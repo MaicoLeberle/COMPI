@@ -1,0 +1,8 @@
+DECISIONES:
+* los no terminales que deban generar su propio código heredan de node el método codeGen.
+* class int_literal tiene un atributo long long value, o debería ser de 32 bits con signo?
+* en if_statement, for_statement, while_statement se pasa un puntero a un objeto statement,
+  para poder pasar el objeto heredado de statement que corresponda.
+
+A DECIDIR:
+* decidir cuáles clases deben heredar, directa o indirectamente, de node (por el método codeGen)-
