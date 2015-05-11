@@ -33,14 +33,151 @@ void yyerror(const char *s);
 // this is the actual grammar that bison will parse, but for right now it's just
 // something silly to echo to the screen what bison gets from flex.  We'll
 // make a real one shortly:
-snazzle:
-	INT snazzle      { cout << "bison found an int: " << $1 << endl; }
-	| FLOAT snazzle  { cout << "bison found a float: " << $1 << endl; }
-	| STRING snazzle { cout << "bison found a string: " << $1 << endl; }
-	| INT            { cout << "bison found an int: " << $1 << endl; }
-	| FLOAT          { cout << "bison found a float: " << $1 << endl; }
-	| STRING         { cout << "bison found a string: " << $1 << endl; }
+program
+	: class_decl
 	;
+
+class_decl
+	: CLASS id '{' field_decls method_decls '}'
+	;
+
+field_decls
+	:
+	| field_decls field_decl
+	;
+
+field_decl
+	: type ids ';'
+	;
+
+ids
+	: ids ',' id
+	| id
+	| ids ',' id '[' int_literal ']'
+	| id '[' int_literal ']'
+	;
+
+method_decls
+	:
+	| method_decls method_decl
+	;
+
+method_decl
+	: method_type id '(' params ')' body
+	;
+
+method_type
+	: type
+	| VOID
+	;
+
+params
+	:
+	| param_decls
+	;
+
+param_decls
+	: param_decls ',' type id
+	| type id
+	;
+
+body
+	: block
+	| EXTERN ';'
+	;
+
+block
+	: '{' field_decls statements '}'
+	;
+
+type
+	: INT | FLOAT | BOOLEAN | id
+	;
+
+statements
+	: statements statement
+	| statement
+	;
+
+statement
+	: location assign_op expr ';'
+	| method_call ';'
+	| IF '(' expr ')' statement else_stmt
+	| FOR id '=' expr ',' expr statement
+	| WHILE expr statement
+	| RETURN expr_stmt ';'
+	| BREAK ';'
+	| CONTINUE ';'
+	| ';'
+	| block
+	;
+
+else_stmt
+	:
+	| ELSE statement
+	;
+
+assign_op
+	: '=' | PLUS_ASSIGN | MINUS_ASSIGN
+	;
+
+method_call
+	: id ids_reference '(' expr_params ')'
+	;
+
+location
+	: id ids_reference
+	| id ids_reference '[' expr ']'
+	;
+
+expr
+	: location
+	| method_call
+	| literal
+	| expr bin_op expr
+	| '-' expr
+	| '!' expr
+	| '(' expr ')'
+	;
+
+expr_params
+	: expr_params ',' expr
+	| expr
+	;
+
+expr_stmt
+	:
+	| expr
+	;
+
+bin_op
+	: arith_op
+	| rel_op
+	| eq_op
+	| cond_op
+	;
+
+arith_op
+	: '+' | '-' | '*' | '/' | '%'
+	;
+
+rel_op
+	: '<' | '>' | LESS_EQUAL | GREAT_EQUAL
+	;
+
+eq_op
+	: EQUAL | DISTINCT
+	;
+
+cond_op
+	: AND | OR
+	;
+
+ids_reference
+	:
+	| '.' id
+	;
+
 %%
 
 int main(int argc, char **argv) {
