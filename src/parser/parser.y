@@ -2,9 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
-using namespace std;
 
-// stuff from flex that bison needs to know about:
 extern "C" int yylex();
 extern "C" int yyparse();
 extern "C" FILE *yyin;
@@ -12,38 +10,43 @@ extern "C" FILE *yyin;
 void yyerror(const char *s);
 %}
 
-// Bison fundamentally works by asking flex to get the next token, which it
-// returns as an object of type "yystype".  But tokens could be of any
-// arbitrary data type!  So we deal with that in Bison by defining a C union
-// holding each of the types of tokens that Flex could return, and have Bison
-// use that union instead of "int" for the definition of "yystype":
 %union {
-	int ival;
-	float fval;
-	char *sval;
+	bool l_bool;
+	int l_int;
+	float l_float;
+	std::string l_str;
+	std::string id;
 }
 
-// define the "terminal symbol" token types I'm going to use (in CAPS
-// by convention), and associate each with a field of the union:
-%token <ival> INT
-%token <fval> FLOAT
-%token <sval> STRING
+%token <l_bool> L_BOOL
+%token <l_int> L_INT
+%token <l_float> L_FLOAT
+%token <l_str> L_STR
+%token <id> ID
+
+%token CLASS VOID EXTERN INT FLOAT BOOLEAN
+%token IF ELSE FOR WHILE RETURN BREAK CONTINUE
+%token PLUS_ASSIGN MINUS_ASSIGN LESS_EQUAL GREAT_EQUAL
+%token EQUAL DISTINCT AND OR
+
+// TODO: Declarar tipos de los no terminales
+// TODO: Generar acciones
+// TODO: Terminan union
 
 %%
-// this is the actual grammar that bison will parse, but for right now it's just
-// something silly to echo to the screen what bison gets from flex.  We'll
-// make a real one shortly:
 program
-	: class_decl
+	: program class_decl
+	| class_decl
 	;
 
 class_decl
-	: CLASS id '{' field_decls method_decls '}'
+	: CLASS ID '{' class_block '}'
 	;
 
-field_decls
+class_block
 	:
-	| field_decls field_decl
+	| class_block field_decl
+	| class_block method_decl
 	;
 
 field_decl
@@ -51,19 +54,14 @@ field_decl
 	;
 
 ids
-	: ids ',' id
-	| id
-	| ids ',' id '[' int_literal ']'
-	| id '[' int_literal ']'
-	;
-
-method_decls
-	:
-	| method_decls method_decl
+	: ids ',' ID
+	| ID
+	| ids ',' ID '[' INTL ']'
+	| ID '[' INTL ']'
 	;
 
 method_decl
-	: method_type id '(' params ')' body
+	: method_type ID '(' params ')' body
 	;
 
 method_type
@@ -77,8 +75,8 @@ params
 	;
 
 param_decls
-	: param_decls ',' type id
-	| type id
+	: param_decls ',' type ID
+	| type ID
 	;
 
 body
@@ -87,23 +85,25 @@ body
 	;
 
 block
-	: '{' field_decls statements '}'
+	: '{' statements '}'
 	;
 
 type
-	: INT | FLOAT | BOOLEAN | id
+	: INT | FLOAT | BOOLEAN | ID
 	;
 
 statements
-	: statements statement
+	:
+	| statements statement
 	| statement
 	;
 
 statement
-	: location assign_op expr ';'
+	: field_decl
+	| location assign_op expr ';'
 	| method_call ';'
 	| IF '(' expr ')' statement else_stmt
-	| FOR id '=' expr ',' expr statement
+	| FOR ID '=' expr ',' expr statement
 	| WHILE expr statement
 	| RETURN expr_stmt ';'
 	| BREAK ';'
@@ -117,17 +117,29 @@ else_stmt
 	| ELSE statement
 	;
 
+expr_stmt
+	:
+	| expr
+	;
+
 assign_op
 	: '=' | PLUS_ASSIGN | MINUS_ASSIGN
 	;
 
 method_call
-	: id ids_reference '(' expr_params ')'
+	: ID ids_reference '(' expr_params ')'
+	| ID ids_reference '(' ')'
 	;
 
 location
-	: id ids_reference
-	| id ids_reference '[' expr ']'
+	: ID ids_reference
+	| ID ids_reference '[' expr ']'
+	;
+
+ids_reference
+	:
+	| ids_reference '.' ID
+	| '.' ID
 	;
 
 expr
@@ -142,11 +154,6 @@ expr
 
 expr_params
 	: expr_params ',' expr
-	| expr
-	;
-
-expr_stmt
-	:
 	| expr
 	;
 
@@ -173,9 +180,11 @@ cond_op
 	: AND | OR
 	;
 
-ids_reference
-	:
-	| '.' id
+literal
+	: L_INT
+	| L_FLOAT
+	| L_BOOL
+	| L_STR
 	;
 
 %%
