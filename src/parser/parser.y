@@ -56,8 +56,8 @@ field_decl
 ids
 	: ids ',' ID
 	| ID
-	| ids ',' ID '[' INTL ']'
-	| ID '[' INTL ']'
+	| ids ',' ID '[' L_INT ']'
+	| ID '[' L_INT ']'
 	;
 
 method_decl
@@ -67,6 +67,10 @@ method_decl
 method_type
 	: type
 	| VOID
+	;
+
+type
+	: INT | FLOAT | BOOLEAN | ID
 	;
 
 params
@@ -86,10 +90,6 @@ body
 
 block
 	: '{' statements '}'
-	;
-
-type
-	: INT | FLOAT | BOOLEAN | ID
 	;
 
 statements
