@@ -1,0 +1,2 @@
+* el scope local de un punto del programa es las variables definidas hasta ese punto
+* field_decl y statement son noterminales intercambiables
