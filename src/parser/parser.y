@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <iostream>
 
-extern "C" int yylex();
+extern int yylex();
 extern "C" int yyparse();
 extern "C" FILE *yyin;
 
@@ -14,8 +14,8 @@ void yyerror(const char *s);
 	bool l_bool;
 	int l_int;
 	float l_float;
-	std::string l_str;
-	std::string id;
+	std::string *l_str;
+	std::string *id;
 }
 
 %token <l_bool> L_BOOL
@@ -40,7 +40,7 @@ program
 	;
 
 class_decl
-	: CLASS ID '{' class_block '}'
+	: CLASS ID '{' class_block '}' {std::cout << "Declaración de clase!" << std::endl;}
 	;
 
 class_block
@@ -192,7 +192,7 @@ literal
 int main(int argc, char **argv) {
 	// Check if the file name was given
 	if (argc != 2) {
-		cout << "Usage: ./parser file" << endl;
+		std::cout << "Usage: ./parser file" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 
@@ -201,7 +201,7 @@ int main(int argc, char **argv) {
 
 	// make sure it is valid:
 	if (!file) {
-		cout << "I can't open a.snazzle.file!" << endl;
+		std::cout << "I can't open a.snazzle.file!" << std::endl;
 		return -1;
 	}
 
@@ -215,7 +215,7 @@ int main(int argc, char **argv) {
 }
 
 void yyerror(const char *s) {
-	cout << "Parse error!  Message: " << s << endl;
+	std::cout << "Parse error!  Message: " << s << std::endl;
 
 	// might as well halt now:
 	exit(EXIT_FAILURE);
