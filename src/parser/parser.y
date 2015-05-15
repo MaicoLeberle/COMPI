@@ -5,6 +5,7 @@
 #include "node2.h"
 
 extern int yylex();
+extern int line_num;
 void yyerror(const char *s);
 
 node_program* ast; // Pointer to the AST
@@ -227,7 +228,7 @@ literal
 %%
 
 void yyerror(const char *s) {
-	std::cout << "Parse error!  Message: " << s << std::endl;
+	std::cout << "Parse error on line " << line_num << "! Message: " << s << std::endl;
 
 	// might as well halt now:
 	exit(EXIT_FAILURE);

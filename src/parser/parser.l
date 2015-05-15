@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include "node2.h"
 #include "parser.tab.hpp"
+
+int line_num = 1;
 %}
 /* "The scanner calls noyywrap on end of file, so you can point it to
     another file and continue scanning its contents". No lo necesitamos.  */
@@ -10,7 +12,7 @@
 
 digit [0-9]
 comments \/\/.*|\/\*(.|\\n)*\*\/
-spaces [ \t|\n]|{comments}
+spaces [ \t]|{comments}
 alpha [a-zA-Z]
 alpha_num {alpha}|{digit}|_
 
@@ -59,6 +61,7 @@ continue                    return CONTINUE;
 \)                          return ')';
 !                           return '!';
 {alpha}{alpha_num}*         yylval.id = new std::string(yytext, yyleng); return ID;
+\n							{ ++line_num; }
 .                           std::cout << "Unknown character!\n"; yyterminate();
 %%
 
