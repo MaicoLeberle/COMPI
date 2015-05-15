@@ -1,0 +1,20 @@
+class Program {
+	int inc(int x) {
+    	return x + 1;
+    }
+
+    int read_int() extern;
+
+    void print(string s) extern;
+
+    void main() {
+    	int y;
+        y = read_int();
+        y = inc(y);
+
+        if (y == 1)
+          printf("y==1\n");
+        else
+          printf("y!=1\n");
+    }
+}

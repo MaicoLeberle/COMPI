@@ -9,6 +9,9 @@ CPPFLAGS=-I/usr/local/opt/flex/include -lfl
 all: parser.cpp
 	$(CC) -ocompi main.cpp parser.cpp parser.tab.cpp $(LDFLAGS) $(CPPFLAGS)
 
+test: parser.cpp
+	$(CC) -otest test.cpp parser.cpp parser.tab.cpp $(LDFLAGS) $(CPPFLAGS)
+
 parser.cpp: parser/parser.l parser.tab.hpp
 	$(LEX) -oparser.cpp parser/parser.l
 
@@ -19,4 +22,4 @@ clean:
 	rm -f *~
 	rm -f compi
 	rm -f parser.cpp parser.tab.* parser.output
-	rm test
+	rm -f test

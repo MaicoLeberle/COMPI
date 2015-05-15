@@ -77,3 +77,16 @@ atlassian-ide-plugin.xml
 com_crashlytics_export_strings.xml
 crashlytics.properties
 crashlytics-build.properties
+
+# Ignore build and lib dirs
+build
+lib/*
+
+# Ignore executable
+bin/*
+
+# Ignore Mac files
+.DS_Store
+
+# XCode
+*.xcodeproj
