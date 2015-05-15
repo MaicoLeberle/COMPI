@@ -19,3 +19,4 @@ clean:
 	rm -f *~
 	rm -f compi
 	rm -f parser.cpp parser.tab.* parser.output
+	rm test
