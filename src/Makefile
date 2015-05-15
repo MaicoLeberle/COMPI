@@ -18,4 +18,4 @@ parser.tab.hpp: parser/parser.y
 clean:
 	rm -f *~
 	rm -f compi
-	rm -f parser.cpp parser.tab.*
+	rm -f parser.cpp parser.tab.* parser.output

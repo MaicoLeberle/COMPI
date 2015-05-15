@@ -1,7 +1,7 @@
 %{
 #include <iostream>
 #include <stdlib.h>
-#include "../node2.h"
+#include "node2.h"
 #include "parser.tab.hpp"
 %}
 /* "The scanner calls noyywrap on end of file, so you can point it to

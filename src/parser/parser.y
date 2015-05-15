@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
-#include "../node2.h"
+#include "node2.h"
 
 extern int yylex();
 extern "C" int yyparse();
@@ -49,16 +49,13 @@ node_program* ast; // Pointer to the AST
 %token <token> PLUS_ASSIGN MINUS_ASSIGN LESS_EQUAL GREAT_EQUAL
 %token <token> EQUAL DISTINCT AND OR
 
-// TODO: Declarar tipos de los no terminales
-// TODO: Generar acciones
-// TODO: Terminan union
 %type <program> program
 %type <class_decl> class_decl
 %type <class_block> class_block
 %type <field_decl> field_decl
 %type <method_decl> method_decl
 %type <ids> ids
-%type <type> type method_type 
+%type <type> type void
 %type <token> assign_op
 %type <params> params
 %type <body> body
@@ -67,8 +64,19 @@ node_program* ast; // Pointer to the AST
 %type <statement> statement
 %type <ids_reference> ids_reference
 %type <expr_params> expr_params
-%type <expr> expr location method_call literal
-%type <token> bin_op arith_op rel_op eq_op cond_op
+%type <expr> expr location method_call literal bin_op
+
+%nonassoc IFX
+%nonassoc ELSE
+%left OR
+%left AND
+%left EQUAL DISTINCT
+%left '<' '>' LESS_EQUAL GREAT_EQUAL
+%left '+' '-'
+%left '*' '/' '%'
+%right '!'
+
+%start program
 
 %%
 program
@@ -100,13 +108,14 @@ ids
 	;
 
 method_decl
-	: method_type ID '(' params ')' body    {$$ = new node_method_decl($1, $2, $4, $6);}
-    | method_type ID '(' ')' body           {$$ = new node_method_decl($1, $2, NULL, $5);}
+	: type ID '(' params ')' body    {$$ = new node_method_decl($1, $2, $4, $6);}
+	| void ID '(' params ')' body    {$$ = new node_method_decl($1, $2, $4, $6);}
+    | type ID '(' ')' body           {$$ = new node_method_decl($1, $2, NULL, $5);}
+    | void ID '(' ')' body           {$$ = new node_method_decl($1, $2, NULL, $5);}
 	;
 
-method_type
-	: type
-	| VOID                                  {$$ = new std::string("void");}
+void
+	: VOID							 {$$ = new std::string("void");}
 	;
 
 type
@@ -134,10 +143,8 @@ block
 	;
 
 statements
-	:                               {$$ = new std::vector<node_statement*>();}
-	| statements statement          {$1->push_back($2); $$ = $1;}
-	| statement                     {$$ = new std::vector<node_statement*>();
-                                    $$->push_back($1);}
+	: 	             		{$$ = new std::vector<node_statement*>();}
+	| statements statement	{$1->push_back($2); $$ = $1;}
 	;
 
 statement
@@ -145,7 +152,7 @@ statement
 	| location assign_op expr ';'                {$$ = new node_assignment_statement((node_location*)$1, 
                                                        $2, $3);}
 	| method_call ';'                            {$$ = new node_method_call_statement((node_method_call*)$1);}
-	| IF '(' expr ')' statement                  {$$ = new node_if_statement($3, $5);}
+	| IF '(' expr ')' statement %prec IFX        {$$ = new node_if_statement($3, $5);}
     | IF '(' expr ')' statement ELSE statement   {$$ = new node_if_statement($3, $5, $7);}
 	| FOR ID '=' expr ',' expr statement         {$$ = new node_for_statement($2, $4, $6, $7);}
 	| WHILE expr statement                       {$$ = new node_while_statement($2, $3);}
@@ -180,16 +187,14 @@ location
 ids_reference
 	:                                       {$$ = new std::vector<std::string*>();}
 	| ids_reference '.' ID                  {$1->push_back($3); $$ = $1;}
-	| '.' ID                                {$$ = new std::vector<std::string*>();
-                                             $$->push_back($2);}
 	;
 
 expr
 	: location
 	| method_call
 	| literal
-	| expr bin_op expr                      {$$ = new node_binary_operation_expr($2, $1, $3);}
-	| '-' expr                              {$$ = new node_minus_expr($2);}
+	| bin_op
+	| '-' expr %prec '!'                    {$$ = new node_minus_expr($2);}
 	| '!' expr                              {$$ = new node_negate_expr($2);}
 	| '(' expr ')'                          {$$ = new node_parenthesis_expr($2);}
 	;
@@ -201,35 +206,18 @@ expr_params
 	;
 
 bin_op
-	: arith_op          
-	| rel_op
-	| eq_op
-	| cond_op
-	;
-
-arith_op
-	: '+'                       {$$ = $<token>1;}
-    | '-'                       {$$ = $<token>1;}
-    | '*'                       {$$ = $<token>1;}
-    | '/'                       {$$ = $<token>1;}
-    | '%'                       {$$ = $<token>1;}
-	;
-
-rel_op      
-	: '<'                       {$$ = $<token>1;}
-    | '>'                       {$$ = $<token>1;}
-    | LESS_EQUAL                {$$ = $<token>1;}
-    | GREAT_EQUAL               {$$ = $<token>1;}
-	;
-
-eq_op
-	: EQUAL                     {$$ = $<token>1;}
-    | DISTINCT                  {$$ = $<token>1;}
-	;
-
-cond_op
-	: AND                       {$$ = $<token>1;}
-    | OR                        {$$ = $<token>1;}
+	: expr '+' expr				{$$ = new node_binary_operation_expr($<token>2, $1, $3);}
+    | expr '*' expr             {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
+    | expr '/' expr             {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
+    | expr '%' expr             {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
+	| expr '<' expr             {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
+    | expr '>' expr             {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
+    | expr LESS_EQUAL expr      {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
+    | expr GREAT_EQUAL expr		{$$ = new node_binary_operation_expr($<token>2, $1, $3);}
+	| expr EQUAL expr           {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
+    | expr DISTINCT expr        {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
+	| expr AND expr             {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
+    | expr OR expr              {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
 	;
 
 literal
