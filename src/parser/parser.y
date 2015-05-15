@@ -5,9 +5,6 @@
 #include "node2.h"
 
 extern int yylex();
-extern "C" int yyparse();
-extern "C" FILE *yyin;
-
 void yyerror(const char *s);
 
 node_program* ast; // Pointer to the AST
@@ -228,31 +225,6 @@ literal
 	;
 
 %%
-
-int main(int argc, char **argv) {
-	// Check if the file name was given
-	if (argc != 2) {
-		std::cout << "Usage: ./parser file" << std::endl;
-		exit(EXIT_FAILURE);
-	}
-
-	// open a file handle to a particular file:
-	FILE *file = fopen(argv[1], "r");
-
-	// make sure it is valid:
-	if (!file) {
-		std::cout << "I can't open a.snazzle.file!" << std::endl;
-		return -1;
-	}
-
-	// set flex to read from it instead of defaulting to STDIN:
-	yyin = file;
-
-	// parse through the input until there is no more:
-	do {
-		yyparse();
-	} while (!feof(yyin));
-}
 
 void yyerror(const char *s) {
 	std::cout << "Parse error!  Message: " << s << std::endl;

@@ -7,7 +7,7 @@ LDFLAGS=-L/usr/local/opt/bison/lib -L/usr/local/opt/flex/lib
 CPPFLAGS=-I/usr/local/opt/flex/include -lfl
 
 all: parser.cpp
-	$(CC) -ocompi parser.cpp parser.tab.cpp $(LDFLAGS) $(CPPFLAGS)
+	$(CC) -ocompi main.cpp parser.cpp parser.tab.cpp $(LDFLAGS) $(CPPFLAGS)
 
 parser.cpp: parser/parser.l parser.tab.hpp
 	$(LEX) -oparser.cpp parser/parser.l
