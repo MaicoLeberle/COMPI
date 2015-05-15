@@ -1,7 +1,7 @@
 %{
 #include <iostream>
 #include <stdlib.h>
-#include "node2.h"
+#include "node.h"
 #include "parser.tab.hpp"
 
 int line_num = 1;
@@ -39,9 +39,9 @@ continue                    return CONTINUE;
 \"(.|\\n)*\"                yylval.l_str = new std::string(yytext, yyleng);return L_STR;
 =                           return '=';
 \+=                         return PLUS_ASSIGN;
--=                          return MINUS_ASSIGN;
+\-=                          return MINUS_ASSIGN;
 \+                          return '+';
--                           return '-';
+\-                           return '-';
 \*                          return '*';
 \/                          return '/';
 %                           return '%';

@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
-#include "node2.h"
+#include "node.h"
 
 extern int yylex();
 extern int line_num;
@@ -42,6 +42,7 @@ node_program* ast; // Pointer to the AST
 %token <l_str> L_STR
 %token <id> ID
 
+%token '+'
 %token <token> CLASS VOID EXTERN INT FLOAT BOOLEAN
 %token <token> IF ELSE FOR WHILE RETURN BREAK CONTINUE
 %token <token> PLUS_ASSIGN MINUS_ASSIGN LESS_EQUAL GREAT_EQUAL
@@ -73,6 +74,7 @@ node_program* ast; // Pointer to the AST
 %left '+' '-'
 %left '*' '/' '%'
 %right '!'
+%left NEGATIVE
 
 %start program
 
@@ -192,7 +194,7 @@ expr
 	| method_call
 	| literal
 	| bin_op
-	| '-' expr %prec '!'                    {$$ = new node_minus_expr($2);}
+	| '-' expr %prec NEGATIVE               {$$ = new node_minus_expr($2);}
 	| '!' expr                              {$$ = new node_negate_expr($2);}
 	| '(' expr ')'                          {$$ = new node_parenthesis_expr($2);}
 	;
@@ -204,18 +206,19 @@ expr_params
 	;
 
 bin_op
-	: expr '+' expr				{$$ = new node_binary_operation_expr($<token>2, $1, $3);}
-    | expr '*' expr             {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
-    | expr '/' expr             {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
-    | expr '%' expr             {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
-	| expr '<' expr             {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
-    | expr '>' expr             {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
-    | expr LESS_EQUAL expr      {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
-    | expr GREAT_EQUAL expr		{$$ = new node_binary_operation_expr($<token>2, $1, $3);}
-	| expr EQUAL expr           {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
-    | expr DISTINCT expr        {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
-	| expr AND expr             {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
-    | expr OR expr              {$$ = new node_binary_operation_expr($<token>2, $1, $3);}
+    : expr '+' expr				{$$ = new node_binary_operation_expr(std::string("+"), $1, $3);}
+    | expr '-' expr             {$$ = new node_binary_operation_expr(std::string("-"), $1, $3);}
+    | expr '*' expr             {$$ = new node_binary_operation_expr(std::string("*"), $1, $3);}
+    | expr '/' expr             {$$ = new node_binary_operation_expr(std::string("/"), $1, $3);}
+    | expr '%' expr             {$$ = new node_binary_operation_expr(std::string("%"), $1, $3);}
+	| expr '<' expr             {$$ = new node_binary_operation_expr(std::string("<"), $1, $3);}
+    | expr '>' expr             {$$ = new node_binary_operation_expr(std::string(">"), $1, $3);}
+    | expr LESS_EQUAL expr      {$$ = new node_binary_operation_expr(std::string("<="), $1, $3);}
+    | expr GREAT_EQUAL expr		{$$ = new node_binary_operation_expr(std::string(">="), $1, $3);}
+    | expr EQUAL expr           {$$ = new node_binary_operation_expr(std::string("=="), $1, $3);}
+    | expr DISTINCT expr        {$$ = new node_binary_operation_expr(std::string("!="), $1, $3);}
+    | expr AND expr             {$$ = new node_binary_operation_expr(std::string("&&"), $1, $3);}
+    | expr OR expr              {$$ = new node_binary_operation_expr(std::string("||"), $1, $3);}
 	;
 
 literal
