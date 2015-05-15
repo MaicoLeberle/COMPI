@@ -30,6 +30,14 @@ int main(int argc, const char* argv[]) {
     assert(ast->classes->at(0)->id.compare("Program") == 0);
     std::cout << "OK" << std::endl;
 
+    std::cout << "First statement should be inc declaration: ";
+    node_method_decl *method = dynamic_cast<node_method_decl*>(ast->classes->at(0)->class_block->at(0));
+    assert(method->m_type->compare("int") == 0);  // Method type should be int
+    assert(method->id->compare("inc") == 0); // Method id should be inc
+    assert(method->formal_params->size() == 1); // Method params count should 1
+    std::cout << "OK" << std::endl;
+    
+    
     yy_delete_buffer(program_buffer);
 
     return 0;
