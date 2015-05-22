@@ -1,10 +1,20 @@
 CC=g++
 
-LEX=/usr/local/Cellar/flex/2.5.39/bin/flex
-YACC=/usr/local/Cellar/bison/3.0.4/bin/bison
+OS=$(shell uname -s)
 
-LDFLAGS=-L/usr/local/opt/bison/lib -L/usr/local/opt/flex/lib
-CPPFLAGS=-I/usr/local/opt/flex/include -lfl
+ifeq ($(OS),Darwin)
+	LEX=/usr/local/Cellar/flex/2.5.39/bin/flex
+	YACC=/usr/local/Cellar/bison/3.0.4/bin/bison
+	LDFLAGS=-L/usr/local/opt/bison/lib -L/usr/local/opt/flex/lib
+	CPPFLAGS=-I/usr/local/opt/flex/include -lfl
+endif
+
+ifeq ($(OS),Linux)
+	LEX=/usr/bin/flex
+	YACC=/usr/bin/bison
+	LDFLAGS=
+	CPPFLAGS=-lfl
+endif
 
 SRC=src
 BUILD=build
