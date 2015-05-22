@@ -45,6 +45,8 @@ continue                    return CONTINUE;
 \*                          return '*';
 \/                          return '/';
 %                           return '%';
+\<							return '<';
+\>							return '>';
 ==                          return EQUAL;
 !=                          return DISTINCT;
 \<=                         return LESS_EQUAL;

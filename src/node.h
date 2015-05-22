@@ -4,6 +4,8 @@
 #include <iostream>
 #include <vector>
 
+// TODO: Change all "type" to enumeration
+
 class node {
 public:
     virtual ~node() { }
@@ -13,13 +15,13 @@ public:
 class node_class_decl;
 class node_program : public node {
 public:
-    std::vector<node_class_decl*> *classes;
+    std::vector<node_class_decl*> classes;
     // Constructors are defined to receive just the information
     // available in the semantic actions where a new
     // node must be constructed.
     node_program(node_class_decl *a_class){
-        classes = new std::vector<node_class_decl*>();
-        classes->push_back(a_class);
+        classes = std::vector<node_class_decl*>();
+        classes.push_back(a_class);
     }
     //virtual llvm::Value* codeGen(CodeGenContext& context) { }
 };
@@ -31,8 +33,8 @@ class node_class_block : public node {
 class node_class_decl : public node {
 public:
     std::string id;
-    std::vector<node_class_block*> *class_block;
-    node_class_decl(std::string ident, std::vector<node_class_block*> *c_block) :
+    std::vector<node_class_block*> class_block;
+    node_class_decl(std::string ident, std::vector<node_class_block*> c_block) :
     id(ident), class_block(c_block) { }
     //virtual llvm::Value* codeGen(CodeGenContext& context);
 };
@@ -40,15 +42,12 @@ public:
 
 class node_ids : public node {
 public:
-    std::vector<std::string*> *ids;
+    std::vector<std::string> ids;
     int index;
-    node_ids(std::string* id){
-        ids = new std::vector<std::string*>();
-        ids->push_back(id);
-    }
-    node_ids(std::string* id, int ind){
-        ids = new std::vector<std::string*>();
-        ids->push_back(id);
+
+    node_ids(std::string id, int ind){
+        ids = std::vector<std::string>();
+        ids.push_back(id);
         index = ind;
     }
     //virtual llvm::Value* codeGen(CodeGenContext& context);
@@ -56,9 +55,9 @@ public:
 
 class node_field_decl : public node_class_block {
 public:
-    std::string *type;
+    std::string type;
     node_ids *ids;
-    node_field_decl(std::string * t, node_ids *list_id) : type(t), ids(list_id) { }
+    node_field_decl(std::string t, node_ids *list_id) : type(t), ids(list_id) { }
     //virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -66,12 +65,12 @@ class node_body;
 class node_typed_identifier;
 class node_method_decl : public node_class_block {
 public:
-    std::string *m_type;
-    std::string *id;
-    std::vector<node_typed_identifier*> *formal_params;
+    std::string m_type;
+    std::string id;
+    std::vector<node_typed_identifier*> formal_params;
     node_body *m_body;
-    node_method_decl(std::string *method_type, std::string *method_id,
-                     std::vector<node_typed_identifier*> *method_formal_params, node_body *method_body) :
+    node_method_decl(std::string method_type, std::string method_id,
+                     std::vector<node_typed_identifier*> method_formal_params, node_body *method_body) :
     m_type(method_type), id(method_id), formal_params(method_formal_params),
     m_body(method_body) {}
     //virtual llvm::Value* codeGen(CodeGenContext& context);
@@ -79,9 +78,9 @@ public:
 
 class node_typed_identifier :public node {
 public:
-    std::string *type;
-    std::string *id;
-    node_typed_identifier(std::string *i_type, std::string *i_value) : type(i_type), id(i_value) { }
+    std::string type;
+    std::string id;
+    node_typed_identifier(std::string i_type, std::string i_value) : type(i_type), id(i_value) { }
 };
 
 class node_statement : public node {
@@ -91,8 +90,8 @@ class node_statement : public node {
 // A block of statements, that defines a new local scope
 class node_block : public node {
 public:
-    std::vector<node_statement*> *block_content;
-    node_block(std::vector<node_statement*> *content) : block_content(content) { }
+    std::vector<node_statement*> block_content;
+    node_block(std::vector<node_statement*> content) : block_content(content) { }
     //virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -165,11 +164,11 @@ public:
 
 class node_for_statement : public node_statement {
 public:
-    std::string *id;
+    std::string id;
     node_expr* from;
     node_expr* to;
     node_statement* s;
-    node_for_statement(std::string* ident, node_expr* from_expression,
+    node_for_statement(std::string ident, node_expr* from_expression,
                        node_expr* to_expression, node_statement* for_body) :
     id(ident), from(from_expression), to(to_expression), s(for_body) { }
     //virtual llvm::Value* codeGen(CodeGenContext& context);
@@ -238,14 +237,14 @@ public:
 
 class node_string_literal : public node_literal {
 public:
-    std::string *value;
-    node_string_literal(std::string *val) : value(val) { }
+    std::string value;
+    node_string_literal(std::string val) : value(val) { }
     //virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class node_binary_operation_expr : public node_expr {
 public:
-    std::string op;
+    std::string op; // TODO: Change to enumeration
     node_expr* lhs_expr;
     node_expr* rhs_expr;
     node_binary_operation_expr(std::string binary_operator, node_expr* left_expression,
@@ -256,9 +255,9 @@ public:
 
 class node_location : public node_expr {
 public:
-    std::vector<std::string*> *ids;
+    std::vector<std::string> ids;
     node_expr* e;
-    node_location(std::vector<std::string*> *location_ids) : ids(location_ids) { }
+    node_location(std::vector<std::string*> *location_ids) : ids(location_ids), e(NULL) { }
     node_location(std::vector<std::string*> *location_ids, node_expr* index) :
     ids(location_ids), e(index) { }
     //virtual llvm::Value* codeGen(CodeGenContext& context);
@@ -287,8 +286,8 @@ public:
 
 class node_method_call : public node_expr {
 public:
-    std::vector<std::string*> *ids;
-    std::vector<node_expr*> *actual_parameters;
+    std::vector<std::string> ids;
+    std::vector<node_expr*> actual_parameters;
     node_method_call(std::vector<std::string*> *list_ids) : ids(list_ids) { }
     node_method_call(std::vector<std::string*> *list_ids, std::vector<node_expr*> *expressions) :
     ids(list_ids), actual_parameters(expressions) { }

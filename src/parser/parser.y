@@ -5,6 +5,7 @@
 #include "node.h"
 
 extern int yylex();
+extern FILE *yyin;
 extern int line_num;
 void yyerror(const char *s);
 
