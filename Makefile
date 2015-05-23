@@ -6,15 +6,15 @@ ifeq ($(OS),Darwin)
 	LEX=/usr/local/Cellar/flex/2.5.39/bin/flex
 	YACC=/usr/local/Cellar/bison/3.0.4/bin/bison
 	LDFLAGS=-L/usr/local/opt/bison/lib -L/usr/local/opt/flex/lib
-	CPPFLAGS=-I/usr/local/opt/flex/include -lfl
+	CPPFLAGS=-I/usr/local/opt/flex/include
 endif
 
 ifeq ($(OS),Linux)
 	LEX=/usr/bin/flex
 	YACC=/usr/bin/bison
-	LDFLAGS=
-	CPPFLAGS=-lfl
 endif
+
+CPPFLAGS+=-lfl -std=c++11
 
 SRC=src
 BUILD=build
@@ -24,10 +24,10 @@ TEST=bin/test
 MAIN=$(SRC)/main.cpp
 TESTSRC=$(SRC)/test.cpp
 
-LEXER=$(SRC)/parser/lexer.l
-PARSER=$(SRC)/parser.cpp
-PARSERH=$(SRC)/parser.tab.hpp
-PARSERTAB=$(SRC)/parser.tab.cpp
+LEXER=$(BUILD)/lexer.cpp
+PARSER=$(BUILD)/parser.cpp
+PARSERH=$(BUILD)/parser.hpp
+LEXERSRC=$(SRC)/parser/lexer.l
 PARSERSRC=$(SRC)/parser/parser.y
 
 all: compi
@@ -37,20 +37,20 @@ compi: $(TARGET)
 test: $(TESTSRC)
 	$(TEST)
 
-$(TARGET): $(PARSER)
-	$(CC) -o$(TARGET) $(MAIN) $(PARSER) $(PARSERTAB) $(LDFLAGS) $(CPPFLAGS)
+$(TARGET): $(LEXER)
+	$(CC) -o$(TARGET) $(MAIN) $(LEXER) $(PARSER) $(LDFLAGS) $(CPPFLAGS)
 
-$(TESTSRC): $(PARSER)
-	$(CC) -o$(TEST) $(TESTSRC) $(PARSER) $(PARSERTAB) $(LDFLAGS) $(CPPFLAGS)
+$(TESTSRC): $(LEXER)
+	$(CC) -o$(TEST) $(TESTSRC) $(LEXER) $(PARSER) $(LDFLAGS) $(CPPFLAGS)
 
-$(PARSER): $(LEXER) $(PARSERH)
-	$(LEX) -o$(PARSER) $(LEXER)
+$(LEXER): $(LEXERSRC) $(PARSERH)
+	$(LEX) -o$(LEXER) $(LEXERSRC)
 
 $(PARSERH): $(PARSERSRC)
-	$(YACC) -d -o$(PARSERTAB) $(PARSERSRC)
+	$(YACC) -d -o$(PARSER) $(PARSERSRC)
 
 clean:
 	rm -f $(SRC)/*~
 	rm -f $(TARGET)
-	rm -f $(PARSER) $(PARSERTAB) $(PARSERH) parser.output
+	rm -f $(LEXER) $(PARSER) $(PARSERH)
 	rm -f $(TEST)

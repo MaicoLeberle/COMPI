@@ -31,5 +31,7 @@ int main(int argc, const char* argv[]) {
 		yyparse();
 	} while (!feof(yyin));
 
+	delete ast;
+
 	return 0;
 }

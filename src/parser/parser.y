@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
-#include "node.h"
+#include "../src/node.h"
 
 extern int yylex();
 extern FILE *yyin;
@@ -15,25 +15,25 @@ node_program* ast; // Pointer to the AST
 %union {
     node_program *program;
     node_class_decl *class_decl;
-    std::vector<node_class_block*> *class_block;
+    std::vector<node_class_block*> class_block;
     node_field_decl *field_decl;
     node_method_decl *method_decl;
-    std::vector<node_typed_identifier*> *params;
+    std::vector<node_typed_identifier*> params;
     node_ids *ids;
     node_body *body;
     node_block *block;
     node_statement *statement;
-    std::vector<node_statement*> *statements;
-    std::vector<std::string*> *ids_reference;
-    std::vector<node_expr*> *expr_params;
+    std::vector<node_statement*> statements;
+    std::vector<std::string*> ids_reference;
+    std::vector<node_expr*> expr_params;
     node_literal *literal;
     node_expr *expr;
     bool l_bool;
 	int l_int;
 	float l_float;
-    std::string *type;
-	std::string *l_str;
-	std::string *id;
+    std::string type;
+	std::string l_str;
+	std::string id;
     int token; // Type of token identifier
 }
 
@@ -46,7 +46,7 @@ node_program* ast; // Pointer to the AST
 %token '+'
 %token <token> CLASS VOID EXTERN INT FLOAT BOOLEAN
 %token <token> IF ELSE FOR WHILE RETURN BREAK CONTINUE
-%token <token> PLUS_ASSIGN MINUS_ASSIGN LESS_EQUAL GREAT_EQUAL
+%token <token> PLUS_ASSIGN MINUS_ASSIGN LESS_EQUAL GREATER_EQUAL
 %token <token> EQUAL DISTINCT AND OR
 
 %type <program> program
@@ -70,8 +70,9 @@ node_program* ast; // Pointer to the AST
 %nonassoc ELSE
 %left OR
 %left AND
-%left EQUAL DISTINCT
-%left '<' '>' LESS_EQUAL GREAT_EQUAL
+%nonassoc EQUAL DISTINCT
+%nonassoc LESS_EQUAL GREATER_EQUAL
+%left '<' '>'
 %left '+' '-'
 %left '*' '/' '%'
 %right '!'
@@ -81,7 +82,7 @@ node_program* ast; // Pointer to the AST
 
 %%
 program
-	: program class_decl    {$1->classes->push_back($2);
+	: program class_decl    {$1->classes.push_back($2);
                              $$ = $1;}
 	| class_decl            {$$ = new node_program($1);
                              ast = $$;}
@@ -215,7 +216,7 @@ bin_op
 	| expr '<' expr             {$$ = new node_binary_operation_expr(std::string("<"), $1, $3);}
     | expr '>' expr             {$$ = new node_binary_operation_expr(std::string(">"), $1, $3);}
     | expr LESS_EQUAL expr      {$$ = new node_binary_operation_expr(std::string("<="), $1, $3);}
-    | expr GREAT_EQUAL expr		{$$ = new node_binary_operation_expr(std::string(">="), $1, $3);}
+    | expr GREATER_EQUAL expr	{$$ = new node_binary_operation_expr(std::string(">="), $1, $3);}
     | expr EQUAL expr           {$$ = new node_binary_operation_expr(std::string("=="), $1, $3);}
     | expr DISTINCT expr        {$$ = new node_binary_operation_expr(std::string("!="), $1, $3);}
     | expr AND expr             {$$ = new node_binary_operation_expr(std::string("&&"), $1, $3);}

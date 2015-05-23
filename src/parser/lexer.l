@@ -1,8 +1,8 @@
 %{
 #include <iostream>
 #include <stdlib.h>
-#include "node.h"
-#include "parser.tab.hpp"
+#include "../src/node.h"
+#include "parser.hpp"
 
 int line_num = 1;
 %}
@@ -39,9 +39,9 @@ continue                    return CONTINUE;
 \"(.|\\n)*\"                yylval.l_str = new std::string(yytext, yyleng);return L_STR;
 =                           return '=';
 \+=                         return PLUS_ASSIGN;
-\-=                          return MINUS_ASSIGN;
+\-=                         return MINUS_ASSIGN;
 \+                          return '+';
-\-                           return '-';
+\-                          return '-';
 \*                          return '*';
 \/                          return '/';
 %                           return '%';
@@ -50,7 +50,7 @@ continue                    return CONTINUE;
 ==                          return EQUAL;
 !=                          return DISTINCT;
 \<=                         return LESS_EQUAL;
-\>=                         return GREAT_EQUAL;
+\>=                         return GREATER_EQUAL;
 &&                          return AND;
 \|\|                        return OR;
 \{                          return '{';
@@ -62,6 +62,7 @@ continue                    return CONTINUE;
 \(                          return '(';
 \)                          return ')';
 !                           return '!';
+\.							return '.';
 {alpha}{alpha_num}*         yylval.id = new std::string(yytext, yyleng); return ID;
 \n							{ ++line_num; }
 .                           std::cout << "Unknown character!\n"; yyterminate();

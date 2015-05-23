@@ -94,8 +94,5 @@ bin/*
 # Eclipse CDT
 .project
 .cproject
+.settings/
 
-# Flex/Bison generated source
-src/parser.cpp
-src/parser.tab.cpp
-src/parser.tab.hpp
