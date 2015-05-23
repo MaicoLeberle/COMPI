@@ -3,14 +3,14 @@
 #include <cstdio>
 #include "node.h"
 
-extern node_program* ast;
+extern node_program_pointer ast;
 extern int yyparse();
 extern FILE *yyin;
 
 int main(int argc, const char* argv[]) {
 	// Check if the file name was given
 	if (argc != 2) {
-		std::cout << "Usage: ./compi file" << std::endl;
+		std::cout << "Usage: " << argv[0] << " file" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 
@@ -31,7 +31,9 @@ int main(int argc, const char* argv[]) {
 		yyparse();
 	} while (!feof(yyin));
 
-	delete ast;
+	fclose(file);
+
+	std::cout << "Main class name: " << ast->classes[0]->id << std::endl;
 
 	return 0;
 }
