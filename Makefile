@@ -34,7 +34,7 @@ all: compi
 
 compi: $(TARGET)
 
-test: $(TESTSRC)
+test: clean $(TESTSRC)
 	$(TEST)
 
 $(TARGET): $(LEXER)

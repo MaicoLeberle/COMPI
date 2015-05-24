@@ -133,7 +133,7 @@ type
     : INT                              {$$ = new Type(Type::INTEGER);}
     | FLOAT                            {$$ = new Type(Type::FLOAT);}
     | BOOLEAN                          {$$ = new Type(Type::BOOLEAN);}
-    | ID                               {$$ = new Type(Type::ID); /* TODO: Check how to return the symbol index */}
+    | ID                               {$$ = new Type(Type::ID, *$1); delete $1;}
     ;
 
 params

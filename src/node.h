@@ -7,7 +7,18 @@
 #include <cstdlib>
 
 // Helper enumeration classes /////////////////////////////////////////////////
-enum class Type { INTEGER, BOOLEAN, FLOAT, VOID, ID };
+/**
+ * Structure to save the type of a method or location. In case the type is "ID" the
+ * tuple also stores the id (TODO: Add index to symbol table?)
+ */
+struct Type {
+	enum _Type {  INTEGER, BOOLEAN, FLOAT, VOID, ID };
+	_Type type;
+	std::string id;
+
+	Type(_Type type_) : type(type_) {}
+	Type(_Type type_, std::string id_) : type(type_), id(id_) {}
+};
 enum class Oper { PLUS, MINUS, TIMES, DIVIDE, MOD, LESS, GREATER, LESS_EQUAL,
                   GREATER_EQUAL, EQUAL, DISTINCT, AND, OR };
 enum class AssignOper { ASSIGN, PLUS_ASSIGN, MINUS_ASSIGN };
@@ -65,7 +76,24 @@ typedef std::shared_ptr<node_method_decl> 			method_pointer;
 typedef std::shared_ptr<node_parameter_identifier> 	parameter_pointer;
 typedef std::shared_ptr<node_body> 					body_pointer;
 typedef std::shared_ptr<node_block> 				block_pointer;
+typedef std::shared_ptr<node_assignment_statement> 	assignment_pointer;
+typedef std::shared_ptr<node_method_call> 			method_call_pointer;
+typedef std::shared_ptr<node_if_statement> 			if_pointer;
+typedef std::shared_ptr<node_for_statement> 		for_pointer;
+typedef std::shared_ptr<node_while_statement> 		while_pointer;
+typedef std::shared_ptr<node_return_statement> 		return_pointer;
+typedef std::shared_ptr<node_break_statement> 		break_pointer;
+typedef std::shared_ptr<node_continue_statement> 	continue_pointer;
+typedef std::shared_ptr<node_skip_statement> 		skip_pointer;
+typedef std::shared_ptr<node_int_literal> 			int_pointer;
+typedef std::shared_ptr<node_float_literal> 		float_pointer;
+typedef std::shared_ptr<node_bool_literal> 			bool_pointer;
+typedef std::shared_ptr<node_string_literal> 		string_pointer;
+typedef std::shared_ptr<node_binary_operation_expr> binary_operation_pointer;
 typedef std::shared_ptr<node_location> 				location_pointer;
+typedef std::shared_ptr<node_negate_expr> 			negate_expr_pointer;
+typedef std::shared_ptr<node_negative_expr> 		negative_expr_pointer;
+typedef std::shared_ptr<node_parentheses_expr> 		parentheses_expr_pointer;
 
 // List wrappers //////////////////////////////////////////////////////////////
 class classes_list 		: public std::vector<class_pointer> {};
@@ -133,16 +161,13 @@ public:
     /**
      * :field type: Type of the field.
      *                 REQUIRES: type != Type::VOID
-     * :field id_idx: Index for the ID in the symbol table (only if type == Type::ID)
      * :field ids: List of identifiers for the field declaration.
      */
     Type type;
-    int id_idx;
     id_list ids;
 
-    node_field_decl(Type type_, id_list ids_, int id_idx_ = 0) :
-        type(type_), id_idx(id_idx_), ids(ids_) {
-        assert(type_ != Type::VOID);
+    node_field_decl(Type type_, id_list ids_) : type(type_), ids(ids_) {
+        assert(type_.type != Type::VOID);
     }
 };
 
@@ -153,20 +178,17 @@ class node_method_decl : public node_class_block {
 public:
     /**
      * :field type: Returning type of the method. Can be of type Type::VOID
-     * :field id_idx: Index for the ID in the symbol table (only if type == Type::ID)
      * :field id: Identifier name of the method.
      * :field parameters: List of the parameters in the method.
      * :field body: Body of the method.
      */
     Type type;
-    int id_idx;
     std::string id;
     parameter_list parameters;
     body_pointer body;
 
     node_method_decl(Type type_, std::string id_, parameter_list parameters_,
-        body_pointer body_, int id_idx_ = 0) :
-        type(type_), id_idx(id_idx_), id(id_), parameters(parameters_), body(body_) {}
+        body_pointer body_) : type(type_), id(id_), parameters(parameters_), body(body_) {}
 };
 
 /**
@@ -186,7 +208,7 @@ public:
 
     node_parameter_identifier(Type type_, std::string id_, int id_idx_ = 0) :
         type(type_), id_idx(id_idx_), id(id_) {
-        assert(type_ != Type::VOID);
+        assert(type_.type != Type::VOID);
     }
 };
 
