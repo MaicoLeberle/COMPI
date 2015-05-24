@@ -14,7 +14,7 @@ ifeq ($(OS),Linux)
 	YACC=/usr/bin/bison
 endif
 
-CPPFLAGS+=-lfl -std=c++11
+CPPFLAGS+=-lfl -g -std=c++11 -Wno-deprecated-register
 
 SRC=src
 BUILD=build

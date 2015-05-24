@@ -1,7 +1,7 @@
 #ifndef NODE_H_
 #define NODE_H_
 
-#include <iostream>
+#include <memory>
 #include <vector>
 #include <cassert>
 #include <cstdlib>
@@ -9,8 +9,8 @@
 // Helper enumeration classes /////////////////////////////////////////////////
 enum class Type { INTEGER, BOOLEAN, FLOAT, VOID, ID };
 enum class Oper { PLUS, MINUS, TIMES, DIVIDE, MOD, LESS, GREATER, LESS_EQUAL,
-				  GREATER_EQUAL, EQUAL, DISTINCT, AND, OR };
-enum class AssignOper { ASSIGN, PLUS_ASSIGN, MINUS_ASSING };
+                  GREATER_EQUAL, EQUAL, DISTINCT, AND, OR };
+enum class AssignOper { ASSIGN, PLUS_ASSIGN, MINUS_ASSIGN };
 
 // Abstract classes ///////////////////////////////////////////////////////////
 /**
@@ -20,63 +20,61 @@ class node {
 public:
     virtual ~node() {}
 };
-class node_class_block
-		: public node {};
-class node_statement
-		: public node {};
-class node_expr
-		: public node {};
-class node_literal
-		: public node_expr {};
+class node_class_block	: public node {};
+class node_statement	: public node {};
+class node_expr			: public node_statement {};
+class node_literal		: public node_expr {};
 
 // Classes prototypes /////////////////////////////////////////////////////////
 class node_program;
 class node_class_decl;
-class node_body;
 class node_id;
+class node_field_decl;
+class node_method_decl;
 class node_parameter_identifier;
+class node_body;
 class node_block;
-class node_location;
-class node_expr;
+class node_assignment_statement;
 class node_method_call;
+class node_if_statement;
+class node_for_statement;
+class node_while_statement;
+class node_return_statement;
+class node_break_statement;
+class node_continue_statement;
+class node_skip_statement;
+class node_int_literal;
+class node_float_literal;
+class node_bool_literal;
+class node_string_literal;
+class node_binary_operation_expr;
+class node_location;
+class node_negate_expr;
+class node_negative_expr;
+class node_parentheses_expr;
 
 // Smart pointers wrappers ////////////////////////////////////////////////////
-class node_program_pointer
-		: public std::unique_ptr<node_program> {};
-class node_class_pointer
-		: public std::unique_ptr<node_class_decl> {};
-class node_class_block_pointer
-		: public std::unique_ptr<node_class_block> {};
-class node_body_pointer
-		: public std::unique_ptr<node_body> {};
-class node_block_pointer
-		: public std::unique_ptr<node_block> {};
-class node_id_pointer
-		: public std::unique_ptr<node_id> {};
-class node_parameter_pointer
-		: public std::unique_ptr<node_parameter_identifier> {};
-class node_statement_pointer
-		: public std::unique_ptr<node_statement> {};
-class node_location_pointer
-		: public std::unique_ptr<node_location> {};
-class node_expr_pointer
-		: public std::unique_ptr<node_expr_pointer> {};
+typedef std::shared_ptr<node_class_block> 			class_block_pointer;
+typedef std::shared_ptr<node_statement> 			statement_pointer;
+typedef std::shared_ptr<node_expr> 					expr_pointer;
+typedef std::unique_ptr<node_program> 				program_pointer;
+typedef std::shared_ptr<node_class_decl> 			class_pointer;
+typedef std::shared_ptr<node_id> 					id_pointer;
+typedef std::shared_ptr<node_field_decl> 			field_pointer;
+typedef std::shared_ptr<node_method_decl> 			method_pointer;
+typedef std::shared_ptr<node_parameter_identifier> 	parameter_pointer;
+typedef std::shared_ptr<node_body> 					body_pointer;
+typedef std::shared_ptr<node_block> 				block_pointer;
+typedef std::shared_ptr<node_location> 				location_pointer;
 
-// Wrappers ///////////////////////////////////////////////////////////////////
-class classes_list
-		: public std::vector<node_class_pointer> {};
-class class_block_list
-		: public std::vector<node_class_block_pointer> {};
-class id_list
-		: public std::vector<node_id_pointer> {};
-class parameter_list
-		: public std::vector<node_parameter_pointer> {};
-class statement_list
-		: public std::vector<node_statement_pointer> {};
-class reference_list
-		: public std::vector<std::string> {};
-class expression_list
-		: public std::vector<node_expr_pointer> {};
+// List wrappers //////////////////////////////////////////////////////////////
+class classes_list 		: public std::vector<class_pointer> {};
+class class_block_list	: public std::vector<class_block_pointer> {};
+class id_list			: public std::vector<id_pointer> {};
+class parameter_list	: public std::vector<parameter_pointer> {};
+class statement_list	: public std::vector<statement_pointer> {};
+class reference_list	: public std::vector<std::string> {};
+class expression_list	: public std::vector<expr_pointer> {};
 
 // Classes ////////////////////////////////////////////////////////////////////
 /**
@@ -84,12 +82,12 @@ class expression_list
  */
 class node_program : public node {
 public:
-	/**
-	 * :field classes: List of all the classes in the program (children of the tree)
-	 */
+    /**
+     * :field classes: List of all the classes in the program (children of the tree)
+     */
     classes_list classes;
 
-    node_program(node_class_pointer class_) {
+    node_program(class_pointer class_) {
         classes.push_back(class_);
     }
 };
@@ -99,15 +97,15 @@ public:
  */
 class node_class_decl : public node {
 public:
-	/**
-	 * :field id: Name of the class
-	 * :field class_block: List of fields and methods of the class
-	 */
+    /**
+     * :field id: Name of the class
+     * :field class_block: List of fields and methods of the class
+     */
     std::string id;
     class_block_list class_block;
 
     node_class_decl(std::string id_, class_block_list class_block_) :
-    	id(id_), class_block(class_block_) {}
+        id(id_), class_block(class_block_) {}
 };
 
 /**
@@ -115,15 +113,15 @@ public:
  */
 class node_id : public node {
 public:
-	/**
-	 * :field id: Identifier name of the field
-	 * :field array_size: If >= 0 the identifier is an array of array_size elements
-	 */
-	std::string id;
-	int array_size;
-	// TODO: Check if we need to include a reference to the symbol's table
+    /**
+     * :field id: Identifier name of the field
+     * :field array_size: If >= 0 the identifier is an array of array_size elements
+     */
+    std::string id;
+    int array_size;
+    // TODO: Check if we need to include a reference to the symbol's table
 
-	node_id(std::string id_, int array_size_ = -1) : id(id_), array_size(array_size_) {}
+    node_id(std::string id_, int array_size_ = -1) : id(id_), array_size(array_size_) {}
 };
 
 /**
@@ -132,19 +130,19 @@ public:
  */
 class node_field_decl : public node_class_block, public node_statement {
 public:
-	/**
-	 * :field type: Type of the field.
-	 * 				REQUIRES: type != Type::VOID
-	 * :field id_idx: Index for the ID in the symbol table (only if type == Type::ID)
-	 * :field ids: List of identifiers for the field declaration.
-	 */
-	Type type;
+    /**
+     * :field type: Type of the field.
+     *                 REQUIRES: type != Type::VOID
+     * :field id_idx: Index for the ID in the symbol table (only if type == Type::ID)
+     * :field ids: List of identifiers for the field declaration.
+     */
+    Type type;
     int id_idx;
     id_list ids;
 
     node_field_decl(Type type_, id_list ids_, int id_idx_ = 0) :
-    	type(type_), id_idx(id_idx_), ids(ids_) {
-    	assert(type_ != Type::VOID);
+        type(type_), id_idx(id_idx_), ids(ids_) {
+        assert(type_ != Type::VOID);
     }
 };
 
@@ -153,22 +151,22 @@ public:
  */
 class node_method_decl : public node_class_block {
 public:
-	/**
-	 * :field type: Returning type of the method. Can be of type Type::VOID
-	 * :field id_idx: Index for the ID in the symbol table (only if type == Type::ID)
-	 * :field id: Identifier name of the method.
-	 * :field parameters: List of the parameters in the method.
-	 * :field body: Body of the method.
-	 */
+    /**
+     * :field type: Returning type of the method. Can be of type Type::VOID
+     * :field id_idx: Index for the ID in the symbol table (only if type == Type::ID)
+     * :field id: Identifier name of the method.
+     * :field parameters: List of the parameters in the method.
+     * :field body: Body of the method.
+     */
     Type type;
     int id_idx;
     std::string id;
     parameter_list parameters;
-    node_body_pointer body;
+    body_pointer body;
 
     node_method_decl(Type type_, std::string id_, parameter_list parameters_,
-		node_body_pointer body_, int id_idx_ = 0) :
-    	type(type_), id_idx(id_idx_), id(id_), parameters(parameters_), body(body_) {}
+        body_pointer body_, int id_idx_ = 0) :
+        type(type_), id_idx(id_idx_), id(id_), parameters(parameters_), body(body_) {}
 };
 
 /**
@@ -176,19 +174,19 @@ public:
  */
 class node_parameter_identifier : public node {
 public:
-	/**
-	 * :field type: Type of the parameter
-	 * 				REQUIRES: type != Type::VOID
-	 * :field id_idx: Index for the ID in the symbol table (only if type == Type::ID)
-	 * :field id: Identifier name of the method.
-	 */
+    /**
+     * :field type: Type of the parameter
+     *                 REQUIRES: type != Type::VOID
+     * :field id_idx: Index for the ID in the symbol table (only if type == Type::ID)
+     * :field id: Identifier name of the method.
+     */
     Type type;
     int id_idx;
     std::string id;
 
     node_parameter_identifier(Type type_, std::string id_, int id_idx_ = 0) :
-    	type(type_), id_idx(id_idx_), id(id_) {
-    	assert(type_ != Type::VOID);
+        type(type_), id_idx(id_idx_), id(id_) {
+        assert(type_ != Type::VOID);
     }
 };
 
@@ -197,14 +195,14 @@ public:
  */
 class node_body : public node {
 public:
-	/**
-	 * :field is_extern: Whether the block of the body is contained elsewhere
-	 * :field block: The node block of the body with the statements
-	 */
+    /**
+     * :field is_extern: Whether the block of the body is contained elsewhere
+     * :field block: The node block of the body with the statements
+     */
     bool is_extern;
-    node_block_pointer block;
+    block_pointer block;
 
-    node_body(node_block_pointer block_) : is_extern(false), block(block_) {}
+    node_body(block_pointer block_) : is_extern(false), block(block_) {}
     node_body() : is_extern(true), block(NULL) {}
 };
 
@@ -213,9 +211,9 @@ public:
  */
 class node_block : public node_statement {
 public:
-	/**
-	 * :field content: List of statements in the block.
-	 */
+    /**
+     * :field content: List of statements in the block.
+     */
     statement_list content;
 
     node_block(statement_list content_) : content(content_) {}
@@ -226,35 +224,35 @@ public:
  */
 class node_assignment_statement : public node_statement {
 public:
-	/**
-	 * :field location: Location to assign the value
-	 * :field oper: Operator of assignation
-	 * :field expression: Expression of assignation
-	 */
-    node_location_pointer location;
+    /**
+     * :field location: Location to assign the value
+     * :field oper: Operator of assignation
+     * :field expression: Expression of assignation
+     */
+    location_pointer location;
     AssignOper oper;
-    node_expr_pointer expression;
+    expr_pointer expression;
 
-    node_assignment_statement(node_location_pointer location_, AssignOper oper_,
-		node_expr_pointer expression_) :
-    	location(location_), oper(oper_), expression(expression_) {}
+    node_assignment_statement(location_pointer location_,
+        AssignOper oper_, expr_pointer expression_) :
+        location(location_), oper(oper_), expression(expression_) {}
 };
 
 /**
  * Node for a method call. Can be treated both as an expression or as a statement.
  */
-class node_method_call : public node_expr, public node_statement {
+class node_method_call : public node_expr {
 public:
-	/**
-	 * :field ids: List of ids references in the method call. Can be of size 1.
-	 * :field parameters: List of expressions called in the method parameters.
-	 */
+    /**
+     * :field ids: List of ids references in the method call. Can be of size 1.
+     * :field parameters: List of expressions called in the method parameters.
+     */
     reference_list ids;
     expression_list parameters;
 
     node_method_call(reference_list ids_) : ids(ids_) {}
     node_method_call(reference_list ids_, expression_list parameters_) :
-    	ids(ids_), parameters(parameters_) {}
+        ids(ids_), parameters(parameters_) {}
 };
 
 /**
@@ -262,20 +260,20 @@ public:
  */
 class node_if_statement : public node_statement {
 public:
-	/**
-	 * :field expression: Expression to evaluate.
-	 * :field then_statement: Statement to execute in case expression == true.
-	 * :field else_statement: Statement to execute in case expression == false.
-	 */
-    node_expr_pointer expression;
-    node_statement_pointer then_statement;
-    node_statement_pointer else_statement;
+    /**
+     * :field expression: Expression to evaluate.
+     * :field then_statement: Statement to execute in case expression == true.
+     * :field else_statement: Statement to execute in case expression == false.
+     */
+    expr_pointer expression;
+    statement_pointer then_statement;
+    statement_pointer else_statement;
 
-    node_if_statement(node_expr_pointer expression_, node_statement_pointer then_statement_) :
-    	expression(expression_), then_statement(then_statement_), else_statement(NULL) {}
-    node_if_statement(node_expr_pointer expression_, node_statement_pointer then_statement_,
-		node_statement_pointer else_statement_) :
-    	expression(expression_), then_statement(then_statement_), else_statement(else_statement_) {}
+    node_if_statement(expr_pointer expression_, statement_pointer then_statement_) :
+        expression(expression_), then_statement(then_statement_), else_statement(NULL) {}
+    node_if_statement(expr_pointer expression_, statement_pointer then_statement_,
+        statement_pointer else_statement_) :
+        expression(expression_), then_statement(then_statement_), else_statement(else_statement_) {}
 };
 
 /**
@@ -283,21 +281,21 @@ public:
  */
 class node_for_statement : public node_statement {
 public:
-	/**
-	 * :field id: Name of the variable to iterate inside the for
-	 * 			  (TODO: Maybe should be the identifier index in the symbol table)
-	 * :field from: Expression to start the loop
-	 * :field to: Expression to end the loop
-	 * :field body: Statement(s) to execute inside the loop
-	 */
+    /**
+     * :field id: Name of the variable to iterate inside the for
+     *               (TODO: Maybe should be the identifier index in the symbol table)
+     * :field from: Expression to start the loop
+     * :field to: Expression to end the loop
+     * :field body: Statement(s) to execute inside the loop
+     */
     std::string id;
-    node_expr_pointer from;
-    node_expr_pointer to;
-    node_statement_pointer body;
+    expr_pointer from;
+    expr_pointer to;
+    statement_pointer body;
 
-    node_for_statement(std::string id_, node_expr_pointer from_, node_expr_pointer to_,
-		node_statement_pointer body_) :
-    	id(id_), from(from_), to(to_), body(body_) {}
+    node_for_statement(std::string id_, expr_pointer from_, expr_pointer to_,
+        statement_pointer body_) :
+        id(id_), from(from_), to(to_), body(body_) {}
 };
 
 /**
@@ -305,14 +303,14 @@ public:
  */
 class node_while_statement : public node_statement {
 public:
-	/**
-	 * :field expression: Expression to evaluate for loop termination
-	 * :field body: Statement(s) to execute inside the loop
-	 */
-    node_expr_pointer expression;
-    node_statement_pointer body;
+    /**
+     * :field expression: Expression to evaluate for loop termination
+     * :field body: Statement(s) to execute inside the loop
+     */
+    expr_pointer expression;
+    statement_pointer body;
 
-    node_while_statement(node_expr_pointer expression_, node_statement_pointer body_)
+    node_while_statement(expr_pointer expression_, statement_pointer body_)
     : expression(expression_), body(body_) {}
 };
 
@@ -321,13 +319,13 @@ public:
  */
 class node_return_statement : public node_statement {
 public:
-	/**
-	 * :field expression: Expression to return. Can be NULL.
-	 */
-    node_expr_pointer expression;
+    /**
+     * :field expression: Expression to return. Can be NULL.
+     */
+    expr_pointer expression;
 
     node_return_statement() : expression(NULL) {}
-    node_return_statement(node_expr_pointer expression_) : expression(expression_) {}
+    node_return_statement(expr_pointer expression_) : expression(expression_) {}
 };
 
 /**
@@ -350,10 +348,10 @@ class node_skip_statement : public node_statement {};
  */
 class node_int_literal : public node_literal {
 public:
-	/**
-	 * :field value: Value of the integer literal
-	 */
-	long long value;
+    /**
+     * :field value: Value of the integer literal
+     */
+    long long value;
 
     node_int_literal(long long value_) : value(value_) {}
 };
@@ -363,9 +361,9 @@ public:
  */
 class node_float_literal : public node_literal {
 public:
-	/**
-	 * :field value: Value of the float literal
-	 */
+    /**
+     * :field value: Value of the float literal
+     */
     double value;
 
     node_float_literal(double value_) : value(value_) {}
@@ -376,10 +374,10 @@ public:
  */
 class node_bool_literal : public node_literal {
 public:
-	/**
-	 * :field value: Value of the bool literal
-	 */
-	bool value;
+    /**
+     * :field value: Value of the bool literal
+     */
+    bool value;
 
     node_bool_literal(bool value_) : value(value_) {}
 };
@@ -389,9 +387,9 @@ public:
  */
 class node_string_literal : public node_literal {
 public:
-	/**
-	 * :field value: Value of the string literal
-	 */
+    /**
+     * :field value: Value of the string literal
+     */
     std::string value;
 
     node_string_literal(std::string value_) : value(value_) { }
@@ -402,17 +400,17 @@ public:
  */
 class node_binary_operation_expr : public node_expr {
 public:
-	/**
-	 * :field oper: Operator of the operation
-	 * :field left: Left expression of the operation
-	 * :field right: Right expression of the operation
-	 */
+    /**
+     * :field oper: Operator of the operation
+     * :field left: Left expression of the operation
+     * :field right: Right expression of the operation
+     */
     Oper oper;
-    node_expr_pointer left;
-    node_expr_pointer right;
+    expr_pointer left;
+    expr_pointer right;
 
-    node_binary_operation_expr(Oper oper_, node_expr_pointer left_, node_expr_pointer right_) :
-    	oper(oper_), left(left_), right(right_) {}
+    node_binary_operation_expr(Oper oper_, expr_pointer left_, expr_pointer right_) :
+        oper(oper_), left(left_), right(right_) {}
 };
 
 /**
@@ -420,16 +418,16 @@ public:
  */
 class node_location : public node_expr {
 public:
-	/**
-	 * :field ids: List of ids references in the location. Can be of size 1.
-	 * :field array_idx_expr: Expression to evaluate to get the index if the location is an array. Can be NULL.
-	 */
-	reference_list ids;
-    node_expr_pointer array_idx_expr;
+    /**
+     * :field ids: List of ids references in the location. Can be of size 1.
+     * :field array_idx_expr: Expression to evaluate to get the index if the location is an array. Can be NULL.
+     */
+    reference_list ids;
+    expr_pointer array_idx_expr;
 
     node_location(reference_list ids_) : ids(ids_), array_idx_expr(NULL) {}
-    node_location(reference_list ids_, node_expr_pointer array_idx_expr_) :
-    	ids(ids_), array_idx_expr(array_idx_expr_) {}
+    node_location(reference_list ids_, expr_pointer array_idx_expr_) :
+        ids(ids_), array_idx_expr(array_idx_expr_) {}
 };
 
 /**
@@ -437,12 +435,12 @@ public:
  */
 class node_negate_expr : public node_expr {
 public:
-	/**
-	 * :field expression: Expression to apply logical negation
-	 */
-    node_expr_pointer expression;
+    /**
+     * :field expression: Expression to apply logical negation
+     */
+    expr_pointer expression;
 
-    node_negate_expr(node_expr_pointer expression_) : expression(expression_) {}
+    node_negate_expr(expr_pointer expression_) : expression(expression_) {}
 };
 
 /**
@@ -450,12 +448,12 @@ public:
  */
 class node_negative_expr : public node_expr {
 public:
-	/**
-	 * :field expression: Expression to apply the numerical negative
-	 */
-    node_expr_pointer expression;
+    /**
+     * :field expression: Expression to apply the numerical negative
+     */
+    expr_pointer expression;
 
-    node_negative_expr(node_expr_pointer expression_) : expression(expression_) {}
+    node_negative_expr(expr_pointer expression_) : expression(expression_) {}
 };
 
 /**
@@ -463,12 +461,12 @@ public:
  */
 class node_parentheses_expr : public node_expr {
 public:
-	/**
-	 * :field expression: Expression between the parentheses.
-	 */
-    node_expr_pointer expression;
+    /**
+     * :field expression: Expression between the parentheses.
+     */
+    expr_pointer expression;
 
-    node_parentheses_expr(node_expr_pointer expression_) : expression(expression_) { }
+    node_parentheses_expr(expr_pointer expression_) : expression(expression_) { }
 };
 
 #endif

@@ -1,14 +1,12 @@
 %{
 #include <iostream>
-#include <stdlib.h>
+#include <string>
+#include <cstdlib>
 #include "../src/node.h"
 #include "parser.hpp"
 
 int line_num = 1;
 %}
-/* "The scanner calls noyywrap on end of file, so you can point it to
-    another file and continue scanning its contents". No lo necesitamos.  */
-%option noyywrap
 
 digit [0-9]
 comments \/\/.*|\/\*(.|\\n)*\*\/
@@ -36,7 +34,7 @@ while                       return WHILE;
 return                      return RETURN;
 break                       return BREAK;
 continue                    return CONTINUE;
-\"(.|\\n)*\"                yylval.l_str = new std::string(yytext, yyleng);return L_STR;
+\"(.|\\n)*\"                yylval.l_str = new std::string(yytext, yyleng); return L_STR;
 =                           return '=';
 \+=                         return PLUS_ASSIGN;
 \-=                         return MINUS_ASSIGN;
@@ -45,8 +43,8 @@ continue                    return CONTINUE;
 \*                          return '*';
 \/                          return '/';
 %                           return '%';
-\<							return '<';
-\>							return '>';
+\<                          return '<';
+\>                          return '>';
 ==                          return EQUAL;
 !=                          return DISTINCT;
 \<=                         return LESS_EQUAL;
@@ -62,10 +60,9 @@ continue                    return CONTINUE;
 \(                          return '(';
 \)                          return ')';
 !                           return '!';
-\.							return '.';
+\.                          return '.';
 {alpha}{alpha_num}*         yylval.id = new std::string(yytext, yyleng); return ID;
-\n							{ ++line_num; }
+\n                          { ++line_num; }
 .                           std::cout << "Unknown character!\n"; yyterminate();
+
 %%
-
-

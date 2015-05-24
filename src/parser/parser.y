@@ -1,4 +1,5 @@
 %{
+#include <memory>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -9,31 +10,33 @@ extern FILE *yyin;
 extern int line_num;
 void yyerror(const char *s);
 
-node_program* ast; // Pointer to the AST
+program_pointer ast; // Pointer to the AST
 %}
 
 %union {
-    node_program *program;
-    node_class_decl *class_decl;
-    std::vector<node_class_block*> class_block;
-    node_field_decl *field_decl;
-    node_method_decl *method_decl;
-    std::vector<node_typed_identifier*> params;
-    node_ids *ids;
-    node_body *body;
-    node_block *block;
-    node_statement *statement;
-    std::vector<node_statement*> statements;
-    std::vector<std::string*> ids_reference;
-    std::vector<node_expr*> expr_params;
-    node_literal *literal;
-    node_expr *expr;
+    node_program* program;
+    node_class_decl* class_decl;
+    class_block_list* class_block;
+    node_field_decl* field_decl;
+    node_method_decl* method_decl;
+    parameter_list* params;
+    id_list* ids;
+    node_body* body;
+    node_block* block;
+    node_statement* statement;
+    statement_list* statements;
+    reference_list* ids_reference;
+    expression_list* expr_params;
+    node_expr* expr;
+    node_location* location;
     bool l_bool;
-	int l_int;
-	float l_float;
-    std::string type;
-	std::string l_str;
-	std::string id;
+    int l_int;
+    float l_float;
+    std::string* l_str;
+    Type* type;
+    AssignOper* assign;
+    Oper* oper;
+    std::string* id;
     int token; // Type of token identifier
 }
 
@@ -43,11 +46,11 @@ node_program* ast; // Pointer to the AST
 %token <l_str> L_STR
 %token <id> ID
 
-%token '+'
-%token <token> CLASS VOID EXTERN INT FLOAT BOOLEAN
+%token <token> CLASS VOID EXTERN
 %token <token> IF ELSE FOR WHILE RETURN BREAK CONTINUE
-%token <token> PLUS_ASSIGN MINUS_ASSIGN LESS_EQUAL GREATER_EQUAL
-%token <token> EQUAL DISTINCT AND OR
+%token <type> INT FLOAT BOOLEAN
+%token <oper> LESS_EQUAL GREATER_EQUAL EQUAL DISTINCT AND OR
+%token <assign> '=' PLUS_ASSIGN MINUS_ASSIGN
 
 %type <program> program
 %type <class_decl> class_decl
@@ -56,7 +59,7 @@ node_program* ast; // Pointer to the AST
 %type <method_decl> method_decl
 %type <ids> ids
 %type <type> type void
-%type <token> assign_op
+%type <assign> assign_op
 %type <params> params
 %type <body> body
 %type <block> block
@@ -64,7 +67,8 @@ node_program* ast; // Pointer to the AST
 %type <statement> statement
 %type <ids_reference> ids_reference
 %type <expr_params> expr_params
-%type <expr> expr location method_call literal bin_op
+%type <expr> expr method_call literal bin_op
+%type <location> location
 
 %nonassoc IFX
 %nonassoc ELSE
@@ -76,165 +80,184 @@ node_program* ast; // Pointer to the AST
 %left '+' '-'
 %left '*' '/' '%'
 %right '!'
-%left NEGATIVE
+%right NEGATIVE
 
 %start program
 
 %%
 program
-	: program class_decl    {$1->classes.push_back($2);
-                             $$ = $1;}
-	| class_decl            {$$ = new node_program($1);
-                             ast = $$;}
-	;
+    : program class_decl    {$1->classes.push_back(class_pointer($2));
+                              $$ = $1;}
+    | class_decl            {ast = program_pointer(new node_program(class_pointer($1)));}
+    ;
 
 class_decl
-	: CLASS ID '{' class_block '}' {$$ = new node_class_decl(*$2, $4);}
-	;
+    : CLASS ID '{' class_block '}'    {$$ = new node_class_decl(*$2, *$4); delete $2; delete $4;}
+    ;
 
 class_block
-	:                              {$$ = new std::vector<node_class_block*>();}
-	| class_block field_decl       {$1->push_back($2); $$ = $1;}
-	| class_block method_decl      {$1->push_back($2); $$ = $1;}
-	;
+    :                                 {$$ = new class_block_list();}
+    | class_block field_decl          {$1->push_back(field_pointer($2)); $$ = $1;}
+    | class_block method_decl         {$1->push_back(method_pointer($2)); $$ = $1;}
+    ;
 
 field_decl
-	: type ids ';'                 {$$ = new node_field_decl($1, $2);}
-	;
+    : type ids ';'                    {$$ = new node_field_decl(*$1, *$2); delete $1; delete $2;}
+    ;
 
 ids
-	: ids ',' ID                   {$1->ids->push_back($3); $$ = $1;}
-	| ID                           {$$ = new node_ids($1);}
-	| ids ',' ID '[' L_INT ']'     {$1->ids->push_back($3); $1->index = $5; $$ = $1;}
-	| ID '[' L_INT ']'             {$$ = new node_ids($1, $3);}
-	;
+    : ids ',' ID                       {$1->push_back(id_pointer(new node_id(*$3))); delete $3; $$ = $1;}
+    | ID                               {$$ = new id_list();
+                                        $$->push_back(id_pointer(new node_id(*$1))); delete $1;}
+    | ids ',' ID '[' L_INT ']'         {$1->push_back(id_pointer(new node_id(*$3, $5))); delete $3; $$ = $1;}
+    | ID '[' L_INT ']'                 {$$ = new id_list();
+                                        $$->push_back(id_pointer(new node_id(*$1, $3))); delete $1;}
+    ;
 
 method_decl
-	: type ID '(' params ')' body    {$$ = new node_method_decl($1, $2, $4, $6);}
-	| void ID '(' params ')' body    {$$ = new node_method_decl($1, $2, $4, $6);}
-    | type ID '(' ')' body           {$$ = new node_method_decl($1, $2, NULL, $5);}
-    | void ID '(' ')' body           {$$ = new node_method_decl($1, $2, NULL, $5);}
-	;
+    : type ID '(' params ')' body    {$$ = new node_method_decl(*$1, *$2, *$4, body_pointer($6));
+                                       delete $1; delete $2; delete $4;}
+    | void ID '(' params ')' body    {$$ = new node_method_decl(*$1, *$2, *$4, body_pointer($6));
+                                       delete $1; delete $2; delete $4;}
+    | type ID '(' ')' body           {$$ = new node_method_decl(*$1, *$2, parameter_list(), body_pointer($5));
+                                       delete $1; delete $2;}
+    | void ID '(' ')' body           {$$ = new node_method_decl(*$1, *$2, parameter_list(), body_pointer($5));
+                                       delete $1; delete $2;}
+    ;
 
 void
-	: VOID							 {$$ = new std::string("void");}
-	;
+    : VOID                             {$$ = new Type(Type::VOID);}
+    ;
 
 type
-	: INT                                   {$$ = new std::string("int");}
-    | FLOAT                                 {$$ = new std::string("float");}
-    | BOOLEAN                               {$$ = new std::string("boolean");}
-    | ID                                    {$$ = $<type>1;}
-	;
+    : INT                              {$$ = new Type(Type::INTEGER);}
+    | FLOAT                            {$$ = new Type(Type::FLOAT);}
+    | BOOLEAN                          {$$ = new Type(Type::BOOLEAN);}
+    | ID                               {$$ = new Type(Type::ID); /* TODO: Check how to return the symbol index */}
+    ;
 
 params
-	: params ',' type ID            {$1->push_back(new node_typed_identifier($3, $4));
-                                     $$ = $1;}
-	| type ID                       {$$ = new std::vector<node_typed_identifier*> 
-                                          ();
-                                    $$->push_back(new node_typed_identifier($1, $2));}
-	;
+    : params ',' type ID            {$1->push_back(parameter_pointer(new node_parameter_identifier(*$3, *$4)));
+                                      $$ = $1; delete $3; delete $4;}
+    | type ID                       {$$ = new parameter_list();
+                                      $$->push_back(parameter_pointer(new node_parameter_identifier(*$1, *$2)));
+                                      delete $1; delete $2;}
+    ;
 
 body
-	: block                         {$$ = new node_body($1);}
-	| EXTERN ';'                    {$$ = new node_body();}
-	;
+    : block                         {$$ = new node_body(block_pointer($1));}
+    | EXTERN ';'                    {$$ = new node_body();}
+    ;
 
 block
-	: '{' statements '}'            {$$ = new node_block($2);}
-	;
+    : '{' statements '}'            {$$ = new node_block(*($2)); delete $2;}
+    ;
 
 statements
-	: 	             		{$$ = new std::vector<node_statement*>();}
-	| statements statement	{$1->push_back($2); $$ = $1;}
-	;
+    :                           {$$ = new statement_list();}
+    | statements statement      {$1->push_back(statement_pointer($2)); $$ = $1;}
+    ;
 
 statement
-	: field_decl                                 {$$ = new node_field_decl_statement($1);}
-	| location assign_op expr ';'                {$$ = new node_assignment_statement((node_location*)$1, 
-                                                       $2, $3);}
-	| method_call ';'                            {$$ = new node_method_call_statement((node_method_call*)$1);}
-	| IF '(' expr ')' statement %prec IFX        {$$ = new node_if_statement($3, $5);}
-    | IF '(' expr ')' statement ELSE statement   {$$ = new node_if_statement($3, $5, $7);}
-	| FOR ID '=' expr ',' expr statement         {$$ = new node_for_statement($2, $4, $6, $7);}
-	| WHILE expr statement                       {$$ = new node_while_statement($2, $3);}
-	| RETURN expr ';'                            {$$ = new node_return_statement($2);}
+    : field_decl                                 {$$ = $1;}
+    | location assign_op expr ';'                {$$ = new node_assignment_statement(location_pointer($1),
+                                                   *$2, expr_pointer($3)); delete $2;}
+    | method_call ';'                            {$$ = $1;}
+    | IF '(' expr ')' statement %prec IFX        {$$ = new node_if_statement(expr_pointer($3), statement_pointer($5));}
+    | IF '(' expr ')' statement ELSE statement   {$$ = new node_if_statement(expr_pointer($3), statement_pointer($5),
+                                                   statement_pointer($7));}
+    | FOR ID '=' expr ',' expr statement         {$$ = new node_for_statement(*$2, expr_pointer($4), expr_pointer($6),
+                                                   statement_pointer($7)); delete $2;}
+    | WHILE expr statement                       {$$ = new node_while_statement(expr_pointer($2), statement_pointer($3));}
+    | RETURN expr ';'                            {$$ = new node_return_statement(expr_pointer($2));}
     | RETURN ';'                                 {$$ = new node_return_statement();}
-	| BREAK ';'                                  {$$ = new node_break_statement();}
-	| CONTINUE ';'                               {$$ = new node_continue_statement();}
-	| ';'                                        {$$ = new node_skip_statement();}
-	| block                                      {$$ = new node_block_statement($1);}
-	;
+    | BREAK ';'                                  {$$ = new node_break_statement();}
+    | CONTINUE ';'                               {$$ = new node_continue_statement();}
+    | ';'                                        {$$ = new node_skip_statement();}
+    | block                                      {$$ = $1;}
+    ;
 
 assign_op
-	: '='                                   {$$ = $<token>1;}
-    | PLUS_ASSIGN 
-    | MINUS_ASSIGN
-	;
+    : '='                                   {$$ = new AssignOper(AssignOper::ASSIGN);}
+    | PLUS_ASSIGN                           {$$ = new AssignOper(AssignOper::PLUS_ASSIGN);}
+    | MINUS_ASSIGN                          {$$ = new AssignOper(AssignOper::MINUS_ASSIGN);}
+    ;
 
 method_call
-	: ID ids_reference '(' expr_params ')'  {$2->insert($2->begin(), $1);
-                                             $$ = new node_method_call($2, $4);}
-	| ID ids_reference '(' ')'              {$2->insert($2->begin(), $1);
-                                             $$ = new node_method_call($2);}
-	;
+    : ID ids_reference '(' expr_params ')'  {$2->insert($2->begin(), *$1); $$ = new node_method_call(*$2, *$4);
+                                              delete $1; delete $2; delete $4;}
+    | ID ids_reference '(' ')'              {$2->insert($2->begin(), *$1); $$ = new node_method_call(*$2);
+                                              delete $1; delete $2;}
+    ;
 
 location
-	: ID ids_reference                      {$2->insert($2->begin(), $1);
-                                             $$ = new node_location($2);}
-	| ID ids_reference '[' expr ']'         {$2->insert($2->begin(), $1);
-                                             $$ = new node_location($2, $4);}
-	;
+    : ID ids_reference                      {$2->insert($2->begin(), *$1); $$ = new node_location(*$2);
+                                              delete $1; delete $2;}
+    | ID ids_reference '[' expr ']'         {$2->insert($2->begin(), *$1); $$ = new node_location(*$2, expr_pointer($4));
+                                              delete $1; delete $2;}
+    ;
 
 ids_reference
-	:                                       {$$ = new std::vector<std::string*>();}
-	| ids_reference '.' ID                  {$1->push_back($3); $$ = $1;}
-	;
+    :                                       {$$ = new reference_list();}
+    | ids_reference '.' ID                  {$1->push_back(*$3); $$ = $1; delete $3;}
+    ;
 
 expr
-	: location
-	| method_call
-	| literal
-	| bin_op
-	| '-' expr %prec NEGATIVE               {$$ = new node_minus_expr($2);}
-	| '!' expr                              {$$ = new node_negate_expr($2);}
-	| '(' expr ')'                          {$$ = new node_parenthesis_expr($2);}
-	;
+    : location                              {$$ = $1;}
+    | method_call                           {$$ = $1;}
+    | literal                               {$$ = $1;}
+    | bin_op                                {$$ = $1;}
+    | '-' expr %prec NEGATIVE               {$$ = new node_negative_expr(expr_pointer($2));}
+    | '!' expr                              {$$ = new node_negate_expr(expr_pointer($2));}
+    | '(' expr ')'                          {$$ = new node_parentheses_expr(expr_pointer($2));}
+    ;
 
 expr_params
-	: expr_params ',' expr                  {$1->push_back($3); $$ = $1;}
-	| expr                                  {$$ = new std::vector<node_expr*> ();
-                                             $$->push_back($1);}
-	;
+    : expr_params ',' expr                  {$1->push_back(expr_pointer($3)); $$ = $1;}
+    | expr                                  {$$ = new expression_list(); $$->push_back(expr_pointer($1));}
+    ;
 
 bin_op
-    : expr '+' expr				{$$ = new node_binary_operation_expr(std::string("+"), $1, $3);}
-    | expr '-' expr             {$$ = new node_binary_operation_expr(std::string("-"), $1, $3);}
-    | expr '*' expr             {$$ = new node_binary_operation_expr(std::string("*"), $1, $3);}
-    | expr '/' expr             {$$ = new node_binary_operation_expr(std::string("/"), $1, $3);}
-    | expr '%' expr             {$$ = new node_binary_operation_expr(std::string("%"), $1, $3);}
-	| expr '<' expr             {$$ = new node_binary_operation_expr(std::string("<"), $1, $3);}
-    | expr '>' expr             {$$ = new node_binary_operation_expr(std::string(">"), $1, $3);}
-    | expr LESS_EQUAL expr      {$$ = new node_binary_operation_expr(std::string("<="), $1, $3);}
-    | expr GREATER_EQUAL expr	{$$ = new node_binary_operation_expr(std::string(">="), $1, $3);}
-    | expr EQUAL expr           {$$ = new node_binary_operation_expr(std::string("=="), $1, $3);}
-    | expr DISTINCT expr        {$$ = new node_binary_operation_expr(std::string("!="), $1, $3);}
-    | expr AND expr             {$$ = new node_binary_operation_expr(std::string("&&"), $1, $3);}
-    | expr OR expr              {$$ = new node_binary_operation_expr(std::string("||"), $1, $3);}
-	;
+    : expr '+' expr             {$$ = new node_binary_operation_expr(Oper::PLUS,
+                                  expr_pointer($1), expr_pointer($3));}
+    | expr '-' expr             {$$ = new node_binary_operation_expr(Oper::MINUS,
+                                  expr_pointer($1), expr_pointer($3));}
+    | expr '*' expr             {$$ = new node_binary_operation_expr(Oper::TIMES, 
+                                  expr_pointer($1), expr_pointer($3));}
+    | expr '/' expr             {$$ = new node_binary_operation_expr(Oper::DIVIDE, 
+                                  expr_pointer($1), expr_pointer($3));}
+    | expr '%' expr             {$$ = new node_binary_operation_expr(Oper::MOD,
+                                  expr_pointer($1), expr_pointer($3));}
+    | expr '<' expr             {$$ = new node_binary_operation_expr(Oper::LESS,
+                                  expr_pointer($1), expr_pointer($3));}
+    | expr '>' expr             {$$ = new node_binary_operation_expr(Oper::GREATER,
+                                  expr_pointer($1), expr_pointer($3));}
+    | expr LESS_EQUAL expr      {$$ = new node_binary_operation_expr(Oper::LESS_EQUAL,
+                                  expr_pointer($1), expr_pointer($3));}
+    | expr GREATER_EQUAL expr   {$$ = new node_binary_operation_expr(Oper::GREATER_EQUAL, 
+                                  expr_pointer($1), expr_pointer($3));}
+    | expr EQUAL expr           {$$ = new node_binary_operation_expr(Oper::EQUAL,
+                                  expr_pointer($1), expr_pointer($3));}
+    | expr DISTINCT expr        {$$ = new node_binary_operation_expr(Oper::DISTINCT,
+                                  expr_pointer($1), expr_pointer($3));}
+    | expr AND expr             {$$ = new node_binary_operation_expr(Oper::AND,
+                                  expr_pointer($1), expr_pointer($3));}
+    | expr OR expr              {$$ = new node_binary_operation_expr(Oper::OR,
+                                  expr_pointer($1), expr_pointer($3));}
+    ;
 
 literal
-	: L_INT                     {$$ = new node_int_literal($1);}
-	| L_FLOAT                   {$$ = new node_float_literal($1);}
-	| L_BOOL                    {$$ = new node_bool_literal($1);}
-	| L_STR                     {$$ = new node_string_literal($1);}
-	;
+    : L_INT                     {$$ = new node_int_literal($1);}
+    | L_FLOAT                   {$$ = new node_float_literal($1);}
+    | L_BOOL                    {$$ = new node_bool_literal($1);}
+    | L_STR                     {$$ = new node_string_literal(*$1); delete $1;}
+    ;
 
 %%
 
 void yyerror(const char *s) {
-	std::cout << "Parse error on line " << line_num << "! Message: " << s << std::endl;
+    std::cout << "Parse error on line " << line_num << "! Message: " << s << std::endl;
 
-	// might as well halt now:
-	exit(EXIT_FAILURE);
+    // might as well halt now:
+    exit(EXIT_FAILURE);
 }
