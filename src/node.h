@@ -9,15 +9,16 @@
 // Helper enumeration classes /////////////////////////////////////////////////
 /**
  * Structure to save the type of a method or location. In case the type is "ID" the
- * tuple also stores the id (TODO: Add index to symbol table?)
+ * tuple also stores the id
  */
 struct Type {
-	enum _Type {  INTEGER, BOOLEAN, FLOAT, VOID, ID };
-	_Type type;
-	std::string id;
+    enum _Type {  INTEGER, BOOLEAN, FLOAT, VOID, ID };
+    _Type type;
+    std::string id;
+    int id_idx = 0; // TODO: Set the index to the symbol table
 
-	Type(_Type type_) : type(type_) {}
-	Type(_Type type_, std::string id_) : type(type_), id(id_) {}
+    Type(_Type type_) : type(type_) {}
+    Type(_Type type_, std::string id_) : type(type_), id(id_) {}
 };
 enum class Oper { PLUS, MINUS, TIMES, DIVIDE, MOD, LESS, GREATER, LESS_EQUAL,
                   GREATER_EQUAL, EQUAL, DISTINCT, AND, OR };
@@ -31,10 +32,10 @@ class node {
 public:
     virtual ~node() {}
 };
-class node_class_block	: public node {};
-class node_statement	: public node {};
-class node_expr			: public node_statement {};
-class node_literal		: public node_expr {};
+class node_class_block  : public node {};
+class node_statement    : public node {};
+class node_expr         : public node_statement {};
+class node_literal      : public node_expr {};
 
 // Classes prototypes /////////////////////////////////////////////////////////
 class node_program;
@@ -65,44 +66,44 @@ class node_negative_expr;
 class node_parentheses_expr;
 
 // Smart pointers wrappers ////////////////////////////////////////////////////
-typedef std::shared_ptr<node_class_block> 			class_block_pointer;
-typedef std::shared_ptr<node_statement> 			statement_pointer;
-typedef std::shared_ptr<node_expr> 					expr_pointer;
-typedef std::unique_ptr<node_program> 				program_pointer;
-typedef std::shared_ptr<node_class_decl> 			class_pointer;
-typedef std::shared_ptr<node_id> 					id_pointer;
-typedef std::shared_ptr<node_field_decl> 			field_pointer;
-typedef std::shared_ptr<node_method_decl> 			method_pointer;
-typedef std::shared_ptr<node_parameter_identifier> 	parameter_pointer;
-typedef std::shared_ptr<node_body> 					body_pointer;
-typedef std::shared_ptr<node_block> 				block_pointer;
-typedef std::shared_ptr<node_assignment_statement> 	assignment_pointer;
-typedef std::shared_ptr<node_method_call> 			method_call_pointer;
-typedef std::shared_ptr<node_if_statement> 			if_pointer;
-typedef std::shared_ptr<node_for_statement> 		for_pointer;
-typedef std::shared_ptr<node_while_statement> 		while_pointer;
-typedef std::shared_ptr<node_return_statement> 		return_pointer;
-typedef std::shared_ptr<node_break_statement> 		break_pointer;
-typedef std::shared_ptr<node_continue_statement> 	continue_pointer;
-typedef std::shared_ptr<node_skip_statement> 		skip_pointer;
-typedef std::shared_ptr<node_int_literal> 			int_pointer;
-typedef std::shared_ptr<node_float_literal> 		float_pointer;
-typedef std::shared_ptr<node_bool_literal> 			bool_pointer;
-typedef std::shared_ptr<node_string_literal> 		string_pointer;
-typedef std::shared_ptr<node_binary_operation_expr> binary_operation_pointer;
-typedef std::shared_ptr<node_location> 				location_pointer;
-typedef std::shared_ptr<node_negate_expr> 			negate_expr_pointer;
-typedef std::shared_ptr<node_negative_expr> 		negative_expr_pointer;
-typedef std::shared_ptr<node_parentheses_expr> 		parentheses_expr_pointer;
+typedef std::shared_ptr<node_class_block>             class_block_pointer;
+typedef std::shared_ptr<node_statement>               statement_pointer;
+typedef std::shared_ptr<node_expr>                    expr_pointer;
+typedef std::unique_ptr<node_program>                 program_pointer;
+typedef std::shared_ptr<node_class_decl>              class_pointer;
+typedef std::shared_ptr<node_id>                      id_pointer;
+typedef std::shared_ptr<node_field_decl>              field_pointer;
+typedef std::shared_ptr<node_method_decl>             method_pointer;
+typedef std::shared_ptr<node_parameter_identifier>    parameter_pointer;
+typedef std::shared_ptr<node_body>                    body_pointer;
+typedef std::shared_ptr<node_block>                   block_pointer;
+typedef std::shared_ptr<node_assignment_statement>    assignment_pointer;
+typedef std::shared_ptr<node_method_call>             method_call_pointer;
+typedef std::shared_ptr<node_if_statement>            if_pointer;
+typedef std::shared_ptr<node_for_statement>           for_pointer;
+typedef std::shared_ptr<node_while_statement>         while_pointer;
+typedef std::shared_ptr<node_return_statement>        return_pointer;
+typedef std::shared_ptr<node_break_statement>         break_pointer;
+typedef std::shared_ptr<node_continue_statement>      continue_pointer;
+typedef std::shared_ptr<node_skip_statement>          skip_pointer;
+typedef std::shared_ptr<node_int_literal>             int_pointer;
+typedef std::shared_ptr<node_float_literal>           float_pointer;
+typedef std::shared_ptr<node_bool_literal>            bool_pointer;
+typedef std::shared_ptr<node_string_literal>          string_pointer;
+typedef std::shared_ptr<node_binary_operation_expr>   binary_operation_pointer;
+typedef std::shared_ptr<node_location>                location_pointer;
+typedef std::shared_ptr<node_negate_expr>             negate_expr_pointer;
+typedef std::shared_ptr<node_negative_expr>           negative_expr_pointer;
+typedef std::shared_ptr<node_parentheses_expr>        parentheses_expr_pointer;
 
 // List wrappers //////////////////////////////////////////////////////////////
-class classes_list 		: public std::vector<class_pointer> {};
-class class_block_list	: public std::vector<class_block_pointer> {};
-class id_list			: public std::vector<id_pointer> {};
-class parameter_list	: public std::vector<parameter_pointer> {};
-class statement_list	: public std::vector<statement_pointer> {};
-class reference_list	: public std::vector<std::string> {};
-class expression_list	: public std::vector<expr_pointer> {};
+class classes_list      : public std::vector<class_pointer> {};
+class class_block_list  : public std::vector<class_block_pointer> {};
+class id_list           : public std::vector<id_pointer> {};
+class parameter_list    : public std::vector<parameter_pointer> {};
+class statement_list    : public std::vector<statement_pointer> {};
+class reference_list    : public std::vector<std::string> {};
+class expression_list   : public std::vector<expr_pointer> {};
 
 // Classes ////////////////////////////////////////////////////////////////////
 /**
