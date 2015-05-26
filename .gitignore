@@ -90,3 +90,9 @@ bin/*
 
 # XCode
 *.xcodeproj
+
+# Eclipse CDT
+.project
+.cproject
+.settings/
+

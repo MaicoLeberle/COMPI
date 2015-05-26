@@ -1,33 +1,39 @@
 #include <iostream>
+#include <cstdlib>
+#include <cstdio>
 #include "node.h"
 
-extern node_program* ast;
+extern program_pointer ast;
 extern int yyparse();
 extern FILE *yyin;
 
 int main(int argc, const char* argv[]) {
-	// Check if the file name was given
-	if (argc != 2) {
-		std::cout << "Usage: ./compi file" << std::endl;
-		exit(EXIT_FAILURE);
-	}
+    // Check if the file name was given
+    if (argc != 2) {
+        std::cout << "Usage: " << argv[0] << " file" << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
-	// open a file handle to a particular file:
-	FILE *file = fopen(argv[1], "r");
+    // open a file handle to a particular file:
+    FILE *file = fopen(argv[1], "r");
 
-	// make sure it is valid:
-	if (!file) {
-		std::cout << "Invalid file!" << std::endl;
-		return -1;
-	}
+    // make sure it is valid:
+    if (!file) {
+        std::cout << "Invalid file!" << std::endl;
+        return -1;
+    }
 
-	// set flex to read from it instead of defaulting to STDIN:
-	yyin = file;
+    // set flex to read from it instead of defaulting to STDIN:
+    yyin = file;
 
-	// parse through the input until there is no more:
-	do {
-		yyparse();
-	} while (!feof(yyin));
+    // parse through the input until there is no more:
+    do {
+        yyparse();
+    } while (!feof(yyin));
 
-	return 0;
+    fclose(file);
+
+    std::cout << "Main class name: " << ast->classes[0]->id << std::endl;
+
+    return 0;
 }
