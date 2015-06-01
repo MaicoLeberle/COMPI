@@ -21,10 +21,12 @@ private:
         a function. Note that every element in the list
         should be of a basic type.                      */
     std::list<symtable_element>* func_params = NULL;
-    /*  List of attributes if the identifier is a class.
-        This information will be useful when checking
-        method calling.                                 */
-    std::list<pair<std::string, symtable_element> >* class_fields = NULL;
+    /*  List of attributes and methods if the identifier 
+        is a class. Every element in the list should be a
+        valid entry in some symbols table. Therefore, 
+        recursion can be done. This information will be 
+        useful when checking method calling.            */
+    std::list<std::string>* class_fields = NULL;
 
 public:
     /*  The identifier class is deducted from the 
@@ -45,7 +47,7 @@ public:
     symtable_element(id_type t, std::list<symtable_element>* f) :
          c_id(T_FUNCTION), t_id(t), func_params(f) { } 
     /*  Class.                                          */
-    symtable_element(std::string s, std::list<pair<std::string, symtable_element> >* f) :
+    symtable_element(std::string s, std::list<std::string >* f) :
         c_id(T_CLASS), class_fields(f) { }
 
     /*  Getters.                                        */
@@ -54,7 +56,7 @@ public:
     std::string get_class_type () { assert(c_id == T_VAR && t_id == ID); return (*class_type); }
     unsigned int get_dimension { assert(c_id == T_ARRAY); return dim; }
     std::list<symtable_element> get_func_params () { assert(c_id == T_FUNCTION); return (*func_params); }
-    std::list<pair<std::string, symtable_element> > get_class_fields () { assert(c_id == T_CLASS); return (*class_fields); }
+    std::list<std::string> > get_class_fields () { assert(c_id == T_CLASS); return (*class_fields); }
 };
 
 /*  This class represents the symbol table associated 
