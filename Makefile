@@ -15,20 +15,28 @@ ifeq ($(OS),Linux)
 endif
 
 CPPFLAGS+=-lfl -g -std=c++11 -Wno-deprecated-register
+FLAGS=-g -std=c++11 -Wno-deprecated-register
 
 SRC=src
 BUILD=build
-TARGET=bin/compi
-TEST=bin/test
+BIN=bin
+TARGET=$(BIN)/compi
+TEST=$(BIN)/test
 
-MAIN=$(SRC)/main.cpp
+MAINSRC=$(SRC)/main.cpp
 TESTSRC=$(SRC)/test.cpp
-
-LEXER=$(BUILD)/lexer.cpp
-PARSER=$(BUILD)/parser.cpp
-PARSERH=$(BUILD)/parser.hpp
+VISITORSRC=$(SRC)/visitor.cpp
 LEXERSRC=$(SRC)/parser/lexer.l
 PARSERSRC=$(SRC)/parser/parser.y
+
+LEXERC=$(BUILD)/lexer.cpp
+PARSERC=$(BUILD)/parser.cpp
+PARSERH=$(BUILD)/parser.hpp
+
+MAIN=$(BUILD)/main.o
+VISITOR=$(BUILD)/visitor.o
+LEXER=$(BUILD)/lexer.o
+PARSER=$(BUILD)/parser.o
 
 all: compi
 
@@ -37,20 +45,31 @@ compi: $(TARGET)
 test: clean $(TESTSRC)
 	$(TEST)
 
-$(TARGET): $(LEXER)
-	$(CC) -o$(TARGET) $(MAIN) $(LEXER) $(PARSER) $(LDFLAGS) $(CPPFLAGS)
+$(TARGET): $(MAIN) $(VISITOR) $(LEXER) $(PARSER)
+	$(CC) -o$(TARGET) $(MAIN) $(VISITOR) $(LEXER) $(PARSER) $(LDFLAGS) $(CPPFLAGS) $(LINKERFLAGS)
+
+$(MAIN): $(MAINSRC)
+	$(CC) -o$(MAIN) -c $(MAINSRC) $(FLAGS)
+
+$(VISITOR): $(VISITORSRC)
+	$(CC) -o$(VISITOR) -c $(VISITORSRC) $(FLAGS)
 
 $(TESTSRC): $(LEXER)
 	$(CC) -o$(TEST) $(TESTSRC) $(LEXER) $(PARSER) $(LDFLAGS) $(CPPFLAGS)
 
-$(LEXER): $(LEXERSRC) $(PARSERH)
-	$(LEX) -o$(LEXER) $(LEXERSRC)
+$(LEXER): $(LEXERC)
+	$(CC) -o$(LEXER) $(LEXERC) -c $(FLAGS)
+
+$(LEXERC): $(LEXERSRC) $(PARSER)
+	$(LEX) -o$(LEXERC) $(LEXERSRC)
+
+$(PARSER): $(PARSERH)
+	$(CC) -o$(PARSER) $(PARSERC) -c $(FLAGS)
 
 $(PARSERH): $(PARSERSRC)
-	$(YACC) -d -o$(PARSER) $(PARSERSRC)
+	$(YACC) -d -o$(PARSERC) $(PARSERSRC)
 
 clean:
 	rm -f $(SRC)/*~
-	rm -f $(TARGET)
-	rm -f $(LEXER) $(PARSER) $(PARSERH)
-	rm -f $(TEST)
+	rm -rf $(BIN)/*
+	rm -f $(BUILD)/*
