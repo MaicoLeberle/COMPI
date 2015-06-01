@@ -13,6 +13,8 @@ private:
     /*  Identifier type. It always has one.             */
     enum id_type { INTEGER, BOOLEAN, FLOAT, VOID, ID };
     id_type t_id;
+    /*  Identifier type when it is an object.           */
+    std::string class_type;
     /*  Identifier dimension. Only for arrays.          */
     unsigned int dim = 0;
     /*  List of formal arguments if the identifier is 
@@ -23,11 +25,21 @@ private:
 public:
     /*  The identifier class is deducted from the 
         constructor parameters.                         */
-    symtable_element(id_type t) : c_id(T_VAR), t_id(t) { }
-    symtable_element(id_type t, std::list<symtable_element> f) : 
-        c_id(T_FUNCTION), t_id(t), func_params(f) { }
+    /*  Basic type variable.                            */
+    symtable_element(id_type t) :
+        c_id(T_VAR), t_id(t) { }
+    /*  Basic type array.                               */
     symtable_element(id_type t, unsigned int d) : 
         c_id(T_ARRAY), t_id(t), dim(d) { }
+    /*  Object.                                         */
+    symtable_element(std::string s) : 
+        c_id(T_VAR), t_id(ID), class_type(s) { }  
+    /*  Objects array.                                  */
+    symtable_element(std::string s, unsigned int d) :
+        c_id(T_ARRAY), t_id(ID), class_type(s) { }
+    /*  Function.                                       */
+    symtable_element(id_type t, std::list<symtable_element> f) : 
+        c_id(T_FUNCTION), t_id(t), func_params(f) { }
 };
 
 /*  This class represents the symbol table associated 
