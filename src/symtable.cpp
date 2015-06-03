@@ -95,5 +95,3 @@ scopes_list::~scopes_list() {
     if (prev != NULL)
         delete prev;
 }
-
-int main () { std::cout << sizeof(symtable_element) << std::endl;}
