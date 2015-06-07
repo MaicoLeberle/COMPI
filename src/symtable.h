@@ -75,9 +75,19 @@ public:
         Precondition: get_class() == T_FUNCTION.                             */
     std::list<symtable_element>* get_func_params (void);
 
+    /*  Appends (to the end of the list) a new symtable_element to the list 
+        of function parameters.
+        Precondition: get_class() == T_FUNCTION.                             */
+    void put_func_param(symtable_element);
+
     /*  Returns list of class fields and methods identifiers.
         Precondition: get_class() == T_CLASS.                                */
     std::list<symtable_element>* get_class_fields (void);
+
+    /*  Appends (to the end of the list) a new symtable_element to the list
+        of class fields.
+        Precondition: get_class() == T_CLASS.                                */
+    void put_class_field(symtable_element);
 
 private:
     /*  key is meant to store the same key that appears in a symbols table
@@ -106,35 +116,72 @@ private:
         symbols table element is a class).                                   */
     std::list<symtable_element>* class_fields = NULL;
 };
-
+    
 
 /*  This class represents the symbol table associated 
     with the current class/block/function.              */
 class symtable { 
 public:
+    /*  Constructor for a block symtable.                                    */
+    symtable(void);
+
+    /*  Constructor for class or function symtable. First parameter should be 
+        the identifier of the class or function. Second parameter should be
+        TRUE if the current symtable represents a class, and FALSE if it 
+        represents a function.                              
+        Precondition: get_class_type() == (symtable_element::T_FUNCTION || 
+        symtable_element::T_CLASS)                                           */
+    symtable(std::string, bool);
+
     bool elem_exists (std::string);
 
     /*  Precondition: the formal argument given to get should already exist
         in the symtable; i.e., elem_exists(...) == TRUE.                     */
-    symtable_element get(std::string);
+    symtable_element get_elem(std::string);
 
-    void put (std::string, symtable_element);
+    /*  Precondition: the constructor used was symtable(std::string).        */
+    std::string get_id(void);
+
+    /*  Returns TRUE if the identifier has not yet been inserted in this 
+        current symtable. Otherwise, returns FALSE.                          */
+    bool id_exists(std::string);
+
+    /*  Returns TRUE if the symtable_element parameter is of the same type of
+        the class whose symtable is the current one. Otherwise, returns FALSE.
+        Precondition: the constructor used was symtable(std::string, 
+        symtable_element::id_class).                                         */
+    bool is_recursive(symtable_element);
+
+    /*  Returns TRUE if id_exists(...) == FALSE && 
+        is_recursive(...) == FALSE. Otherwise, returns false.                */
+    bool put (std::string, symtable_element); 
 
 private:
+    /*  id will be useful when checking the return type of a function, or 
+        when checking the imposibility of defining an object of some class 
+        type in the definition of that class.                                */
+    std::string* id;
+    bool class_or_function;
     std::map<std::string, symtable_element> hashtable;
 } ;
 
 
 /*  This class represents the stack of symbol tables that conform the current
     scope.                                                                   */
-class scopes_list {
+class symtables_stack {
 private:
     symtable* table;
-    scopes_list *prev;
+    symtables_stack *prev;
 
 public:
+    /*  This enumeration will be used as a way to inform the symtables_stack 
+        user the result of calling put(...).                                 */
+    enum put_results { IS_RECURSIVE
+                     , ID_EXISTS
+                     , INSERTED };
+
     /*  This constructor is meant only for the empty stack.                  */
-    scopes_list(void);
+    symtables_stack(void);
 
     /*  Create a new symbols table related to a block.                       */
     void push_symtable(void);
@@ -143,13 +190,21 @@ public:
         PRECONDITION: get_class_type() == (T_CLASS || T_FUNCTION)            */
     void push_symtable(symtable_element);
 
+    /*  Precondition: There have been more calls to push_symtable(...) than
+        to pop_symtable(); i.e., there is still another symbols table to pop.*/
     void pop_symtable(void);
     
+    /*  Precondition: There have been more calls to push_symtable(...) than
+        to pop_symtable(); i.e., there is still another symbols table to get an
+        element from.*/ 
     symtable_element get (std::string);
 
-    void put(std::string, symtable_element);
+    /*  Precondition: There have been more calls to push_symtable(...) than
+        to pop_symtable(); i.e., there is still another symbols table to put an
+        element to.*/
+    symtables_stack::put_results put(std::string, symtable_element);
 
-    ~scopes_list(void);
+    ~symtables_stack(void);
 };
 
 #endif
