@@ -172,6 +172,7 @@ class symtables_stack {
 private:
     symtable* table;
     symtables_stack *prev;
+    unsigned int length;
 
 public:
     /*  This enumeration will be used as a way to inform the symtables_stack 
@@ -195,14 +196,25 @@ public:
     void pop_symtable(void);
     
     /*  Precondition: There have been more calls to push_symtable(...) than
-        to pop_symtable(); i.e., there is still another symbols table to get an
-        element from.*/ 
+        to pop_symtable(); i.e., there is still another symbols table to get 
+        an element from.                                                     */ 
     symtable_element get (std::string);
 
     /*  Precondition: There have been more calls to push_symtable(...) than
-        to pop_symtable(); i.e., there is still another symbols table to put an
-        element to.*/
+        to pop_symtable(); i.e., there is still another symbols table to put 
+        an element to.                                                       */
     symtables_stack::put_results put(std::string, symtable_element);
+
+    /*  Precondition: The lastly inserted symtable_element in the symbols 
+        tables stack is a function.                                          */
+    symtables_stack::put_results put_func_param(symtable_element);
+
+    /*  Precondition: The lastly inserted symtable_element in the symbols
+        tables stack is a class.                                             */
+    symtables_stack::put_results put_class_field(symtable_element);
+
+    /*  Returns the quantity of symbols tables in the stack.                 */
+    unsigned int get_length(void);
 
     ~symtables_stack(void);
 };

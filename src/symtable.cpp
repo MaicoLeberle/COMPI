@@ -115,11 +115,12 @@ bool symtable::put (std::string key, symtable_element value) {
 
 /*  symtables_stack methods.                                                     */
 
-symtables_stack::symtables_stack(void) : prev(NULL), table(NULL) { }
+symtables_stack::symtables_stack(void) : prev(NULL), table(NULL), length(0) { }
 
 void symtables_stack::push_symtable(void) {
     this->prev = this;
     this->table = new symtable();
+    ++length;
 }
 void symtables_stack::push_symtable(symtable_element s) {
     assert ((s.get_class() == symtable_element::T_CLASS)
@@ -140,6 +141,8 @@ void symtables_stack::push_symtable(symtable_element s) {
 
     for(std::list<symtable_element>::iterator it = l->begin(); it != l->end(); it++) 
         (this->table)->put(it->get_key(), *it);
+
+    ++length;
 }
 
 void symtables_stack::pop_symtable(void) {
@@ -152,6 +155,7 @@ void symtables_stack::pop_symtable(void) {
         (this->table) = (this->prev)->table;
         (this->prev) = (this->prev)->prev;
     }
+    --length;
 }
 
 
@@ -177,6 +181,10 @@ symtables_stack::put_results symtables_stack::put(std::string key, symtable_elem
         return symtables_stack::ID_EXISTS;
     if ((this->table)->is_recursive(value))
         return symtables_stack::IS_RECURSIVE;
+}
+
+unsigned int symtables_stack::get_length() {
+    return (this->length);
 }
 
 symtables_stack::~symtables_stack() {
