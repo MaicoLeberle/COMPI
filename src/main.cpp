@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include "node.h"
+#include "visitor.h"
 
 extern program_pointer ast;
 extern int yyparse();
@@ -33,7 +34,9 @@ int main(int argc, const char* argv[]) {
 
     fclose(file);
 
-    std::cout << "Main class name: " << ast->classes[0]->id << std::endl;
+    visitor v1;
+
+    ast->accept(v1);
 
     return 0;
 }
