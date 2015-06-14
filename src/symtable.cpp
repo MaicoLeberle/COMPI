@@ -29,6 +29,10 @@ symtable_element::symtable_element(std::string k, id_type t, std::list<symtable_
 symtable_element::symtable_element(std::string k, std::list<symtable_element>* f) :
     key(k), c_id(T_CLASS), class_fields(f), class_type (k) { }
 
+symtable_element::symtable_element(symtable_element* from) :
+    key(from->get_key()), c_id(from->get_class()), t_id(from->get_type()), class_type(from->get_class_type())
+  , dim(from->get_dimension()), func_params(from->get_func_params()), class_fields(from->get_class_fields()) { }
+
 std::string symtable_element::get_key() {
     return (this->key);
 }
@@ -84,9 +88,9 @@ bool symtable::elem_exists (std::string key) {
     return (hashtable.find(key) != hashtable.end());
 }
 
-symtable_element symtable::get_elem(std::string key) {
+symtable_element* symtable::get_elem(std::string key) {
     assert(elem_exists(key));
-    return ((hashtable.find(key))->second);
+    return (&((hashtable.find(key))->second));
 }
 
 std::string symtable::get_id() {
@@ -113,22 +117,23 @@ bool symtable::put (std::string key, symtable_element value) {
     return true;
 }
 
-/*  symtables_stack methods.                                                     */
+/*  symtables_stack methods.                                                  */
 
-symtables_stack::symtables_stack(void) : prev(NULL), table(NULL), length(0) { }
+symtables_stack::symtables_stack(void) : last_elem(NULL) { }
 
 void symtables_stack::push_symtable(void) {
-    this->prev = this;
-    this->table = new symtable();
-    ++length;
+    symtable* new_table = new symtable();
+    (this->stack).push_front(new_table);
 }
 void symtables_stack::push_symtable(symtable_element s) {
     assert ((s.get_class() == symtable_element::T_CLASS)
          || (s.get_class() == symtable_element::T_FUNCTION));
-    
-    /*  First, a new (block) symbols table must be pushed.                   */
-    this->prev = this;
-    this->table = new symtable(s.get_key()
+
+    /*  First, create the new symbols table. There is no need to insert the 
+        parameter element because it should have been done BEFORE wanting to
+        create a new symbols table to analize this element (be it class or 
+        function).                                                           */
+    symtable* new_table = new symtable(s.get_key()
                             , ((s.get_class() == symtable_element::T_CLASS)? true : false));
 
     /*  Second, each element in the function parameters list or class 
@@ -140,54 +145,82 @@ void symtables_stack::push_symtable(symtable_element s) {
         l = s.get_class_fields();
 
     for(std::list<symtable_element>::iterator it = l->begin(); it != l->end(); it++) 
-        (this->table)->put(it->get_key(), *it);
+        new_table->put(it->get_key(), *it);
 
-    ++length;
+    (this->stack).push_front(new_table);
 }
 
 void symtables_stack::pop_symtable(void) {
-    assert(this->table != NULL);
-    if (this->prev == NULL) {
-        delete (this->table);
-        this->table = NULL;
-    } else {
-        delete (this->table);
-        (this->table) = (this->prev)->table;
-        (this->prev) = (this->prev)->prev;
-    }
-    --length;
+    assert(!this->is_empty());
+    (this->stack).pop_front();
 }
 
 
-symtable_element symtables_stack::get(std::string key) {
-    assert(this->table != NULL);
+symtable_element* symtables_stack::get(std::string key) {
+    assert(!this->is_empty());
+    symtable* current = (this->stack).front();
+
      /*  Must search from the top of the stack and downwards.        */
-    for(symtables_stack *it = this; it != NULL; it = it->prev) 
-        if((it->table)->elem_exists(key))
-            return ((it->table)->get_elem(key));
+    for(std::list<symtable*>::iterator it = (this->stack).begin(); it != (this->stack).end(); ++it) 
+        if((*it)->elem_exists(key))
+            return ((*it)->get_elem(key));
 
     /*  If the key has not been found in any of the symbols 
         tables, then it has not been found in the current scope.     */
-    return (symtable_element(symtable_element::NOT_FOUND));
+    symtable_element* not_found_elem = new symtable_element(symtable_element::NOT_FOUND);
+    return (not_found_elem);
 }
 
-symtables_stack::put_results symtables_stack::put(std::string key, symtable_element value) {
-    assert(this->table != NULL);
+symtables_stack::put_results symtables_stack::put(std::string key, const symtable_element& value) {
+    assert(!this->is_empty());
+
     /*  Always insert a new identifier's information in the top
-        of the stack;i.e., in the symbols table inserted last.       */
-    if((this->table)-> put(key, value))
+        of the stack; i.e., in the symbols table inserted last.       */
+    symtable* current = (this->stack).front();
+
+    if(current-> put(key, value)) {
+        /*  Update last_elem.                                                    */
+        this->last_elem = new symtable_element(value);
         return symtables_stack::INSERTED;
-    if ((this->table)->id_exists(key))
+    }
+
+    /*  If putting the symbol into the symbols table did not succeeded, there
+        are two possible reasons:                                            */
+    if (current->id_exists(key))
         return symtables_stack::ID_EXISTS;
-    if ((this->table)->is_recursive(value))
+    if (current->is_recursive(value))
         return symtables_stack::IS_RECURSIVE;
 }
 
+symtables_stack::put_results symtables_stack::put_func_param(symtable_element value) {
+    assert(this->last_elem);
+
+    if ((this->last_elem)->get_class() != symtable_element::T_FUNCTION)
+        return symtables_stack::NOT_FUNCTION;
+    
+    (this->last_elem)->put_func_param(value);
+    return symtables_stack::INSERTED;
+}
+
+symtables_stack::put_results symtables_stack::put_class_field(symtable_element value) {
+    assert(this->last_elem);
+
+    if ((this->last_elem)->get_class() != symtable_element::T_CLASS)
+        return symtables_stack::NOT_CLASS;
+
+    (this->last_elem)->put_class_field(value);
+    return symtables_stack::INSERTED;
+}
+
 unsigned int symtables_stack::get_length() {
-    return (this->length);
+    return ((this->stack).size());
+}
+
+bool symtables_stack::is_empty() {
+    return ((this->stack).size() == 0);
 }
 
 symtables_stack::~symtables_stack() {
-    if (prev != NULL)
-        delete prev;
+    for (auto c = (this->stack).begin(); c != (this->stack).end(); c++)
+        delete (*c);
 }

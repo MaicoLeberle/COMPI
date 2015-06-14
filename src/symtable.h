@@ -54,6 +54,9 @@ public:
     /*  Class.                                                               */
     symtable_element(std::string, std::list<symtable_element>*);
 
+    /*  Copy constructor.                                                    */
+    symtable_element(symtable_element*);
+
 
     /*  Getters.                                                             */
 
@@ -65,14 +68,13 @@ public:
     /*  Returns the corresponding enum id_type value.                        */
     id_type get_type (void);
 
-    /*  Precondition: get_class() == (T_OBJ || T_OBJ_ARRAY || T_CLASS).      */
+    /*  Returns the class_type value.                                        */ 
     std::string get_class_type (void);
 
-    /*  Precondition: get_class() = (T_ARRAY || T_OBJ_ARRAY).                */
+    /*  Returns the dimension. It will be 0 if it is not an array.           */
     unsigned int get_dimension (void);
 
-    /*  Returns list of function formal parameters identifiers.
-        Precondition: get_class() == T_FUNCTION.                             */
+    /*  Returns list of function formal parameters identifiers.              */
     std::list<symtable_element>* get_func_params (void);
 
     /*  Appends (to the end of the list) a new symtable_element to the list 
@@ -80,8 +82,7 @@ public:
         Precondition: get_class() == T_FUNCTION.                             */
     void put_func_param(symtable_element);
 
-    /*  Returns list of class fields and methods identifiers.
-        Precondition: get_class() == T_CLASS.                                */
+    /*  Returns list of class fields and methods identifiers.                */
     std::list<symtable_element>* get_class_fields (void);
 
     /*  Appends (to the end of the list) a new symtable_element to the list
@@ -137,7 +138,7 @@ public:
 
     /*  Precondition: the formal argument given to get should already exist
         in the symtable; i.e., elem_exists(...) == TRUE.                     */
-    symtable_element get_elem(std::string);
+    symtable_element* get_elem(std::string);
 
     /*  Precondition: the constructor used was symtable(std::string).        */
     std::string get_id(void);
@@ -170,15 +171,18 @@ private:
     scope.                                                                   */
 class symtables_stack {
 private:
-    symtable* table;
-    symtables_stack *prev;
-    unsigned int length;
+    //symtables_stack *prev;
+    //unsigned int length;
+    std::list<symtable*> stack;
+    symtable_element* last_elem;
 
 public:
     /*  This enumeration will be used as a way to inform the symtables_stack 
         user the result of calling put(...).                                 */
     enum put_results { IS_RECURSIVE
                      , ID_EXISTS
+                     , NOT_FUNCTION
+                     , NOT_CLASS 
                      , INSERTED };
 
     /*  This constructor is meant only for the empty stack.                  */
@@ -198,23 +202,31 @@ public:
     /*  Precondition: There have been more calls to push_symtable(...) than
         to pop_symtable(); i.e., there is still another symbols table to get 
         an element from.                                                     */ 
-    symtable_element get (std::string);
+    symtable_element* get (std::string);
 
-    /*  Precondition: There have been more calls to push_symtable(...) than
+    /*  Inserts a new element into the symbols tables stack. This element is 
+        later remembered as the lastly inserted symtable_element.
+        Precondition: There have been more calls to push_symtable(...) than
         to pop_symtable(); i.e., there is still another symbols table to put 
         an element to.                                                       */
-    symtables_stack::put_results put(std::string, symtable_element);
+    symtables_stack::put_results put(std::string, const symtable_element&);
 
-    /*  Precondition: The lastly inserted symtable_element in the symbols 
-        tables stack is a function.                                          */
+    /*  Inserts a new parameter to the lastly inserted symtable_element.
+        Precondition: The lastly inserted symtable_element in the symbols 
+        tables stack is a function.The element's key should be the same as 
+        this function's first parameter.                                     */
     symtables_stack::put_results put_func_param(symtable_element);
 
-    /*  Precondition: The lastly inserted symtable_element in the symbols
-        tables stack is a class.                                             */
+    /*  Inserts a new class field to the lastly inserted symtable_element.
+        Precondition: The lastly inserted symtable_element in the symbols
+        tables stack is a class. The element's key should be the same as this
+        function's first parameter.                                          */
     symtables_stack::put_results put_class_field(symtable_element);
 
     /*  Returns the quantity of symbols tables in the stack.                 */
     unsigned int get_length(void);
+
+    bool is_empty(void);
 
     ~symtables_stack(void);
 };
