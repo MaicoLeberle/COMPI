@@ -21,11 +21,12 @@ SRC=src
 BUILD=build
 BIN=bin
 TARGET=$(BIN)/compi
-TEST=$(BIN)/test
+TEST_SUITE=$(BIN)/test
 
 MAINSRC=$(SRC)/main.cpp
 TESTSRC=$(SRC)/test.cpp
-VISITORSRC=$(SRC)/visitor.cpp
+SEMANTIC_ANALYSISSRC=$(SRC)/semantic_analysis.cpp
+SYMTABLESRC=$(SRC)/symtable.cpp
 LEXERSRC=$(SRC)/parser/lexer.l
 PARSERSRC=$(SRC)/parser/parser.y
 
@@ -34,28 +35,35 @@ PARSERC=$(BUILD)/parser.cpp
 PARSERH=$(BUILD)/parser.hpp
 
 MAIN=$(BUILD)/main.o
-VISITOR=$(BUILD)/visitor.o
+TEST_MAIN=$(BUILD)/test_main.o
+SEMANTIC_ANALYSIS=$(BUILD)/semantic_analysis.o
+SYMTABLE=$(BUILD)/symtable.o
 LEXER=$(BUILD)/lexer.o
 PARSER=$(BUILD)/parser.o
 
-all: compi
+all: compi test_suite
 
 compi: $(TARGET)
 
-test: clean $(TESTSRC)
-	$(TEST)
+test_suite: $(TEST_SUITE)
 
-$(TARGET): $(MAIN) $(VISITOR) $(LEXER) $(PARSER)
-	$(CC) -o$(TARGET) $(MAIN) $(VISITOR) $(LEXER) $(PARSER) $(LDFLAGS) $(CPPFLAGS) $(LINKERFLAGS)
+$(TARGET): $(MAIN) $(SEMANTIC_ANALYSIS) $(SYMTABLE) $(LEXER) $(PARSER)
+	$(CC) -o$(TARGET) $(MAIN) $(SEMANTIC_ANALYSIS) $(SYMTABLE) $(LEXER) $(PARSER) $(LDFLAGS) $(CPPFLAGS) $(LINKERFLAGS)
+
+$(TEST_SUITE): $(TEST_MAIN) $(SEMANTIC_ANALYSIS) $(SYMTABLE) $(LEXER) $(PARSER)
+	$(CC) -o$(TEST_SUITE) $(TEST_MAIN) $(SEMANTIC_ANALYSIS) $(SYMTABLE) $(LEXER) $(PARSER) $(LDFLAGS) $(CPPFLAGS) $(LINKERFLAGS)
+
+$(TEST_MAIN): $(TESTSRC)
+	$(CC) -o$(TEST_MAIN) -c $(TESTSRC) $(FLAGS)
 
 $(MAIN): $(MAINSRC)
 	$(CC) -o$(MAIN) -c $(MAINSRC) $(FLAGS)
+	
+$(SYMTABLE): $(SYMTABLESRC)
+	$(CC) -o$(SYMTABLE) -c $(SYMTABLESRC) $(FLAGS)
 
-$(VISITOR): $(VISITORSRC)
-	$(CC) -o$(VISITOR) -c $(VISITORSRC) $(FLAGS)
-
-$(TESTSRC): $(LEXER)
-	$(CC) -o$(TEST) $(TESTSRC) $(LEXER) $(PARSER) $(LDFLAGS) $(CPPFLAGS)
+$(SEMANTIC_ANALYSIS): $(SEMANTIC_ANALYSISSRC)
+	$(CC) -o$(SEMANTIC_ANALYSIS) -c $(SEMANTIC_ANALYSISSRC) $(FLAGS) -D__DEBUG
 
 $(LEXER): $(LEXERC)
 	$(CC) -o$(LEXER) $(LEXERC) -c $(FLAGS)
