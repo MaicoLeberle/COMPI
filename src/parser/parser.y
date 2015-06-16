@@ -109,9 +109,9 @@ ids
     : ids ',' ID                       {$1->push_back(id_pointer(new node_id(*$3))); delete $3; $$ = $1;}
     | ID                               {$$ = new id_list();
                                         $$->push_back(id_pointer(new node_id(*$1))); delete $1;}
-    | ids ',' ID '[' L_INT ']'         {$1->push_back(id_pointer(new node_id(*$3, $5))); delete $3; $$ = $1;}
+    | ids ',' ID '[' L_INT ']'         {$1->push_back(id_pointer(new node_id(*$3, true, $5))); delete $3; $$ = $1;}
     | ID '[' L_INT ']'                 {$$ = new id_list();
-                                        $$->push_back(id_pointer(new node_id(*$1, $3))); delete $1;}
+                                        $$->push_back(id_pointer(new node_id(*$1, true, $3))); delete $1;}
     ;
 
 method_decl

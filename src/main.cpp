@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include "node.h"
-#include "visitor.h"
+#include "semantic_analysis.h"
 
 extern program_pointer ast;
 extern int yyparse();
@@ -34,7 +34,7 @@ int main(int argc, const char* argv[]) {
 
     fclose(file);
 
-    visitor v1;
+    semantic_analysis v1;
 
     ast->accept(v1);
 
