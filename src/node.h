@@ -30,10 +30,13 @@ enum class AssignOper { ASSIGN, PLUS_ASSIGN, MINUS_ASSIGN };
 class node {
 public:
 	virtual ~node() {}
-	template<typename Visitor>
-	void accept(Visitor& v) {}
+	template<typename visitor>
+	void accept(visitor& v) {}
 };
-class node_class_block  : public node {};
+class node_class_block  : public node {
+public:
+	virtual bool is_node_field_decl(void) {}
+};
 class node_statement    : public node {};
 class node_expr         : public node_statement {};
 class node_literal      : public node_expr {};
@@ -121,8 +124,8 @@ public:
         classes.push_back(class_);
     }
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -142,8 +145,8 @@ public:
     node_class_decl(std::string id_, class_block_list class_block_) :
         id(id_), class_block(class_block_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -155,15 +158,19 @@ class node_id : public node {
 public:
     /**
      * :field id: Identifier name of the field
+     * : field is_array: This id represents an array?
      * :field array_size: If >= 0 the identifier is an array of array_size elements
      */
     std::string id;
+    bool is_array;
     int array_size;
 
-    node_id(std::string id_, int array_size_ = 0) : id(id_), array_size(array_size_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    node_id(std::string id_, bool flag = false, int array_size_ = 0) :
+    	id(id_), is_array(flag), array_size(array_size_) {}
+
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -186,8 +193,12 @@ public:
         assert(type_.type != Type::VOID);
     }
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    bool is_node_field_decl(){
+    	return true;
+    }
+
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -211,8 +222,12 @@ public:
     node_method_decl(Type type_, std::string id_, parameter_list parameters_,
         body_pointer body_) : type(type_), id(id_), parameters(parameters_), body(body_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    bool is_node_field_decl(){
+    	return false;
+    }
+
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -235,8 +250,8 @@ public:
         assert(type_.type != Type::VOID);
     }
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -256,8 +271,8 @@ public:
     node_body(block_pointer block_) : is_extern(false), block(block_) {}
     node_body() : is_extern(true), block(nullptr) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -274,8 +289,8 @@ public:
 
     node_block(statement_list content_) : content(content_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -298,8 +313,8 @@ public:
         AssignOper oper_, expr_pointer expression_) :
         location(location_), oper(oper_), expression(expression_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -320,8 +335,8 @@ public:
     node_method_call(reference_list ids_, expression_list parameters_) :
         ids(ids_), parameters(parameters_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -346,8 +361,8 @@ public:
         statement_pointer else_statement_) :
         expression(expression_), then_statement(then_statement_), else_statement(else_statement_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -372,8 +387,8 @@ public:
         statement_pointer body_) :
         id(id_), from(from_), to(to_), body(body_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -393,8 +408,8 @@ public:
     node_while_statement(expr_pointer expression_, statement_pointer body_)
     : expression(expression_), body(body_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -412,8 +427,8 @@ public:
     node_return_statement() : expression(nullptr) {}
     node_return_statement(expr_pointer expression_) : expression(expression_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -422,8 +437,8 @@ public:
  * Node of a break
  */
 class node_break_statement : public node_statement {
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -432,8 +447,8 @@ class node_break_statement : public node_statement {
  * Node of a continue
  */
 class node_continue_statement : public node_statement {
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -442,8 +457,8 @@ class node_continue_statement : public node_statement {
  * Node of a skip
  */
 class node_skip_statement : public node_statement {
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -460,8 +475,8 @@ public:
 
     node_int_literal(long long value_) : value(value_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -478,8 +493,8 @@ public:
 
     node_float_literal(double value_) : value(value_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -496,8 +511,8 @@ public:
 
     node_bool_literal(bool value_) : value(value_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -514,8 +529,8 @@ public:
 
     node_string_literal(std::string value_) : value(value_) { }
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -537,8 +552,8 @@ public:
     node_binary_operation_expr(Oper oper_, expr_pointer left_, expr_pointer right_) :
         oper(oper_), left(left_), right(right_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -559,8 +574,8 @@ public:
     node_location(reference_list ids_, expr_pointer array_idx_expr_) :
         ids(ids_), array_idx_expr(array_idx_expr_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -577,8 +592,8 @@ public:
 
     node_negate_expr(expr_pointer expression_) : expression(expression_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -595,8 +610,8 @@ public:
 
     node_negative_expr(expr_pointer expression_) : expression(expression_) {}
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
@@ -613,8 +628,8 @@ public:
 
     node_parentheses_expr(expr_pointer expression_) : expression(expression_) { }
 
-    template<typename Visitor>
-	void accept(Visitor& v) {
+    template<typename visitor>
+	void accept(visitor& v) {
     	v.visit(*this);
     }
 };
