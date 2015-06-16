@@ -125,10 +125,32 @@ void semantic_analysis::visit(const node_program& node) {
 	}
 	// {s_tables.get_length() == 1 || s_tables.get_length() == 0}
 	#ifdef __DEBUG
-		unsigned int length = s_tables.get_length();
+		unsigned int length = s_table.get_length();
 		assert(length == 1 || length == 0);
 	#endif
+	/*symtable_element* classA = new symtable_element(...);
+	  s.put(classA);
+	  s.push_symtable(classA);
+	  Si ahora analizamos los elementos de la clase:
+	  s.put_class_field(intX);
+	  s.put(intX);
+	  Método:
+	  s.put_class_field(functionF); //Registrar en la clase que corresponde
+	  s.put(functionF); // Registrar en la tabla de símbolos
+	  s.push_symtable(functioF); // Abro
+	  Para los parámetros:
+	  s.put_func_param(parametro)
+	  s.put(parametro)
+	  Para variables locales del método:
+	  s.put(variable local)
+	  Si encuentro un bloque:
+	  s.push_symtable()
 
+	 * */
+	/* TODO: para analizar locations id1.id2 :
+	 * tomo el id1, lo uso para obtener la instancia. Tomo la instancia,
+	 * y llamo a get_class_fields, y busco ahí los métodos
+	 * */
 	// Rule 3: Every program has one class with name "main".
 	if(node.classes.size() == 0 ||
 	s_table.get(std::string("main"))->get_class() == symtable_element::NOT_FOUND){
