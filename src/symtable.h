@@ -134,8 +134,6 @@ public:
         symtable_element::T_CLASS)                                           */
     symtable(std::string, bool);
 
-    bool elem_exists (std::string);
-
     /*  Precondition: the formal argument given to get should already exist
         in the symtable; i.e., elem_exists(...) == TRUE.                     */
     symtable_element* get_elem(std::string);
@@ -174,16 +172,35 @@ private:
     //symtables_stack *prev;
     //unsigned int length;
     std::list<symtable*> stack;
-    symtable_element* last_elem;
+    symtable_element* last_func;
+    symtable_element* last_class;
 
 public:
     /*  This enumeration will be used as a way to inform the symtables_stack 
         user the result of calling put(...).                                 */
     enum put_results { IS_RECURSIVE
                      , ID_EXISTS
-                     , NOT_FUNCTION
-                     , NOT_CLASS 
-                     , INSERTED };
+                     , ID_PUT };
+    enum put_func_results { NOT_FUNC
+                          , FUNC_EXISTS
+                          , FUNC_PUT
+                          , FUNC_ERROR /* This last value is meant only for
+                                          debugging purposes. */ };
+    enum put_class_results { NOT_CLASS
+                           , CLASS_EXISTS
+                           , CLASS_PUT
+                           , CLASS_ERROR /* This last value is meant only for
+                                          debugging purposes. */ };
+    enum put_param_results { PARAM_PUT
+                          , PARAM_TYPE_ERROR
+                          , NO_PREV_FUNC };
+
+    enum put_field_results { FIELD_PUT
+                          , FIELD_TYPE_ERROR /* Classes cannot be fields of 
+                                                another classes. */
+                          , NO_PREV_CLASS /* A class should be under analysis 
+                                             in order to put a new class 
+                                             field in scope. */ };
 
     /*  This constructor is meant only for the empty stack.                  */
     symtables_stack(void);
@@ -193,40 +210,77 @@ public:
 
     /*  Create a new symbols table related to a function or class.
         PRECONDITION: get_class_type() == (T_CLASS || T_FUNCTION)            */
-    void push_symtable(symtable_element);
+    void push_symtable(symtable_element&);
 
-    /*  Precondition: There have been more calls to push_symtable(...) than
-        to pop_symtable(); i.e., there is still another symbols table to pop.*/
+    /*  Precondition: There have been more calls to push_symtable than
+        to pop_symtable; i.e., there is still another symbols table to pop.*/
     void pop_symtable(void);
     
-    /*  Precondition: There have been more calls to push_symtable(...) than
-        to pop_symtable(); i.e., there is still another symbols table to get 
+    /*  Precondition: There have been more calls to push_symtable than
+        to pop_symtable; i.e., there is still another symbols table to get 
         an element from.                                                     */ 
     symtable_element* get (std::string);
 
-    /*  Inserts a new element into the symbols tables stack. This element is 
-        later remembered as the lastly inserted symtable_element.
+    /*  Inserts a new element into the symbols tables stack. 
         Precondition: There have been more calls to push_symtable(...) than
         to pop_symtable(); i.e., there is still another symbols table to put 
-        an element to.                                                       */
-    symtables_stack::put_results put(std::string, const symtable_element&);
+        an element to. The element to be inserted is not a class nor a 
+        function.                                                            */
+    symtables_stack::put_results put(std::string, symtable_element);
 
-    /*  Inserts a new parameter to the lastly inserted symtable_element.
-        Precondition: The lastly inserted symtable_element in the symbols 
-        tables stack is a function.The element's key should be the same as 
-        this function's first parameter.                                     */
-    symtables_stack::put_results put_func_param(symtable_element);
+    /*  Inserts a new function to the symbols tables stack. This function is 
+        remembered for future calls of put_func_param. Also, a new symbols
+        table is pushed on top of the stack, and every subsequent call to 
+        put_func_param is performed to this function and this recently created 
+        symbols table.
+        Precondition: There have been more calls to push_symtable than
+        to pop_symtable; i.e., there is still another symbols table to put 
+        an element to. The element to be inserted is a function. Every 
+        previous function in the current class under analysis has already 
+        been fully analyzed.                                                */
+    symtables_stack::put_func_results put_func(std::string, symtable_element&);
 
-    /*  Inserts a new class field to the lastly inserted symtable_element.
-        Precondition: The lastly inserted symtable_element in the symbols
-        tables stack is a class. The element's key should be the same as this
-        function's first parameter.                                          */
-    symtables_stack::put_results put_class_field(symtable_element);
+    /*  Simply performs a pop operation on the stack and resets the value of
+        last_func. Caution not to pop some other symbols table on top of the 
+        stack is advised. Future calls to put_func_param should be preceded by 
+        a put_func call. 
+        Precondition: There have been more calls to put_func than to 
+        finish_func_analysis; i.e., there is a function's symbols table to be 
+        popped.                                                        */
+    void finish_func_analysis(void);
+
+    /*  Inserts a new classto the symbols tables stack. This class is 
+        remembered for future calls of put_func_param. Also, a new symbols
+        table is pushed on top of the stack, and every subsequent call to
+        put_class_field is performed to this class and this recently created
+        symbols table.
+        Precondition: There have been more calls to push_symtable than
+        to pop_symtable; i.e., there is still another symbols table to put 
+        an element to. The element to be inserted is a class. Every previous 
+        class has already been fully analyzed.                               */
+    symtables_stack::put_class_results put_class(std::string, symtable_element&);
+
+    /*  Simply performs a pop operation on the stack and resets the value of
+        last_class. Caution not to pop some other symbols table on top of the 
+        stack is advised. Future calls to put_class_field should be preceded by
+        a put_class call. 
+        Precondition: There has been exactly one more call to put_class than to 
+        finish_class_analysis; i.e., there is a class's symbols table to be 
+        popped.                                                        */
+    void finish_class_analysis(void);
+
+    /*  Inserts a new parameter to the lastly inserted function (via put_func).
+        Precondition: The element is not a function or a class, and the string 
+        given to this put_func_param is equal to the element's key.          */
+    symtables_stack::put_param_results put_func_param(std::string, symtable_element&);
+
+    /*  Inserts a new class field to the lastly inserted class (via put_class).
+        Precondition: The element is not a class, and the string given to this
+         put_class_field call is equal to the element's key.                 */
+    symtables_stack::put_field_results put_class_field(std::string, symtable_element&);
 
     /*  Returns the quantity of symbols tables in the stack.                 */
-    unsigned int get_length(void);
-
-    bool is_empty(void);
+    unsigned int size(void);
 
     ~symtables_stack(void);
 };

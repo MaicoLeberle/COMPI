@@ -1,10 +1,11 @@
 #include "symtable.h"
 
 
-/*  symtable_entry methods.                                                  */
+/*  ----------------------------------------------------------------------------------------------------    
+                                            symtable_entry                                                
+    ----------------------------------------------------------------------------------------------------    */
 
-/*  Each constructor receives the minimum amount of information necessary to
-    resolve the id_class, id_type, etc., that the identifier has.            */
+/*  START OF CONSTRUCTORS.   */
 
 symtable_element::symtable_element(id_class not_found_class) :
     c_id(not_found_class) {
@@ -33,6 +34,10 @@ symtable_element::symtable_element(symtable_element* from) :
     key(from->get_key()), c_id(from->get_class()), t_id(from->get_type()), class_type(from->get_class_type())
   , dim(from->get_dimension()), func_params(from->get_func_params()), class_fields(from->get_class_fields()) { }
 
+/*  END OF CONSTRUCTORS.    */
+
+/*  START OF GETTERS.   */
+
 std::string symtable_element::get_key() {
     return (this->key);
 }
@@ -60,15 +65,19 @@ std::list<symtable_element>* symtable_element::get_func_params () {
     return (this->func_params); 
 }
 
+std::list<symtable_element>* symtable_element::get_class_fields () {
+    assert(c_id == T_CLASS);
+    return (class_fields); 
+}
+
+/*  END OF GETTERS. */
+
+/*  START OF PUTTERS.   */
+
 void symtable_element::put_func_param(symtable_element new_elem) {
     assert(this->c_id == T_FUNCTION);
     assert(this->func_params);
     (this->func_params)->push_back(new_elem);
-}
-
-std::list<symtable_element>* symtable_element::get_class_fields () {
-    assert(c_id == T_CLASS);
-    return (class_fields); 
 }
 
 void symtable_element::put_class_field(symtable_element new_elem) {
@@ -77,19 +86,26 @@ void symtable_element::put_class_field(symtable_element new_elem) {
     (this->class_fields)->push_back(new_elem);
 }
 
-/*  symtable methods.                                                        */
+/*  END OF PUTTERS. */
 
+
+
+/*  ----------------------------------------------------------------------------------------------------    
+                                            symtable                                                 
+    ----------------------------------------------------------------------------------------------------    */
+
+/*  START OF CONSTRUCTORS.  */
 symtable::symtable() : id(NULL) {}
 
 symtable::symtable(std::string identifier, bool b) 
     : id(new std::string(identifier)),  class_or_function (b) { }
 
-bool symtable::elem_exists (std::string key) {
-    return (hashtable.find(key) != hashtable.end());
-}
+/*  END OF CONSTRUCTORS.    */
+
+/*  START OF GETTERS.   */
 
 symtable_element* symtable::get_elem(std::string key) {
-    assert(elem_exists(key));
+    assert(id_exists(key));
     return (&((hashtable.find(key))->second));
 }
 
@@ -97,6 +113,21 @@ std::string symtable::get_id() {
     assert(this->id);
     return(*(this->id));
 }
+
+/*  END OF GETTERS. */
+
+/*  START OF PUTTERS.   */
+
+bool symtable::put (std::string key, symtable_element value) {
+    if (id_exists(key) || is_recursive(value))
+        return false;
+    hashtable.insert(std::pair<std::string, symtable_element>(key, value));
+    return true;
+}
+
+/*  END OF PUTTERS. */
+
+/*  START OF CHECKERS.  */
 
 bool symtable::id_exists(std::string id) {
     return ((this->hashtable).find(id) != (this->hashtable).end());
@@ -109,23 +140,23 @@ bool symtable::is_recursive(symtable_element elem) {
     return(elem.get_class_type() == *(this->id));
 }
 
+/*  END OF CHECKERS.    */
 
-bool symtable::put (std::string key, symtable_element value) {
-    if (id_exists(key) || is_recursive(value))
-        return false;
-    hashtable.insert(std::pair<std::string, symtable_element>(key, value));
-    return true;
-}
 
-/*  symtables_stack methods.                                                  */
 
-symtables_stack::symtables_stack(void) : last_elem(NULL) { }
+/*  ----------------------------------------------------------------------------------------------------    
+                                            symtables_stack                                                  
+    ----------------------------------------------------------------------------------------------------    */
 
-void symtables_stack::push_symtable(void) {
+symtables_stack::symtables_stack() : last_class(NULL), last_func(NULL) { }
+
+/*  START OF SYMBOLS TABLES PUSHING AND POPPING METHODS.    */
+
+void symtables_stack::push_symtable() {
     symtable* new_table = new symtable();
     (this->stack).push_front(new_table);
 }
-void symtables_stack::push_symtable(symtable_element s) {
+void symtables_stack::push_symtable(symtable_element& s) {
     assert ((s.get_class() == symtable_element::T_CLASS)
          || (s.get_class() == symtable_element::T_FUNCTION));
 
@@ -150,19 +181,22 @@ void symtables_stack::push_symtable(symtable_element s) {
     (this->stack).push_front(new_table);
 }
 
-void symtables_stack::pop_symtable(void) {
-    assert(!this->is_empty());
+void symtables_stack::pop_symtable() {
+    assert(this->size() != 0);
     (this->stack).pop_front();
 }
 
+/*  END OF SYMBOLS TABLES PUSHING AND POPPING METHODS.  */
+
+/*  START OF VARIABLE TREATMENT METHODS.    */
 
 symtable_element* symtables_stack::get(std::string key) {
-    assert(!this->is_empty());
+    assert(this->size() != 0);
     symtable* current = (this->stack).front();
 
      /*  Must search from the top of the stack and downwards.        */
     for(std::list<symtable*>::iterator it = (this->stack).begin(); it != (this->stack).end(); ++it) 
-        if((*it)->elem_exists(key))
+        if((*it)->id_exists(key))
             return ((*it)->get_elem(key));
 
     /*  If the key has not been found in any of the symbols 
@@ -171,18 +205,15 @@ symtable_element* symtables_stack::get(std::string key) {
     return (not_found_elem);
 }
 
-symtables_stack::put_results symtables_stack::put(std::string key, const symtable_element& value) {
-    assert(!this->is_empty());
+symtables_stack::put_results symtables_stack::put(std::string key, symtable_element value) {
+    assert((value.get_class() != symtable_element::T_FUNCTION) && (value.get_class() != symtable_element::T_CLASS));
 
     /*  Always insert a new identifier's information in the top
         of the stack; i.e., in the symbols table inserted last.       */
     symtable* current = (this->stack).front();
 
-    if(current-> put(key, value)) {
-        /*  Update last_elem.                                                    */
-        this->last_elem = new symtable_element(value);
-        return symtables_stack::INSERTED;
-    }
+    if(current-> put(key, value))                                                 
+        return symtables_stack::ID_PUT;
 
     /*  If putting the symbol into the symbols table did not succeeded, there
         are two possible reasons:                                            */
@@ -192,32 +223,100 @@ symtables_stack::put_results symtables_stack::put(std::string key, const symtabl
         return symtables_stack::IS_RECURSIVE;
 }
 
-symtables_stack::put_results symtables_stack::put_func_param(symtable_element value) {
-    assert(this->last_elem);
+/*  END OF VARIABLE TREATMENT METHODS. */
 
-    if ((this->last_elem)->get_class() != symtable_element::T_FUNCTION)
-        return symtables_stack::NOT_FUNCTION;
-    
-    (this->last_elem)->put_func_param(value);
-    return symtables_stack::INSERTED;
+/*  START FUNCTION ANALYSIS METHODS. */
+
+symtables_stack::put_func_results symtables_stack::put_func(std::string key, symtable_element& value) {
+    assert(this->last_func == NULL);
+    if(value.get_class() != symtable_element::T_FUNCTION) 
+        return symtables_stack::NOT_FUNC;
+
+    if((this->get(key))->get_class() != symtable_element::NOT_FOUND)
+        return symtables_stack::FUNC_EXISTS;
+
+    symtable* current = (this->stack).front();
+    if(current -> put(key, value)) {
+        /*  The function has been added to its class's symbols table.
+            Next, it has to be analysed; hence, a new symbols table for it is
+            created.                                                         */
+        this->push_symtable(value);
+        this->last_func = &value;
+        return symtables_stack::FUNC_PUT;
+    }
+    return symtables_stack::FUNC_ERROR;
 }
 
-symtables_stack::put_results symtables_stack::put_class_field(symtable_element value) {
-    assert(this->last_elem);
+symtables_stack::put_param_results symtables_stack::put_func_param(std::string key, symtable_element& value) {
+    assert(this->last_func);
+    assert(key.compare(value.get_key()) == 0);
 
-    if ((this->last_elem)->get_class() != symtable_element::T_CLASS)
+    if((!(this->last_func)) || ((this->last_func)->get_class() == symtable_element::NOT_FOUND))
+        return symtables_stack::NO_PREV_FUNC;
+    
+    if((value.get_class() == symtable_element::T_FUNCTION) || (value.get_class() == symtable_element::T_CLASS))
+        return symtables_stack::PARAM_TYPE_ERROR;
+
+    ((this->last_func)->get_func_params())->push_front(value);
+    this->put(key, value);
+    return symtables_stack::PARAM_PUT;
+}
+
+void symtables_stack::finish_func_analysis() {
+    assert(this->last_func);
+    (this->stack).pop_front();
+    this->last_func = NULL;
+}
+
+/*  END OF FUNCTION ANALYSIS METHODS.   */
+
+/* START OF CLASS ANALYSIS METHODS. */
+
+symtables_stack::put_class_results symtables_stack::put_class(std::string key, symtable_element& value) {
+    assert(this->last_class == NULL);
+    if(value.get_class() != symtable_element::T_CLASS)
         return symtables_stack::NOT_CLASS;
 
-    (this->last_elem)->put_class_field(value);
-    return symtables_stack::INSERTED;
+    if((this->get(key))->get_class() != symtable_element::NOT_FOUND)
+        return symtables_stack::CLASS_EXISTS;
+
+    symtable* current = (this->stack).front();
+    if(current -> put(key, value)) {
+        /*  The function has been added to its class's symbols table.
+            Next, it has to be analysed; hence, a new symbols table for it is
+            created.                                                         */
+        this->push_symtable(value);
+        this->last_class = &value;
+        return symtables_stack::CLASS_PUT;
+    }
+    return symtables_stack::CLASS_ERROR;
 }
 
-unsigned int symtables_stack::get_length() {
+symtables_stack::put_field_results symtables_stack::put_class_field(std::string key, symtable_element& value) {
+    assert(this->last_class);
+    assert(key.compare(value.get_key()) == 0);
+
+    if((this->last_class)->get_class() == symtable_element::NOT_FOUND)
+        return symtables_stack::NO_PREV_CLASS;
+    
+    if(value.get_class() == symtable_element::T_CLASS)
+        return symtables_stack::FIELD_TYPE_ERROR;
+
+    ((this->last_class)->get_class_fields())->push_front(value);
+    this->put(key, value);
+    return symtables_stack::FIELD_PUT;
+}
+
+void symtables_stack::finish_class_analysis() {
+    assert(this->last_class);
+    (this->stack).pop_front();
+    this->last_class = NULL;
+}
+
+/*  END OF CLASS ANALYSIS METHODS.  */    
+
+unsigned int symtables_stack::size() {
     return ((this->stack).size());
-}
-
-bool symtables_stack::is_empty() {
-    return ((this->stack).size() == 0);
 }
 
 symtables_stack::~symtables_stack() {
