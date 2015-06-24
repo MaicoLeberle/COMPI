@@ -88,7 +88,8 @@ program_pointer ast; // Pointer to the AST
 program
     : program class_decl    {$1->classes.push_back(class_pointer($2));
                               $$ = $1;}
-    | class_decl            {ast = program_pointer(new node_program(class_pointer($1)));}
+    | class_decl            {$$ = new node_program(class_pointer($1));
+                            ast = program_pointer($$);}
     ;
 
 class_decl
@@ -109,9 +110,9 @@ ids
     : ids ',' ID                       {$1->push_back(id_pointer(new node_id(*$3))); delete $3; $$ = $1;}
     | ID                               {$$ = new id_list();
                                         $$->push_back(id_pointer(new node_id(*$1))); delete $1;}
-    | ids ',' ID '[' L_INT ']'         {$1->push_back(id_pointer(new node_id(*$3, true, $5))); delete $3; $$ = $1;}
+    | ids ',' ID '[' L_INT ']'         {$1->push_back(id_pointer(new node_id(*$3, $5))); delete $3; $$ = $1;}
     | ID '[' L_INT ']'                 {$$ = new id_list();
-                                        $$->push_back(id_pointer(new node_id(*$1, true, $3))); delete $1;}
+                                        $$->push_back(id_pointer(new node_id(*$1, $3))); delete $1;}
     ;
 
 method_decl
