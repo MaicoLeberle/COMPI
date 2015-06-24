@@ -154,7 +154,8 @@ public:
     bool is_recursive(symtable_element);
 
     /*  Returns TRUE if id_exists(...) == FALSE && 
-        is_recursive(...) == FALSE. Otherwise, returns false.                */
+        is_recursive(...) == FALSE, and the element is not a class or a 
+        function. Otherwise, returns false.                */
     bool put (std::string, symtable_element); 
 
 private:
@@ -170,11 +171,6 @@ private:
 /*  This class represents the stack of symbol tables that conform the current
     scope.                                                                   */
 class symtables_stack {
-private:
-    std::list<symtable*> stack;
-    symtable_element* last_func;
-    symtable_element* last_class;
-
 public:
     /*  This enumeration will be used as a way to inform the symtables_stack 
         user the result of calling put(...).                                 */
@@ -283,6 +279,11 @@ public:
     unsigned int size(void);
 
     ~symtables_stack(void);
+
+private:
+    std::list<symtable*> stack;
+    symtable_element* last_func;
+    symtable_element* last_class;
 };
 
 #endif
