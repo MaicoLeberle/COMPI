@@ -3,12 +3,11 @@
 semantic_analysis::semantic_analysis () {
 	errors = 0;
 	into_for_or_while = false;
+	// TODO: cambiar esto cuando se resuelva lo de la tabla de símbolos
+	into_method = false;
+	actual_method = nullptr;
 }
-// TODO: cambiar en visitor.h: por alguna razon, lo que actualmente
-// se ha subido no es la inferfaz que yo había definido: los metodos
-// no son "virtuales puros"
-// Adds an error message to the standard error output and appends
-// the std::endl manipulator. Also, counts the error.
+
 void semantic_analysis::register_error(std::string error, error_id error_encountered){
 	std::cerr << error << std::endl;
 	// The process is not interrupted. We just count the error.
@@ -19,6 +18,37 @@ void semantic_analysis::register_error(std::string error, error_id error_encount
 semantic_analysis::error_id semantic_analysis::get_last_error(){
 	return last_error;
 }
+
+int semantic_analysis::get_errors(){
+	return errors;
+}
+
+symtable_element::id_type semantic_analysis::get_wider_type(
+symtable_element::id_type t1, symtable_element::id_type t2){
+
+	symtable_element::id_type ret;
+
+#ifdef __DEBUG
+	assert(t1 == symtable_element::FLOAT || t1 == symtable_element::INTEGER);
+	assert(t2 == symtable_element::FLOAT || t2 == symtable_element::INTEGER);
+#endif
+
+	switch(t1){
+		case symtable_element::INTEGER:
+			if (t2 == symtable_element::INTEGER)
+				ret = symtable_element::INTEGER;
+			else
+				ret = t2;
+			break;
+
+		case symtable_element::FLOAT:
+			ret = t1;
+			break;
+	}
+
+	return ret;
+}
+
 symtable_element::id_type semantic_analysis::determine_type(Type::_Type type_ast){
 	symtable_element::id_type ret;
 
@@ -52,37 +82,175 @@ symtable_element::id_type semantic_analysis::determine_type(Type::_Type type_ast
 	return ret;
 }
 
-/*symtable_element *get_next_symtable_element(symtable_element *actual_element,
-std::string id){
-	#ifdef __DEBUG
-	// PRE
-	assert(actual_element->get_class() != symtable_element::NOT_FOUND);
-	#endif
+void semantic_analysis::stm_call_appropriate_accept(statement_pointer s){
+	switch (s->type_of_statement()){
+		case node_statement::field_decl:{
+				node_field_decl& aux = static_cast<node_field_decl&> (*s);
+				aux.accept(*this);
+				break;
+		}
 
-	switch(actual_element->get_class()){
-		case symtable_element::T_CLASS:
-			std::list<symtable_element> *fields = actual_element->get_class_fields();
-			std::vector<int>::size_type i = (std::vector<int>::size_type) 1;
-			// TODO: como es
-			std::vector<int>::size_type limit = fields->size();
+		case node_statement::block:{
+				node_block& aux = static_cast<node_block&> (*s);
+				aux.accept(*this);
+				break;
+		}
 
+		case node_statement::assignment_statement:{
+				node_assignment_statement& aux = static_cast<node_assignment_statement&> (*s);
+				aux.accept(*this);
+				break;
+		}
+
+		case node_statement::method_call_statement:{
+			node_method_call& aux = static_cast<node_method_call&> (*s);
+			aux.accept(*this);
+			break;
+		}
+
+		case node_statement::if_statement:{
+			node_if_statement& aux = static_cast<node_if_statement&> (*s);
+			aux.accept(*this);
+			break;
+		}
+
+		case node_statement::for_statement:{
+			node_for_statement& aux = static_cast<node_for_statement&> (*s);
+			aux.accept(*this);
+			break;
+		}
+
+		case node_statement::while_statement:{
+			node_while_statement& aux = static_cast<node_while_statement&> (*s);
+			aux.accept(*this);
+			break;
+		}
+
+		case node_statement::return_statement:{
+			node_return_statement& aux = static_cast<node_return_statement&> (*s);
+			aux.accept(*this);
+			break;
+		}
+
+		case node_statement::break_statement:{
+			node_break_statement& aux = static_cast<node_break_statement&> (*s);
+			aux.accept(*this);
+			break;
+		}
+
+		case node_statement::continue_statement:{
+			node_continue_statement& aux = static_cast<node_continue_statement&> (*s);
+			aux.accept(*this);
+			break;
+		}
+
+		case node_statement::skip_statement:{
+			node_skip_statement& aux = static_cast<node_skip_statement&> (*s);
+			aux.accept(*this);
+		}
 	}
-
-
 }
 
-symtable_element::id_type dereference_get_element(reference_list ids){
+void semantic_analysis::expr_call_appropriate_accept(expr_pointer s){
+	switch (s->type_of_expression()){
+		case node_expr::int_literal:{
+				node_int_literal& aux = static_cast<node_int_literal&> (*s);
+				aux.accept(*this);
+				break;
+		}
+
+		case node_expr::bool_literal:{
+				node_bool_literal& aux = static_cast<node_bool_literal&> (*s);
+				aux.accept(*this);
+				break;
+		}
+
+		case node_expr::string_literal:{
+				node_string_literal& aux = static_cast<node_string_literal&> (*s);
+				aux.accept(*this);
+				break;
+		}
+
+		case node_expr::binary_operation_expr:{
+			node_binary_operation_expr& aux = static_cast<node_binary_operation_expr&> (*s);
+			aux.accept(*this);
+			break;
+		}
+
+		case node_expr::location:{
+			node_location& aux = static_cast<node_location&> (*s);
+			aux.accept(*this);
+			break;
+		}
+
+		case node_expr::negate_expr:{
+			node_negate_expr& aux = static_cast<node_negate_expr&> (*s);
+			aux.accept(*this);
+			break;
+		}
+
+		case node_expr::negative_expr:{
+			node_negative_expr& aux = static_cast<node_negative_expr&> (*s);
+			aux.accept(*this);
+			break;
+		}
+
+		case node_expr::parentheses_expr:{
+			node_parentheses_expr& aux = static_cast<node_parentheses_expr&> (*s);
+			aux.accept(*this);
+			break;
+		}
+
+		case node_expr::method_call_expr:{
+			node_method_call& aux = static_cast<node_method_call&> (*s);
+			aux.accept(*this);
+			break;
+		}
+	}
+}
+
+symtable_element* semantic_analysis::get_next_symtable_element(symtable_element
+		*actual_element, std::string id){
+
+	symtable_element *ret = nullptr;
+
 	#ifdef __DEBUG
-		// PRE
-		assert(s_table.get_length() > 0);
+	// PRE
+	//assert(actual_element->get_class() == symtable_element::T_CLASS ||
+	//		actual_element->get_class() == symtable_element::T_FUNCTION);
 	#endif
 
+	std::list<symtable_element> *fields = actual_element->get_class_fields();
+	for(std::list<symtable_element>::iterator it = fields->begin();
+		it != fields->end(); ++it){
+
+		if(it->get_key() == id){
+			ret = &(*it);
+			break;
+		}
+	}
+
+	return ret;
+}
+
+symtable_element* semantic_analysis::dereference(reference_list ids){
+	#ifdef __DEBUG
+		// PRE
+		assert(s_table.size() > 0);
+		std::cout << "Accessing reference " << ids[0] << std::endl;
+	#endif
+
+	symtable_element *ret = nullptr;
 	symtable_element *aux = s_table.get(ids[0]);
+	symtable_element::id_class aux_class;
 	// Rule 2: declaration before use
 	if (aux->get_class() == symtable_element::NOT_FOUND){
-		register_error(std::string("Id "+ids[0]+" must be declared before use."));
+		register_error(std::string("Id "+ids[0]+" must be declared before use."),
+				ERROR_2);
 	}
 	else{
+		// {aux->get_class() != symtable_element::NOT_FOUND}
+
 		std::vector<int>::size_type i = (std::vector<int>::size_type) 1;
 		std::vector<int>::size_type limit = ids.size();
 		// INV : {aux is the symtable_element for the id number i-1 in ids}
@@ -90,44 +258,76 @@ symtable_element::id_type dereference_get_element(reference_list ids){
 		while(i < limit){
 			// TODO: asumo que en ids se guardan los identificadores en orden
 			// desde 0 (el primer id de la izquierda), hacia la derecha...
-			if (__DEBUG)
-				std::cout << "Accessing reference " << ids[i] << std::endl;
+#ifdef __DEBUG
+			std::cout << "Accessing reference " << ids[i] << std::endl;
+#endif
 
 			// Index the previous symtable_element, with the next id.
-			switch(aux->get_class()){
-				case symtable_element::T_CLASS:
-					std::list<symtable_element> *fields = aux->get_class_fields();
-
-
-			}
-			aux = aux.get(ids[i]);
-			// Rule 2: declaration before use
-			if (aux.get_class() == symtable_element::NOT_FOUND){
-				register_error(std::string("Id "+ids[i]+" must be declared before use."));
-				// TODO: cortamos esto acá?
-				// TODO: cómo informamos de este error?
+			aux_class = aux->get_class();
+			if(aux_class != symtable_element::T_OBJ){
+				// TODO: este error no está enlistado
+				register_error(std::string("Trying to access a field from id "+ids[i-1]
+				                           +", which is not an object."),
+								ERROR_21);
 				break;
+
 			}
-			i++
+			else{
+				// {aux_class == symtable_element::T_OBJ}
+				// Get the class of the object.
+				std::string object_class_name = aux->get_class_type();
+				symtable_element *object_class = s_table.get(object_class_name);
+				// TODO: si, una vez encontrada una declaración de instancia
+				// de clase desconocida, se continua el análisis, llegamos
+				// a una situación como esta, en la que se emplea la referencia
+				// a instancia. Se supone que la primer vez que nos topamos
+				// con la referencia a instancia, no debimos haberla agregado
+				// a la tabla de símbolos?, debería ser ese un criterio de
+				// implementación?. Por ahora, exijo que esto así sea, para
+				// no tener que definir un nuevo código de error.
+#ifdef __DEBUG
+				assert(object_class->get_class() != symtable_element::NOT_FOUND);
+#endif
+				// Obtain the next element.
+				aux = get_next_symtable_element(object_class, ids[i]);
+				// Rule 2: declaration before use
+				if (aux == nullptr){
+					register_error(std::string("Id "+ids[i]+" must be declared before use."),
+							ERROR_2);
+					// TODO: cortamos esto acá?
+					break;
+				}
+				i++;
+
+			}
 		}
 	}
-	// {aux is the symtable_element referenced by ids or a symtable_element
-	// with class symtable_element::NOT_FOUND, if ids is invalid.}
-	return aux;
-}*/
+	// {aux is the symtable_element referenced by ids or nullptr.}
+	if(aux->get_class() != symtable_element::NOT_FOUND){
+		well_formed = true;
+		ret = aux;
+		//type_l_expr = aux->get_type();
+		//class_l_expr = aux->get_class();
+	}
+	else{
+		// {aux->get_class() == symtable_element::NOT_FOUND}
+		well_formed = false;
+	}
+
+	return ret;
+}
 
 void semantic_analysis::visit(const node_program& node) {
 	#ifdef __DEBUG
 	 	 std::cout << "Beginning analysis." << std::endl;
 	#endif
+	// Define a new block: the global scope
+	s_table.push_symtable();
 	for(auto c : node.classes) {
 		c->accept(*this);
 	}
-	// {s_tables.get_length() == 1 || s_tables.get_length() == 0}
-	#ifdef __DEBUG
-		unsigned int length = s_table.get_length();
-		assert(length == 1 || length == 0);
-	#endif
+	// {there must be 1 or 0 symbol tables in s_tables}
+	// TODO: cómo chequeamos esto?
 	/*symtable_element* classA = new symtable_element(...);
 	  s.put(classA);
 	  s.push_symtable(classA);
@@ -159,12 +359,16 @@ void semantic_analysis::visit(const node_program& node) {
 }
 
  void semantic_analysis::visit(const node_class_decl& node) {
-	#ifdef __DEBUG
-	 	 std::cout << "Accessing class " << node.id << std::endl;
-	#endif
+#ifdef __DEBUG
+	 std::cout << "Accessing class " << node.id << std::endl;
+#endif
 	symtable_element new_class(node.id, new std::list<symtable_element>());
 	// Define a new scope
-	s_table.push_symtable(new_class);
+#ifdef __DEBUG
+	assert(s_table.put_class(node.id, new_class) == symtables_stack::CLASS_PUT);
+#else
+	s_table.put_class(node.id, new_class);
+#endif
 	for(auto cb : node.class_block) {
 		if (cb->is_node_field_decl()){
 			// TODO: por qué tiene que ser node_field_decl&?
@@ -196,16 +400,19 @@ void semantic_analysis::visit(const node_program& node) {
 		// y la tabla de símbolos no tiene por qué tener un enteo
 		// especial para representa la existencia de expesiones
 		// mal fomadas
-		symtable_element *method = s_table.get(std::string("main"));
-		if(method->get_class() == symtable_element::NOT_FOUND){
+		// TODO: usamos Main y no main, para poder pasar los tests!
+		symtable_element *element = s_table.get(std::string("Main"));
+		if(element->get_class() != symtable_element::T_FUNCTION){
 			register_error(std::string("\"main\" class without a \"main\" method."),
 					ERROR_3);
 		}
 	}
+	// Close the scope introduced by the class
+	s_table.finish_class_analysis();
 }
 
 void semantic_analysis::visit(const node_field_decl& node) {
-	symtable_element *id = NULL;
+	symtable_element *id = nullptr;
 
 	#ifdef __DEBUG
 	 	 std::cout << "Accessing field declaration." << std::endl;
@@ -220,36 +427,44 @@ void semantic_analysis::visit(const node_field_decl& node) {
 			// TODO: el operador + está sobre-cargado para std::string?.
 			register_error(std::string("Identifier "+f->id+" already declared in this scope."),
 					ERROR_1);
+			// TODO: cuando encontramos un error, continuamos el análisis
+			// con lo que resta del código?
+			continue;
 		}
 		// Rule 4: if it is an array declaration => the length must be > 0
-		if (f->is_array && f->array_size <= 0){
+		if (f->array_size == 0){
 			register_error(std::string("Array declaration with id " +
-							f->id +" has dimension <= 0."),
+							f->id +" has dimension == 0."),
 					ERROR_4);
+			continue;
 		}
-		// TODO: tenemos que unificar la manera de representar los tipos,
-		// para no tener que estar averiguando aquí de qué tipo es el id.
 		// Everything ok. Add the identifier to the symbol table.
 		if (node.type.type == Type::ID){
 			// Declaration of instances.
 			// Create a new symtable_element object, that represents
 			// an object, with the id and the name of the corresponding class.
-			// TODO: así o con new?
 			// TODO: chequear que el tipo exista
+			if(s_table.get(node.type.id)->get_class() != symtable_element::T_CLASS){
+				// TODO: este tipo de error no está enlistado...
+				register_error(std::string("Identifier "+f->id+" has unknown type "
+								+ node.type.id + "."),
+						ERROR_20);
+				continue;
+			}
+			// TODO: cómo chequeamos que, en caso de existir el tipo, este
+			// no coincide con el nombre de la clase?
 			id = new symtable_element(f->id, node.type.id);
 		}
 		else{
 			// {node.type.type != Type::ID}
 			// Basic type or array
-			if (f->is_array){
+			if (f->array_size > 0){
 				// Array
-				// TODO: me rechaza el tipo, porque me pide algo que sea
-				// del enum definido en symtable!
 				id = new symtable_element(f->id, determine_type(node.type.type),
 					  f->array_size);
 			}
 			else{
-				// {f->array_size <= 0}
+				// {f->array_size < 0}
 				// Basic type
 				id = new symtable_element(f->id, determine_type(node.type.type));
 			}
@@ -257,11 +472,23 @@ void semantic_analysis::visit(const node_field_decl& node) {
 		// Add the symbol to s_table.
 		// TODO: esta bien definida la variable? Notar que recibe directamente
 		// un symtable_element, no un puntero o referencia. Lo copia?
-		#ifdef __DEBUG
-			assert(s_table.put_class_field(*id) == symtables_stack::INSERTED);
-		#else
-			s_table.put_class_field(*id);
-		#endif
+		// TODO: este nodo puede representar un atributo de clase, como tambien
+		// una variable local a un método. Deberíamos poder disponer de un
+		// único método put, que me sirva para ambos casos, indistintamente.
+		if(not into_method){
+#ifdef __DEBUG
+			assert(s_table.put_class_field(f->id, *id) == symtables_stack::FIELD_PUT);
+#else
+			s_table.put_class_field(f->id, *id);
+#endif
+		}
+		else{
+#ifdef __DEBUG
+			assert(s_table.put(f->id, *id) == symtables_stack::ID_PUT);
+#else
+			s_table.put(f->id, *id);
+#endif
+		}
 	}
 }
 
@@ -269,18 +496,31 @@ void semantic_analysis::visit(const node_id& node) {
 	// This visitor does not need to do some task into node_id.
 }
 
-void semantic_analysis::visit(const node_method_decl& node) {
-	#ifdef __DEBUG
-		std::cout << "Accessing method " << node.id << std::endl;
-	#endif
-
+void semantic_analysis::visit(const node_method_decl& node){
+#ifdef __DEBUG
+	std::cout << "Accessing method " << node.id << std::endl;
+#endif
 	symtable_element method(node.id, determine_type(node.type.type),
 							new std::list<symtable_element>());
+	// TODO: quitar esto cuando se resuelva lo de la tabla
+	into_method = true;
+	actual_method = &method;
+	// Add to the symbol table, define a new scope
+#ifdef __DEBUG
+	assert(s_table.put_func(node.id, method) == symtables_stack::FUNC_PUT);
+#else
+	s_table.put_func(node.id, method);
+#endif
 	for(auto p : node.parameters) {
 		p->accept(*this);
 	}
 
 	node.body->accept(*this);
+	// Close the scope defined by the method.
+	s_table.finish_func_analysis();
+	// TODO: quitar esto cuando se resuelva lo de la tabla
+	into_method = false;
+	actual_method = nullptr;
 }
 
 void semantic_analysis::visit(const node_parameter_identifier& node) {
@@ -288,43 +528,22 @@ void semantic_analysis::visit(const node_parameter_identifier& node) {
 		std::cout << "Accessing parameter " << node.id << std::endl;
 	#endif
 	// We add the identifier to the actual symbol table
-	// TODO: habría que re-utilizar el id_type definido en node.h
-	// por otro lado, tendríamos que agregar un símbolo que represente
-	// la imposibilidad de asignarle un tipo a una expresión
-	// (por existir algún error en esta)
-	if (node.type.type == Type::ID){
-		// TODO: chequear que el tipo exista
+	if(node.type.type == Type::ID &&
+	   s_table.get(node.type.id)->get_class() != symtable_element::T_CLASS){
+		// TODO: este tipo de error no está enlistado...
+		register_error(std::string("Identifier "+node.id+" has unknown type "
+						+ node.type.id + "."),
+				ERROR_20);
 	}
-	// TODO: chequear que node.id no coincida con el nombre del
-	// método.
-	symtable_element param(node.id, determine_type(node.type.type));
-	s_table.put_func_param(param);
+	else{
+		// {node.type.type != Type::ID ||
+		//   s_table.get(node.type.id)->get_class() == symtable_element::T_CLASS}
+		// TODO: chequear que node.id no coincida con el nombre del
+		// método.
+		symtable_element param(node.id, determine_type(node.type.type));
+		s_table.put_func_param(node.id, param);
+	}
 }
-
-void semantic_analysis::visit(const node_body& node) {}
-	void semantic_analysis::visit(const node_block& node) {}
-	// Statements
- 	void semantic_analysis::visit(const node_assignment_statement& node) {}
- 	void semantic_analysis::visit(const node_method_call& node) {}
- 	void semantic_analysis::visit(const node_if_statement& node) {}
- 	void semantic_analysis::visit(const node_for_statement& node) {}
- 	void semantic_analysis::visit(const node_while_statement& node) {}
- 	void semantic_analysis::visit(const node_return_statement& node) {}
- 	void semantic_analysis::visit(const node_break_statement& node) {}
- 	void semantic_analysis::visit(const node_continue_statement& node) {}
- 	void semantic_analysis::visit(const node_skip_statement& node) {}
- 	// Expressions
- 	void semantic_analysis::visit(const node_int_literal& node) {}
- 	void semantic_analysis::visit(const node_float_literal& node) {}
- 	void semantic_analysis::visit(const node_bool_literal& node) {}
- 	void semantic_analysis::visit(const node_string_literal& node) {}
- 	void semantic_analysis::visit(const node_binary_operation_expr& node) {}
- 	void semantic_analysis::visit(const node_location& node) {}
- 	void semantic_analysis::visit(const node_negate_expr& node) {}
- 	void semantic_analysis::visit(const node_negative_expr& node) {}
- 	void semantic_analysis::visit(const node_parentheses_expr& node) {}
-/*
-
 
 void semantic_analysis::visit(const node_body& node) {
 	#ifdef __DEBUG
@@ -346,11 +565,14 @@ void semantic_analysis::visit(const node_body& node) {
 }
 
 void semantic_analysis::visit(const node_block& node) {
+#ifdef __DEBUG
+	std::cout << "Accessing a block." << std::endl;
+#endif
 	// A block defines a new scope.
 	s_table.push_symtable();
 	// Analyze the content of the block.
 	for(auto s : node.content) {
-		s->accept(*this);
+		stm_call_appropriate_accept(s);
 	}
 }
 void semantic_analysis::visit(const node_assignment_statement& node) {
@@ -358,40 +580,140 @@ void semantic_analysis::visit(const node_assignment_statement& node) {
 		std::cout << "Accessing assignment statement" << std::endl;
 	#endif
 
-		symtable_element::id_type type_id, type_expr;
+	symtable_element::id_type type_id, type_expr;
 
 	// Check and determine the type of the location.
-	// TODO: tenemos que agregar al enum id_type de symtable,
-	// el tipo ARRAY de, lo que sea...
-	// TODO: cuando definamos nuestra representación de expresiones
-	// definir el atributo type_l_expr que corresponda, y
-	// hacer las correspondientes asignaciones aquí.
-
 	node.location->accept(*this);
 	if (well_formed){
 		type_id = type_l_expr;
+
+		expr_call_appropriate_accept(node.expression);
+		if (well_formed){
+			type_expr = type_l_expr;
+			// Rule 16: both, the type of the location and the expression to be assigned,
+			// must be the same.
+			if (type_id != type_expr){
+				register_error(std::string("Location and expression assigned have different types."),
+						ERROR_16);
+			}
+			// Rule 17: in a -= or += assignment, the location and the
+			// expression assigned must evaluated to integer or float.
+			if (node.oper == AssignOper::PLUS_ASSIGN ||
+			node.oper == AssignOper::MINUS_ASSIGN){
+
+				if((type_id != symtable_element::FLOAT &&
+					type_id != symtable_element::INTEGER) ||
+					(type_expr != symtable_element::FLOAT &&
+					type_expr != symtable_element::INTEGER)){
+
+					register_error(std::string("Location and expression assigned "
+							"must evaluate to integer or float."),
+											ERROR_17);
+				}
+			}
+		}
+		else{
+			// {not well_formed}
+
+		}
 	}
 	else{
 		// {not well_formed}
 		// TODO: continuamos?
 	}
-	// Rule 16: both, the type of the location and the expression to be assigned,
-	// must be the same
-	node.expression->accept(*this);
-	if (well_formed){
-		type_expr = type_l_expr;
-		// TODO: tambien tendríamos que chequear que la expresión a asignar efectivamente
-		// evalue a algo asignable...
-		// TODO: realizar la comparación de tipos como corresponda, de acuerdo
-		// a la forma que escojamos de representación de los mismos
-		if (type_id != type_expr){
-			register_error(std::string("Location and expression assigned have different types."));
+}
+
+void semantic_analysis::visit(const node_location& node) {
+	symtable_element::id_type type_index, type_id;
+	symtable_element::id_class class_id;
+	symtable_element *aux = nullptr;
+	// Rule 10: the location must be already declared
+	// TODO: por qué este error está separado del error 2?
+#ifdef __DEBUG
+	std::cout << "Accessing location expression" << std::endl;
+#endif
+
+	aux = dereference(node.ids);
+	if(well_formed){
+		type_id = aux->get_type();
+		class_id = aux->get_class();
+		if (node.array_idx_expr != nullptr){
+			// The location represents an field from an array.
+			if (class_id != symtable_element::T_ARRAY){
+				// Rule 11: if the location is an array position,
+				// the corresponding id must point to an array, and the
+				// index must be an integer
+				// TODO: podría hacer falta un visitor que me genere un string bonito
+				// que represente el texto asociado a esta porción del ast, para
+				// informar mejor sobre la location y el index?
+				register_error(std::string("Trying to index a value that is not an array."),
+										ERROR_11);
+				well_formed = false;
+			}
+			else{
+				// {class_id == symtable_element::T_ARRAY}
+				expr_call_appropriate_accept(node.array_idx_expr);
+				if(well_formed){
+					// Rule 11: if the location is an array position,
+					// the corresponding id must point to an array, and the
+					// index must be an integer
+					type_index = type_l_expr;
+					if (type_index != symtable_element::INTEGER){
+						register_error(std::string("Trying to index an array "
+													"value without an integer "
+													"expression."), ERROR_11);
+						well_formed = false;
+					}
+					else{
+						// {type_index == symtable_element::INTEGER}
+						// The location references to an aeeay field, and is
+						// well formed
+						type_l_expr = type_id;
+						class_l_expr = class_id;
+					}
+				}
+			}
+		}
+		else{
+			// {node.array_idx_expr == nullptr}
+			// The location is well formed, and does not reference to an array.
+			type_l_expr = type_id;
+			class_l_expr = class_id;
 		}
 	}
-	else{
-		// {not well_formed}
+}
 
-	}
+void semantic_analysis::visit(const node_int_literal& node) {
+#ifdef __DEBUG
+	std::cout << "Accessing int literal of value " << node.value << std::endl;
+#endif
+	type_l_expr = symtable_element::INTEGER;
+	well_formed = true;
+}
+
+void semantic_analysis::visit(const node_bool_literal& node) {
+#ifdef __DEBUG
+	std::cout << "Accessing bool literal of value " << node.value << std::endl;
+#endif
+	type_l_expr = symtable_element::BOOLEAN;
+	well_formed = true;
+}
+
+void semantic_analysis::visit(const node_float_literal& node) {
+#ifdef __DEBUG
+	std::cout << "Accessing FLOAT literal of value " << node.value << std::endl;
+#endif
+	type_l_expr = symtable_element::FLOAT;
+	well_formed = true;
+}
+
+void semantic_analysis::visit(const node_string_literal& node) {
+#ifdef __DEBUG
+	std::cout << "Accessing string literal of value " << node.value << std::endl;
+#endif
+	//TODO: falta symtable_element::STRING
+	type_l_expr = symtable_element::FLOAT;
+	well_formed = true;
 }
 
 void semantic_analysis::visit(const node_method_call& node) {
@@ -400,93 +722,79 @@ void semantic_analysis::visit(const node_method_call& node) {
 	#endif
 
 	symtable_element::id_type type_method, type_parameter;
-	symtable_element aux; // TODO: debería usar un puntero, para no estar creando
+	symtable_element *aux; // TODO: debería usar un puntero, para no estar creando
 						 // instancias que no me hacen falta?
 
 	// Determine the type of the location
-	//for(auto r : node.ids) {
-	// TODO: get_type para el symtable_element que representa a un método,
-	// me devuelve el tipo de retorno del método
-	// TODO: cómo no consideramos una location a este elemento de
-	// method_call, entonces no puedo reutilizar el metodo visit
-	// para node_location, que ya realiza este proceso medio complicado...
-	for(std::vector<int>::size_type i = (std::vector<int>::size_type) 0;
-		i < node.ids.size(); i++){
-		// TODO: asumo que en ids se guardan los identificadores en orden
-		// desde 0 (el primer id de la izquierda), hacia la derecha...
-		// TODO: ir indexando la tabla de símbolos, hasta el último
-		// id, que debe referir a un método. Extraer su valor
-		// de retorno, y guardarlo en type_method
-		if (__DEBUG)
-			std::cout << "Accessing reference " << r << std::endl;
+	aux = dereference(node.ids);
+	if(well_formed){
+		if(aux->get_class() == symtable_element::T_FUNCTION){
+			// Rule 5: the number and type of the actual parameters,
+			// must be the same of the formal parameters
+			std::list<symtable_element>* func_params = aux->get_func_params();
 
-		if (i == (std::vector<int>::size_type) 0){
-			// First identifier, from the left
-			aux = s_table.get(node.ids[i]); // TODO: get hace una copia de lo que devuelve?
-									// no debería devolver mejor un puntero?
-			// Rule 2: declaration before use
-			if (aux.get_class == symtable_element::NOT_FOUND){
-				register_error(std::string("Id "+r+" must be declared before use."));
-				// TODO: cortamos esto acá?
-				break;
+			if(func_params->size() != node.parameters.size()){
+				// TODO: estaría bueno poder poner el nombre del método...
+				register_error(std::string("Method call with less parameters"
+										"than expected."), ERROR_5);
+				well_formed = false;
+			}
+			else{
+				// {func_params->size() == node.parameters.size()}
+				std::list<symtable_element>::iterator it = func_params->begin();
+				for(auto r : node.parameters){
+					expr_call_appropriate_accept(r);
+					if(well_formed){
+						if(it->get_type() != type_l_expr){
+							register_error(std::string("Call to method with"
+									"wrong argument's type."), ERROR_5);
+							well_formed = false;
+							break;
+						}
+						else{
+							// {it->get_type == type_l_expr}
+
+							// Rule 7: string literals only with extern methods.
+							// TODO: string type?
+						}
+					}
+					else{
+						// {not well_formed}
+						break;
+					}
+					it++;
+				}
+				type_l_expr = aux->get_type();
+				class_l_expr = aux->get_class();
+				// Rule 6: if a method call is used as an expression, the method
+				// must return some value. We just simply return the type of return
+				// of the method.
 			}
 		}
 		else{
-			// {i != (std::vector<int>::size_type) 0}
-			// Search into the previously obtained symtable_element
-			// TODO: puedo hacer esto?
-			aux = aux.get(node.ids[i]);
-			// Rule 2: declaration before use
-			if (aux.get_class == symtable_element::NOT_FOUND){
-				register_error(std::string("Id "+r+" must be declared before use."));
-				// TODO: cortamos esto acá?
-				break;
-			}
-			if(i == node.ids.size() - (std::vector<int>::size_type)1){
-				// The identifier must point to a method
-			}
-		}
-		// TODO: get_type de symtable_element, para el caso de
-		// un método, me devolvería el tipo de retorno del método?
-		// TODO: asignar el tipo de retorno a type_l_expr
-
-	}
-	// Rule 5: the number and type of the actual parameters,
-	// must be the same of the formal parameters
-	for(auto r : node.parameters) {
-		// TODO: recorrer node.parameters preguntando si coincide
-		// el tipo de estos con los parametros formales del método.
-		// También preguntar por la cantidad de parámetros
-		type_parameter = r->accept(*this);
-		// TODO: chequear que el parametro evalue efectivamente
-		// a algun tipo basico
-		// Rule 7: string literals only with extern methods
-		// TODO: string type?
-		if (type_parameter == symtable_element::STRING){
-			// TODO: chequear que el método invocado sea extern
+			// {class_l_expr != symtable_element::T_FUNCTION}
+			// Rule 21: Method call operation over...methods only.
+			register_error(std::string("Method call operation over a value "
+										"different than a method."), ERROR_22);
+			well_formed = false;
 		}
 	}
-
-	// Rule 6: if a method call is used as an expression, the method
-	// must return some value. We just simply return the type of return
-	// of the method.
-	// TODO: quizás convenga utilizar como representación de tipo
-	// lo definido en symtable, para poder retornar directamente
-	// la información que tengamos en la tabla
-	return type_method;
 }
 
 void semantic_analysis::visit(const node_if_statement& node){
-	node.expression->accept(*this);
-	// Rule 12: the guard must be a boolean expression
-	if (type_l_expr != symtable_element::BOOLEAN){
-		register_error(std::string("Non-boolean guard of an if expression ."));
-	}
+	expr_call_appropriate_accept(node.expression);
+	if(well_formed){
+		// Rule 12: the guard must be a boolean expression.
+		if (type_l_expr != symtable_element::BOOLEAN){
+			register_error(std::string("Non-boolean guard of an if expression ."),
+							ERROR_12);
+		}
 
-	node.then_statement->accept(*this);
+		stm_call_appropriate_accept(node.then_statement);
 
-	if(node.else_statement != nullptr) {
-		node.else_statement->accept(*this);
+		if(node.else_statement != nullptr) {
+			stm_call_appropriate_accept(node.else_statement);
+		}
 	}
 }
 
@@ -495,262 +803,225 @@ void semantic_analysis::visit(const node_for_statement& node){
 
 	std::cout << "Accessing for statement" << std::endl;
 
-	// Rule 18: from and to expression must evaluate to integers
-	node.from->accept(*this);
-	type_expr = type_l_expr;
-	// TODO: estoy usando como representacion del tipo de una expresion,
-	// a los valores de un enum que fueron originalmente definidos para
-	// representar el tipo de los id...?
-	if (type_expr != symtable_element::INTEGER){
-		register_error(std::string("Non-integer \"from\" expression of a for loop."));
+	// Rule 18: from and to expression must evaluate to integers.
+	expr_call_appropriate_accept(node.from);
+	if(well_formed && type_l_expr!= symtable_element::INTEGER){
+		register_error(std::string("Non-integer \"from\" expression of a for loop."),
+				ERROR_18);
 	}
 
-	node.to->accept(*this);
-	type_expr = type_l_expr;
-	if (type_expr != symtable_element::INTEGER){
-		register_error(std::string("Non-integer \"to\" expression of a for loop."));
+	expr_call_appropriate_accept(node.to);
+	if(well_formed && type_l_expr != symtable_element::INTEGER){
+		register_error(std::string("Non-integer \"to\" expression of a for loop."),
+				ERROR_18);
 	}
 	// To check rules that depend on this information...
 	into_for_or_while = true;
-	node.body->accept(*this);
+	stm_call_appropriate_accept(node.body);
 	into_for_or_while = false;
 }
 
 void semantic_analysis::visit(const node_while_statement& node) {
-	symtable_element::id_type type_guard;
+#ifdef __DEBUG
 	std::cout << "Accessing while statement" << std::endl;
-	node.expression->accept(*this);
-	type_guard = type_l_expr;
-	// Rule 12: the guard must be a boolean expression
-	if (type_guard != symtable_element::BOOLEAN){
-		register_error(std::string("Error: non-boolean guard of an if expression ."));
+#endif
+
+	expr_call_appropriate_accept(node.expression);
+	if(well_formed && type_l_expr != symtable_element::BOOLEAN){
+		register_error(std::string("Non-boolean guard of while loop."),
+						ERROR_12);
 	}
 	// To check rules that depend on this information...
 	into_for_or_while = true;
-	node.body->accept(*this);
+	stm_call_appropriate_accept(node.body);
 	into_for_or_while = false;
 }
 
 void semantic_analysis::visit(const node_return_statement& node) {
-	symtable_element::id_type type_guard;
+	symtable_element::id_type type_method = actual_method->get_type();
+
+#ifdef __DEBUG
 	std::cout << "Accessing return statement" << std::endl;
+#endif
 
 	if(node.expression != nullptr) {
-		// Rule 8: a return statement must have an associated expression
-		// only if the method returns a value
-		// TODO: necesito poder consultar de forma transparente
-		// el tipo de retorno del método que define el scope actual
-
-		// Rule 9: the type of the value returned from the method must
-		// be the same than the type of the expression of the return statement
-		// TODO: cómo chequeamos esto?
-		node.expression->accept(*this);
-		type_expr = type_l_expr;
-
+		if(type_method == symtable_element::VOID){
+			// Rule 8: a return statement must have an associated expression
+			// only if the method returns a value.
+			register_error(std::string("Non-void returned value, from a method "
+										"whose return type is void."), ERROR_8);
+		}
+		else{
+			// {type_method != symtable_element::VOID}
+			// Rule 9: the type of the value returned from the method must
+			// be the same than the type of the expression of the return statement
+			expr_call_appropriate_accept(node.expression);
+			if(well_formed && type_l_expr != type_method){
+				register_error(std::string("Method's return type differs from"
+						"type of returned value."), ERROR_9);
+			}
+		}
 	}
 	else{
 		// {node.expression == nullptr}
-		// TODO: chequear que el retorno del método sea void
+		if(type_method != symtable_element::VOID){
+			// Rule 8.
+			register_error(std::string("No value returned, from a method "
+										"whose return type is not void."), ERROR_8);
+		}
 	}
 }
 
 void semantic_analysis::visit(const node_break_statement& node) {
+#ifdef __DEBUG
 	std::cout << "Accessing break statement" << std::endl;
+#endif
+
 	// Rule 19: break and continue, only into a loop's body.
 	if (!into_for_or_while){
-		register_error(std::string("Break statement outside a loop."));
+		register_error(std::string("Break statement outside a loop."),
+				ERROR_19);
 	}
 }
 
 void semantic_analysis::visit(const node_continue_statement& node) {
+#ifdef __DEBUG
 	std::cout << "Accessing continue statement" << std::endl;
+#endif
 	// Rule 19: break and continue, only into a loop's body.
 	if (!into_for_or_while){
-		register_error(std::string("Continue statement outside a loop."));
+		register_error(std::string("Continue statement outside a loop."),
+				ERROR_19);
 	}
 }
 
 void semantic_analysis::visit(const node_skip_statement& node) {
+#ifdef __DEBUG
 	std::cout << "Accessing skip statement" << std::endl;
-}
-
-void semantic_analysis::visit(const node_int_literal& node) {
-	std::cout << "Accessing int literal of value " << node.value << std::endl;
-	// TODO: acordarse de cambiar el tipo de valor retornado...
-	return symtable_element::INTEGER;
-}
-
-void semantic_analysis::visit(const node_float_literal& node) {
-	std::cout << "Accessing float literal of value " << node.value << std::endl;
-	return symtable_element::FLOAT;
-}
-
-void semantic_analysis::visit(const node_bool_literal& node) {
-	std::cout << "Accessing boolean literal of value " << node.value << std::endl;
-	return symtable_element::BOOLEAN;
-}
-
-void semantic_analysis::visit(const node_string_literal& node) {
-	std::cout << "Accessing float literal of value " << node.value << std::endl;
-	return symtable_element::STRING; // TODO: ?
+#endif
 }
 
 void semantic_analysis::visit(const node_binary_operation_expr& node) {
-	symtable_element::id_type ret;
-	// TODO: no nos convendría aquí tener un nodo especial para
-	// cada tipo de operacion?
-	symtable_element::id_type l_op_type = node.left->accept(*this);
-	symtable_element::id_type r_op_type = node.right->accept(*this);
+	symtable_element::id_type l_op_type, r_op_type;
+	symtable_element::id_class l_op_class, r_op_class;
+
+#ifdef __DEBUG
 	std::cout << "Accessing binary operation" << std::endl;
+#endif
 
+	expr_call_appropriate_accept(node.left);
+	if(well_formed){
+		l_op_type = type_l_expr;
+		l_op_class = class_l_expr;
+		well_formed = false;
+		expr_call_appropriate_accept(node.right);
+		if(well_formed){
+			r_op_type = type_l_expr;
+			r_op_class = class_l_expr;
 
-	// Rule 13: operands of arithmetic and relational operations,
-	// must have type int or float
-	if (node.oper != EQUAL && node.oper != DISTINCT &&
-		node.oper != AND && node.oper != OR){
+			// Rule 13: operands of arithmetic and relational operations,
+			// must have type int or float.
+			if (node.oper != Oper::EQUAL && node.oper != Oper::DISTINCT &&
+				node.oper != Oper::AND && node.oper != Oper::OR){
 
-		if ((l_op_type == symtable_element::INTEGER ||
-			 l_op_type == symtable_element::FLOAT)
-							&&
-			(r_op_type == symtable_element::INTEGER ||
-			 r_op_type == symtable_element::FLOAT)){
+				if ((l_op_type == symtable_element::INTEGER ||
+				l_op_type == symtable_element::FLOAT) &&
+				(r_op_type == symtable_element::INTEGER ||
+				r_op_type == symtable_element::FLOAT)){
 
-			// TODO: hay conversión implícita de tipos?
-			// TODO: determinar el tipo a retornar
-
-		}
-		else{
-			register_error(std::string("Non-numeric operands of arithmetic or relational operation."));
-		}
-	}
-	else{
-		// {node.oper == EQUAL || node.oper == DISTINCT ||
-		//  node.oper == AND || node.oper == OR}
-
-		// Rule 14: eq_op operands must have the same type (int, float or boolean)
-		if (node.oper == EQUAL || node.oper == DISTINCT){
-			if (l_op_type != r_op_type ||
-				(l_op_type != symtable_element::INTEGER &&
-				 l_op_type != symtable_element::FLOAT &&
-				 l_op_type != symtable_element::BOOLEAN)){
-
-				register_error(std::string("eq_op operands with different or wrong types."));
+					well_formed = true;
+					// TODO: hay conversión implícita de tipos?
+					// TODO: determinar el tipo a retornar
+					if (node.oper == Oper::LESS || node.oper == Oper::GREATER ||
+					node.oper == Oper::LESS_EQUAL || node.oper == Oper::GREATER_EQUAL){
+						type_l_expr = symtable_element::BOOLEAN;
+					}
+					else{
+						type_l_expr = get_wider_type(l_op_type, r_op_type);
+					}
+				}
+				else{
+					register_error(std::string("Non-numeric operands of "
+							"arithmetic or relational operation."), ERROR_13);
+					well_formed = false;
+				}
 			}
-		}
-		else{
-			// {node.oper == AND || node.oper == OR}
-			// Rule 15: cond_op and ! operands, must evaluate to a boolean
-			if (l_op_type != r_op_type || l_op_type != symtable_element::BOOLEAN){
-				register_error(std::string("cond_op operands must evaluate to boolean."));
-			}
-		}
-	}
+			else{
+				// {node.oper == Oper::EQUAL || node.oper == Oper::DISTINCT ||
+				//  node.oper == Oper::AND || node.oper == Oper::OR}
 
-	// TODO: setear el valor de ret!
-	return ret;
-}
+				// Rule 14: eq_op operands must have the same type (int, float or boolean)
+				if (node.oper == Oper::EQUAL || node.oper == Oper::DISTINCT){
+					if (l_op_type != r_op_type ||
+						(l_op_type != symtable_element::INTEGER &&
+						 l_op_type != symtable_element::FLOAT &&
+						 l_op_type != symtable_element::BOOLEAN)){
 
-void semantic_analysis::visit(const node_location& node) {
-	symtable_element aux; // TODO: debería usar un puntero, para no estar creando
-							 // instancias que no me hacen falta?
-	symtable_element::id_type type_index, type_id;
-	// Rule 10: the location must be already declared
-	// TODO: necesito un método rápido para preguntar eso
-	// TODO: tenemos que consultar la tabla con los distintos
-	// id, hasta determinar el tipo. Haría falta un único método
-	// de consulta, para poder repetirlo con los distintos ids
-	// hasta llegar al último.
-	if (__DEBUG)
-		std::cout << "Accessing location expression" << std::endl;
-
-	//for(auto r : node.ids) {
-	//	std::cout << "Accessing reference " << r << std::endl;
-	//	// TODO: ir indexando la tabla de símbolos hasta dar con el tipo
-	//	// del último id, y asignarlo a type_id
-	//}
-	aux = s_table.get(node.ids[0]);
-	// Rule 2: declaration before use
-	if (aux.get_class == symtable_element::NOT_FOUND){
-		register_error(std::string("Id "+r+" must be declared before use."));
-	}
-	else{
-		// INV : {aux is the symtable_element for the id number i-1 in node.ids}
-		for(std::vector<int>::size_type i = (std::vector<int>::size_type) 1;
-				i < node.ids.size(); i++){
-			// TODO: asumo que en ids se guardan los identificadores en orden
-			// desde 0 (el primer id de la izquierda), hacia la derecha...
-			if (__DEBUG)
-				std::cout << "Accessing reference " << r << std::endl;
-
-			// Index the previous symtable_element
-			aux = aux.get(node.ids[i]);
-			// Rule 2: declaration before use
-			if (aux.get_class == symtable_element::NOT_FOUND){
-				register_error(std::string("Id "+r+" must be declared before use."));
-				// TODO: cortamos esto acá?
-				break;
+						register_error(std::string("eq_op operands with "
+								"different or wrong types."), ERROR_14);
+						well_formed = false;
+					}
+					else{
+						well_formed = true;
+						type_l_expr = symtable_element::BOOLEAN;
+					}
+				}
+				else{
+					// {node.oper == Oper::AND || node.oper == Oper::OR}
+					// Rule 15: cond_op and ! operands, must evaluate to a boolean
+					if (l_op_type != r_op_type || l_op_type != symtable_element::BOOLEAN){
+						register_error(std::string("cond_op operands must "
+								"evaluate to boolean."), ERROR_15);
+						well_formed = false;
+					}
+					else{
+						well_formed = true;
+						type_l_expr = symtable_element::BOOLEAN;
+					}
+				}
 			}
 		}
 	}
-	// {aux is the symtable_element that represents the object referenced by
-	// the location}
-	// TODO: necesito alguna manera
-	if (node.array_idx_expr != NULL){
-		// Rule 11: if the location is an array position,
-		// the corresponding id must point to an array, and the
-		// index must be an integer
-		type_index = node.array_idx_expr->accept(*this);
-		// TODO: cambiar symtable_element::ARRAY por lo que corresponda
-		if (type_id != symtable_element::ARRAY ||
-			type_index != symtable_element::INTEGER){
-			// TODO: podría hacer falta un visitor que me genere un string bonito
-			// que represente el texto asociado a esta porción del ast, para
-			// informar mejor sobre la location y el index?
-			std::cerr << "Error: array assignment with wrong id or index." << std::endl;
-			// The process is not interrumpted. We just count the error.
-			error += 1;
-		}
-	}
-
-	return type_id;
 }
 
 void semantic_analysis::visit(const node_negate_expr& node) {
+#ifdef __DEBUG
 	std::cout << "Accessing negate expression" << std::endl;
-	// TODO: notar que sí tenemos un nodo especial para esta
-	// situación.
-	symtable_element::id_type type_expr = node.expression->accept(*this);
+#endif
 
-	// Rule 15: cond_op and ! operands, must evaluate to a boolean
-	if (type_expr != symtable_element::BOOLEAN){
-		std::cerr << "Error: non-boolean operand for a cond_op." << std::endl;
-		// The process is not interrumpted. We just count the error.
-		error += 1;
+	expr_call_appropriate_accept(node.expression);
+	if(well_formed){
+		// Rule 15: cond_op and ! operands, must evaluate to a boolean.
+		if (type_l_expr != symtable_element::BOOLEAN){
+			register_error(std::string("! operand must evaluate to boolean."),
+					ERROR_15);
+			well_formed = false;
+		}
 	}
-
-	return type_expr;
 }
 
 void semantic_analysis::visit(const node_negative_expr& node) {
+#ifdef __DEBUG
 	std::cout << "Accessing negative expression" << std::endl;
+#endif
 	// TODO: notar que sí tenemos un nodo especial para esta
 	// situación.
-	symtable_element::id_type type_expr = node.expression->accept(*this);
+	expr_call_appropriate_accept(node.expression);
 
-	if (type_expr != symtable_element::INTEGER && type != symtable_element::FLOAT){
+	if (well_formed && type_l_expr != symtable_element::INTEGER &&
+	type_l_expr != symtable_element::FLOAT){
 		// Rule 13: operands of arithmetic and relational operations,
 		// must have type int or float
-		std::cerr << "Error: non-numeric operand for a negation operation." << std::endl;
-		// The process is not interrumpted. We just count the error.
-		error += 1;
+		register_error(std::string("Non-numeric operand for an arithmetic "
+								"negation operation."), ERROR_13);
+		well_formed = false;
 	}
-
-	return type_expr;
 }
 
 void semantic_analysis::visit(const node_parentheses_expr& node) {
+#ifdef __DEBUG
 	std::cout << "Accessing parentheses expression" << std::endl;
+#endif
 
-	return node.expression->accept(*this);
+	expr_call_appropriate_accept(node.expression);
 }
-*/
