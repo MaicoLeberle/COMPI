@@ -19,9 +19,28 @@ struct Type {
     Type(_Type type_) : type(type_) {}
     Type(_Type type_, std::string id_) : type(type_), id(id_) {}
 };
-enum class Oper { PLUS, MINUS, TIMES, DIVIDE, MOD, LESS, GREATER, LESS_EQUAL,
-                  GREATER_EQUAL, EQUAL, DISTINCT, AND, OR };
-enum class AssignOper { ASSIGN, PLUS_ASSIGN, MINUS_ASSIGN };
+
+/**
+ * Enumerator class for binary operators. Operators are sorted according to precedence, from most to least.
+ * Operators in the same line have the same precedence.
+ */
+enum class Oper {
+	TIMES, DIVIDE, MOD,
+	PLUS, MINUS,
+	LESS, LESS_EQUAL, GREATER, GREATER_EQUAL,
+	EQUAL, DISTINCT,
+	AND,
+	OR
+};
+
+/**
+ * Enumerator class for assignment operators.
+ */
+enum class AssignOper {
+	ASSIGN,
+	PLUS_ASSIGN,
+	MINUS_ASSIGN
+};
 
 // Abstract classes ///////////////////////////////////////////////////////////
 /**
