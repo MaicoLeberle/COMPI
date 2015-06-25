@@ -36,7 +36,8 @@ public:
         Precondition: the argument is NOT_FOUND                              */
     symtable_element(id_class);
 
-    /*  Basic type variable.                                                 */
+    /*  Basic type variable.
+        Precondition: the type is neither VOID nor ID.                       */
     symtable_element(std::string, id_type);
 
     /*  Basic type array.                                                    */
@@ -130,8 +131,9 @@ public:
         the identifier of the class or function. Second parameter should be
         TRUE if the current symtable represents a class, and FALSE if it 
         represents a function.                              
-        Precondition: get_class_type() == (symtable_element::T_FUNCTION || 
-        symtable_element::T_CLASS)                                           */
+        Precondition: get_class_type() of the symtable_element whose key is 
+        this function's first parameter should be == 
+        (symtable_element::T_FUNCTION || symtable_element::T_CLASS).         */
     symtable(std::string, bool);
 
     /*  Precondition: the formal argument given to get should already exist
@@ -152,7 +154,8 @@ public:
     bool is_recursive(symtable_element);
 
     /*  Returns TRUE if id_exists(...) == FALSE && 
-        is_recursive(...) == FALSE. Otherwise, returns false.                */
+        is_recursive(...) == FALSE, and the element is not a class or a 
+        function. Otherwise, returns false.                */
     bool put (std::string, symtable_element); 
 
 private:
@@ -168,13 +171,6 @@ private:
 /*  This class represents the stack of symbol tables that conform the current
     scope.                                                                   */
 class symtables_stack {
-private:
-    //symtables_stack *prev;
-    //unsigned int length;
-    std::list<symtable*> stack;
-    symtable_element* last_func;
-    symtable_element* last_class;
-
 public:
     /*  This enumeration will be used as a way to inform the symtables_stack 
         user the result of calling put(...).                                 */
@@ -240,6 +236,11 @@ public:
         been fully analyzed.                                                */
     symtables_stack::put_func_results put_func(std::string, symtable_element&);
 
+    /*  Inserts a new parameter to the lastly inserted function (via put_func).
+        Precondition: The element is not a function or a class, and the string 
+        given to this put_func_param is equal to the element's key.          */
+    symtables_stack::put_param_results put_func_param(std::string, symtable_element&);
+
     /*  Simply performs a pop operation on the stack and resets the value of
         last_func. Caution not to pop some other symbols table on top of the 
         stack is advised. Future calls to put_func_param should be preceded by 
@@ -260,6 +261,11 @@ public:
         class has already been fully analyzed.                               */
     symtables_stack::put_class_results put_class(std::string, symtable_element&);
 
+    /*  Inserts a new class field to the lastly inserted class (via put_class).
+        Precondition: The element is not a class, and the string given to this
+         put_class_field call is equal to the element's key.                 */
+    symtables_stack::put_field_results put_class_field(std::string, symtable_element&);
+
     /*  Simply performs a pop operation on the stack and resets the value of
         last_class. Caution not to pop some other symbols table on top of the 
         stack is advised. Future calls to put_class_field should be preceded by
@@ -269,20 +275,15 @@ public:
         popped.                                                        */
     void finish_class_analysis(void);
 
-    /*  Inserts a new parameter to the lastly inserted function (via put_func).
-        Precondition: The element is not a function or a class, and the string 
-        given to this put_func_param is equal to the element's key.          */
-    symtables_stack::put_param_results put_func_param(std::string, symtable_element&);
-
-    /*  Inserts a new class field to the lastly inserted class (via put_class).
-        Precondition: The element is not a class, and the string given to this
-         put_class_field call is equal to the element's key.                 */
-    symtables_stack::put_field_results put_class_field(std::string, symtable_element&);
-
     /*  Returns the quantity of symbols tables in the stack.                 */
     unsigned int size(void);
 
     ~symtables_stack(void);
+
+private:
+    std::list<symtable*> stack;
+    symtable_element* last_func;
+    symtable_element* last_class;
 };
 
 #endif

@@ -7,13 +7,13 @@
 
 /*  START OF CONSTRUCTORS.   */
 
-symtable_element::symtable_element(id_class not_found_class) :
-    c_id(not_found_class) {
+symtable_element::symtable_element(id_class not_found_class) : c_id(not_found_class) {
     assert(not_found_class == NOT_FOUND);
 }
 
-symtable_element::symtable_element(std::string k, id_type t) :
-    key(k), c_id(T_VAR), t_id(t) { }
+symtable_element::symtable_element(std::string k, id_type t) : key(k), c_id(T_VAR), t_id(t) {
+    assert((t != symtable_element::VOID) && (t != symtable_element::ID));
+}
 
 symtable_element::symtable_element(std::string k, id_type t, unsigned int d) : 
     key(k), c_id(T_ARRAY), t_id(t), dim(d) { }
@@ -129,8 +129,8 @@ bool symtable::put (std::string key, symtable_element value) {
 
 /*  START OF CHECKERS.  */
 
-bool symtable::id_exists(std::string id) {
-    return ((this->hashtable).find(id) != (this->hashtable).end());
+bool symtable::id_exists(std::string key) {
+    return ((this->hashtable).find(key) != (this->hashtable).end());
 }
     
 bool symtable::is_recursive(symtable_element elem) {
@@ -282,7 +282,7 @@ symtables_stack::put_class_results symtables_stack::put_class(std::string key, s
 
     symtable* current = (this->stack).front();
     if(current -> put(key, value)) {
-        /*  The function has been added to its class's symbols table.
+        /*  The class has been added to the top of the symbols tables stack.
             Next, it has to be analysed; hence, a new symbols table for it is
             created.                                                         */
         this->push_symtable(value);
