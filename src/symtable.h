@@ -44,16 +44,16 @@ public:
     symtable_element(std::string, id_type, unsigned int);
 
     /*  Object.                                                              */
-    symtable_element(std::string, std::string); 
+    symtable_element(std::string, std::string*); 
 
     /*  Objects array.                                                       */
-    symtable_element(std::string, std::string, unsigned int);
+    symtable_element(std::string, std::string*, unsigned int);
 
     /*  Function.                                                            */
     symtable_element(std::string, id_type, std::list<symtable_element>*); 
 
     /*  Class.                                                               */
-    symtable_element(std::string, std::list<symtable_element>*);
+    symtable_element(std::string*, std::list<symtable_element>*);
 
     /*  Copy constructor.                                                    */
     symtable_element(symtable_element*);
@@ -70,7 +70,7 @@ public:
     id_type get_type (void);
 
     /*  Returns the class_type value.                                        */ 
-    std::string get_class_type (void);
+    std::string* get_class_type (void);
 
     /*  Returns the dimension. It will be 0 if it is not an array.           */
     unsigned int get_dimension (void);
@@ -104,19 +104,19 @@ private:
     id_type t_id;
 
     /*  Identifier type when it is an object, an object array or a class.    */
-    std::string class_type;
+    std::string* class_type;
 
     /*  Identifier dimension. Only for arrays.                               */
-    unsigned int dim = 0;
+    unsigned int dim;
 
     /*  List of formal arguments identifiers (meant for when the symbols 
         table element is a function). Note that every element in the list 
         should be of a basic type.                                           */
-    std::list<symtable_element>* func_params = NULL;
+    std::list<symtable_element>* func_params;
 
     /*  List of attributes and methods identifiers (meant for when the 
         symbols table element is a class).                                   */
-    std::list<symtable_element>* class_fields = NULL;
+    std::list<symtable_element>* class_fields;
 };
     
 
@@ -250,8 +250,8 @@ public:
         popped.                                                        */
     void finish_func_analysis(void);
 
-    /*  Inserts a new classto the symbols tables stack. This class is 
-        remembered for future calls of put_func_param. Also, a new symbols
+    /*  Inserts a new class to the symbols tables stack. This class is 
+        remembered for future calls of put_class_field. Also, a new symbols
         table is pushed on top of the stack, and every subsequent call to
         put_class_field is performed to this class and this recently created
         symbols table.
