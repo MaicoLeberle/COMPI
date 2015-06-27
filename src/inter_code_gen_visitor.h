@@ -1,20 +1,13 @@
 #ifndef _INTER_CODE_GEN_VISITOR_H_
 #define _INTER_CODE_GEN_VISITOR_H_
 
+#include <memory>
 #include "visitor.h" // Visitor's interface
 #include "symtable.h" // Symbol table's implementation.
+#include "three_address_code.h"
 
-class inter_code_gen_visitor : public visitor{
+class inter_code_gen_visitor : public visitor {
 public:
-	// TODO: esto habría que pasarlo a visitor.h?
-	/* Determines the kind of node_statement that it receives as parameter,
-	 * and calls the appropriate accept method. */
-	void stm_call_appropriate_accept(statement_pointer);
-
-	/* Determines the kind of node_expr that it receives as parameter,
-	 * and calls the appropriate accept method. */
-	void expr_call_appropriate_accept(expr_pointer);
-
 	// Inherited interface, to allow the definition outside this
 	// class declaration.
 
@@ -50,13 +43,8 @@ public:
 	virtual void visit(const node_parentheses_expr& node);
 
 private:
-	std::list<ThreeAddressCode> *inst_list; // List of three-address instructions
+	instructions_list instructions; // List of three-address instructions
 	symtables_stack s_table; // Symbol table
-
-	/* Converts a type expression described in terms of the Type enum of
-	 * node.h, to a type expression suitable for storage into
-	 * a symtable_element object. */
-	symtable_element::id_type determine_type(Type::_Type);
-}
+};
 
 #endif

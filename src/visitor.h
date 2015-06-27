@@ -34,8 +34,17 @@ class node_parentheses_expr;
    every visitor. */
 class visitor {
 public:
+	/* Determines the kind of node_expr that it receives as parameter,
+	 * and calls the appropriate accept method. */
+	void expr_call_appropriate_accept(expr_pointer e);
+
+	/* Determines the kind of node_statement that it receives as parameter,
+	 * and calls the appropriate accept method. */
+	void stm_call_appropriate_accept(statement_pointer s);
+
 	// Program
 	virtual void visit(const node_program& node) = 0;
+
 	// Class declaration
 	virtual void visit(const node_class_decl& node) = 0;
 	virtual void visit(const node_field_decl& node) = 0;
@@ -44,6 +53,7 @@ public:
 	virtual void visit(const node_parameter_identifier& node) = 0;
 	virtual void visit(const node_body& node) = 0;
 	virtual void visit(const node_block& node) = 0;
+
 	// Statements
 	virtual void visit(const node_assignment_statement& node) = 0;
 	virtual void visit(const node_method_call& node) = 0;
@@ -54,6 +64,7 @@ public:
 	virtual void visit(const node_break_statement& node) = 0;
 	virtual void visit(const node_continue_statement& node) = 0;
 	virtual void visit(const node_skip_statement& node) = 0;
+
 	// Expressions
 	virtual void visit(const node_int_literal& node) = 0;
 	virtual void visit(const node_float_literal& node) = 0;
@@ -64,6 +75,9 @@ public:
 	virtual void visit(const node_negate_expr& node) = 0;
 	virtual void visit(const node_negative_expr& node) = 0;
 	virtual void visit(const node_parentheses_expr& node) = 0;
+
+	// Destructor
+	virtual ~visitor() = 0;
 };
 
 #endif
