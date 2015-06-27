@@ -7,32 +7,40 @@
 
 /*  START OF CONSTRUCTORS.   */
 
-symtable_element::symtable_element(id_class not_found_class) : c_id(not_found_class) {
-    assert(not_found_class == NOT_FOUND);
+symtable_element::symtable_element(id_class not_found_class) : 
+    c_id(not_found_class), dim(0), func_params(NULL), class_fields(NULL), class_type(NULL) {
+        assert(not_found_class == NOT_FOUND);
 }
 
-symtable_element::symtable_element(std::string k, id_type t) : key(k), c_id(T_VAR), t_id(t) {
+symtable_element::symtable_element(std::string k, id_type t) : 
+    key(k), c_id(T_VAR), t_id(t), dim(0), func_params(NULL), class_fields(NULL), class_type(NULL) {
     assert((t != symtable_element::VOID) && (t != symtable_element::ID));
 }
 
 symtable_element::symtable_element(std::string k, id_type t, unsigned int d) : 
-    key(k), c_id(T_ARRAY), t_id(t), dim(d) { }
+    key(k), c_id(T_ARRAY), t_id(t), dim(d), func_params(NULL), class_fields(NULL), class_type(NULL)  { }
 
-symtable_element::symtable_element(std::string k, std::string s) : 
-    key(k), c_id(T_OBJ), t_id(ID), class_type(s) { }  
+symtable_element::symtable_element(std::string k, std::string* s) : 
+    key(k), c_id(T_OBJ), t_id(ID), class_type(s), dim(0), func_params(NULL), class_fields(NULL)  { }  
 
-symtable_element::symtable_element(std::string k, std::string s, unsigned int d) :
-    key(k), c_id(T_OBJ_ARRAY), t_id(ID), class_type(s) { }
+symtable_element::symtable_element(std::string k, std::string* s, unsigned int d) :
+    key(k), c_id(T_OBJ_ARRAY), t_id(ID), class_type(s), dim(d), func_params(NULL), class_fields(NULL)  { 
+        assert(d != 0);
+}
 
 symtable_element::symtable_element(std::string k, id_type t, std::list<symtable_element>* f) :
-    key(k), c_id(T_FUNCTION), t_id(t), func_params(f) { } 
+    key(k), c_id(T_FUNCTION), t_id(t), func_params(f), dim(0), class_fields(NULL), class_type(NULL)  { } 
 
-symtable_element::symtable_element(std::string k, std::list<symtable_element>* f) :
-    key(k), c_id(T_CLASS), class_fields(f), class_type (k) { }
+symtable_element::symtable_element(std::string* k, std::list<symtable_element>* f) :
+    key(*k), c_id(T_CLASS), class_fields(f), class_type(k), dim(0), func_params(NULL) { 
+    }
 
 symtable_element::symtable_element(symtable_element* from) :
-    key(from->get_key()), c_id(from->get_class()), t_id(from->get_type()), class_type(from->get_class_type())
-  , dim(from->get_dimension()), func_params(from->get_func_params()), class_fields(from->get_class_fields()) { }
+    key(from->get_key()), c_id(from->get_class()), t_id(from->get_type())
+  , dim(from->get_dimension()), func_params(from->get_func_params()), class_fields(from->get_class_fields()) { 
+        std::string *s = from->get_class_type();
+        this->class_type = s;
+}
 
 /*  END OF CONSTRUCTORS.    */
 
@@ -50,8 +58,7 @@ symtable_element::id_type symtable_element::get_type () {
     return (this->t_id); 
 }
 
-std::string symtable_element::get_class_type () {
-    assert(this->c_id == T_OBJ || this->c_id == T_OBJ_ARRAY || this->c_id == T_CLASS);
+std::string* symtable_element::get_class_type () {
     return (this->class_type); 
 }
 
@@ -121,6 +128,9 @@ std::string symtable::get_id() {
 bool symtable::put (std::string key, symtable_element value) {
     if (id_exists(key) || is_recursive(value))
         return false;
+    if (this->id != NULL && value.get_class() == symtable_element::T_CLASS)
+        /*  A class cannot be defined inside another class or function.      */
+        return false;
     hashtable.insert(std::pair<std::string, symtable_element>(key, value));
     return true;
 }
@@ -134,10 +144,9 @@ bool symtable::id_exists(std::string key) {
 }
     
 bool symtable::is_recursive(symtable_element elem) {
-    assert(this->id);
-    if (elem.get_class() != symtable_element::T_OBJ || !(this->class_or_function))
+    if (!this->id || elem.get_class() != symtable_element::T_OBJ || !(this->class_or_function))
         return false;
-    return(elem.get_class_type() == *(this->id));
+    return((*elem.get_class_type()) == *(this->id));
 }
 
 /*  END OF CHECKERS.    */
@@ -167,8 +176,8 @@ void symtables_stack::push_symtable(symtable_element& s) {
     symtable* new_table = new symtable(s.get_key()
                             , ((s.get_class() == symtable_element::T_CLASS)? true : false));
 
-    /*  Second, each element in the function parameters list or class 
-        attributes and methods list must be added to the new symbols table.  */
+    /*  Second, each element in the function parameters list, or class 
+        attributes and methods list, must be added to the new symbols table. */
     std::list<symtable_element>* l;
     if (s.get_class() == symtable_element::T_FUNCTION) 
         l = s.get_func_params();
