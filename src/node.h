@@ -49,13 +49,16 @@ enum class AssignOper {
 class node {
 public:
 	virtual ~node() {}
+
 	template<typename visitor>
 	void accept(visitor& v) {}
 };
+
 class node_class_block : public node {
 public:
-	virtual bool is_node_field_decl() {}
+	virtual bool is_node_field_decl() = 0;
 };
+
 class node_statement : public node {
 public:
 	// To resolve type erasure
@@ -72,13 +75,15 @@ public:
 		skip_statement,
 		method_call_statement,
 	};
-	virtual statement type_of_statement(void) {}
+
+	virtual statement type_of_statement() = 0;
 };
+
 class node_expr : public node_statement {
 public:
 	// To resolve type erasure
 	enum expression {
-		// Note that this is nt directly related with our language's types.
+		// Note that this is not directly related with our language's types.
 		// This enumeration codes "syntactic" kind of expressions.
 		int_literal,
 		float_literal,
@@ -91,9 +96,11 @@ public:
 		parentheses_expr,
 		method_call_expr,
 	};
-	virtual expression type_of_expression(void) {}
+
+	virtual expression type_of_expression(void) = 0;
 };
-class node_literal      : public node_expr {};
+
+class node_literal : public node_expr {};
 
 // Classes prototypes /////////////////////////////////////////////////////////
 class node_program;
@@ -127,7 +134,7 @@ class node_parentheses_expr;
 typedef std::shared_ptr<node_class_block>             class_block_pointer;
 typedef std::shared_ptr<node_statement>               statement_pointer;
 typedef std::shared_ptr<node_expr>                    expr_pointer;
-typedef std::unique_ptr<node_program>                 program_pointer;
+typedef std::shared_ptr<node_program>                 program_pointer;
 typedef std::shared_ptr<node_class_decl>              class_pointer;
 typedef std::shared_ptr<node_id>                      id_pointer;
 typedef std::shared_ptr<node_field_decl>              field_pointer;
@@ -216,7 +223,6 @@ public:
      */
     std::string id;
     int array_size;
-
 
     node_id(std::string id_, int array_size_ = -1) :
     	id(id_), array_size(array_size_) {}

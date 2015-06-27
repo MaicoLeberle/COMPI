@@ -1,184 +1,108 @@
-#include <iostream>
-#include <typeinfo>
 #include "visitor.h"
 
-void visitor::visit(const node_program& node) {
-	for(auto c : node.classes) {
-		c->accept(*this);
+void visitor::expr_call_appropriate_accept(expr_pointer e) {
+	switch(e->type_of_expression()) {
+			case node_expr::int_literal :
+				node_int_literal& aux = static_cast<node_int_literal&> (*e);
+				aux.accept(*this);
+				break;
+
+			case node_expr::bool_literal :
+				node_bool_literal& aux = static_cast<node_bool_literal&> (*e);
+				aux.accept(*this);
+				break;
+
+			case node_expr::string_literal :
+				node_string_literal& aux = static_cast<node_string_literal&> (*e);
+				aux.accept(*this);
+				break;
+
+			case node_expr::binary_operation_expr :
+				node_binary_operation_expr& aux = static_cast<node_binary_operation_expr&> (*e);
+				aux.accept(*this);
+				break;
+
+			case node_expr::location :
+				node_location& aux = static_cast<node_location&> (*e);
+				aux.accept(*this);
+				break;
+
+			case node_expr::negate_expr :
+				node_negate_expr& aux = static_cast<node_negate_expr&> (*e);
+				aux.accept(*this);
+				break;
+
+			case node_expr::negative_expr :
+				node_negative_expr& aux = static_cast<node_negative_expr&> (*e);
+				aux.accept(*this);
+				break;
+
+			case node_expr::parentheses_expr :
+				node_parentheses_expr& aux = static_cast<node_parentheses_expr&> (*e);
+				aux.accept(*this);
+				break;
+
+			case node_expr::method_call_expr :
+				node_method_call& aux = static_cast<node_method_call&> (*e);
+				aux.accept(*this);
+				break;
+		}
+}
+
+void visitor::stm_call_appropriate_accept(statement_pointer s){
+	switch(s->type_of_statement()) {
+		case node_statement::field_decl :
+				node_field_decl& aux = static_cast<node_field_decl&> (*s);
+				aux.accept(*this);
+				break;
+
+		case node_statement::block :
+				node_block& aux = static_cast<node_block&> (*s);
+				aux.accept(*this);
+				break;
+
+		case node_statement::assignment_statement :
+				node_assignment_statement& aux = static_cast<node_assignment_statement&> (*s);
+				aux.accept(*this);
+				break;
+
+		case node_statement::method_call_statement :
+			node_method_call& aux = static_cast<node_method_call&> (*s);
+			aux.accept(*this);
+			break;
+
+		case node_statement::if_statement :
+			node_if_statement& aux = static_cast<node_if_statement&> (*s);
+			aux.accept(*this);
+			break;
+
+		case node_statement::for_statement :
+			node_for_statement& aux = static_cast<node_for_statement&> (*s);
+			aux.accept(*this);
+			break;
+
+		case node_statement::while_statement :
+			node_while_statement& aux = static_cast<node_while_statement&> (*s);
+			aux.accept(*this);
+			break;
+
+		case node_statement::return_statement :
+			node_return_statement& aux = static_cast<node_return_statement&> (*s);
+			aux.accept(*this);
+			break;
+
+		case node_statement::break_statement :
+			node_break_statement& aux = static_cast<node_break_statement&> (*s);
+			aux.accept(*this);
+			break;
+
+		case node_statement::continue_statement :
+			node_continue_statement& aux = static_cast<node_continue_statement&> (*s);
+			aux.accept(*this);
+			break;
+
+		case node_statement::skip_statement :
+			node_skip_statement& aux = static_cast<node_skip_statement&> (*s);
+			aux.accept(*this);
 	}
 }
-
-void visitor::visit(const node_class_decl& node) {
-	std::cout << "Accessing class " << node.id << std::endl;
-
-	for(auto cb : node.class_block) {
-		cb->accept(*this);
-	}
-}
-
-void visitor::visit(const node_field_decl& node) {
-	for(auto f : node.ids) {
-		f->accept(*this);
-	}
-}
-
-void visitor::visit(const node_id& node) {
-	std::cout << "Accessing field " << node.id << " of dim " << node.array_size << std::endl;
-}
-
-void visitor::visit(const node_method_decl& node) {
-	std::cout << "Accessing method " << node.id << std::endl;
-
-	for(auto p : node.parameters) {
-		p->accept(*this);
-	}
-
-	node.body->accept(*this);
-}
-
-void visitor::visit(const node_parameter_identifier& node) {
-	std::cout << "Accessing parameter " << node.id << std::endl;
-}
-
-void visitor::visit(const node_body& node) {
-	std::cout << "Accessing body of method" << std::endl;
-
-	if(node.is_extern)
-		std::cout << "The body is extern" << std::endl;
-	else {
-		std::cout << "The body is declared" << std::endl;
-
-		node.block->accept(*this);
-	}
-}
-
-void visitor::visit(const node_block& node) {
-	for(auto s : node.content) {
-		s->accept(*this);
-	}
-}
-
-void visitor::visit(const node_assignment_statement& node) {
-	std::cout << "Accessing assignment statement" << std::endl;
-
-	node.location->accept(*this);
-
-	node.expression->accept(*this);
-}
-
-void visitor::visit(const node_method_call& node) {
-	std::cout << "Accessing method call statement" << std::endl;
-
-	for(auto r : node.ids) {
-		std::cout << "Accessing reference " << r << std::endl;
-	}
-
-	for(auto e : node.parameters) {
-		e->accept(*this);
-	}
-}
-
-void visitor::visit(const node_if_statement& node){
-	std::cout << "Accessing if statement" << std::endl;
-
-	node.expression->accept(*this);
-
-	node.then_statement->accept(*this);
-
-	if(node.else_statement != nullptr) {
-		node.else_statement->accept(*this);
-	}
-}
-
-void visitor::visit(const node_for_statement& node){
-	std::cout << "Accessing for statement" << std::endl;
-
-	node.from->accept(*this);
-
-	node.to->accept(*this);
-
-	node.body->accept(*this);
-}
-
-void visitor::visit(const node_while_statement& node) {
-	std::cout << "Accessing while statement" << std::endl;
-
-	node.expression->accept(*this);
-
-	node.body->accept(*this);
-}
-
-void visitor::visit(const node_return_statement& node) {
-	std::cout << "Accessing return statement" << std::endl;
-
-	if(node.expression != nullptr) {
-		node.expression->accept(*this);
-	}
-}
-
-void visitor::visit(const node_break_statement& node) {
-	std::cout << "Accessing break statement" << std::endl;
-}
-
-void visitor::visit(const node_continue_statement& node) {
-	std::cout << "Accessing continue statement" << std::endl;
-}
-
-void visitor::visit(const node_skip_statement& node) {
-	std::cout << "Accessing skip statement" << std::endl;
-}
-
-void visitor::visit(const node_int_literal& node) {
-	std::cout << "Accessing int literal of value " << node.value << std::endl;
-}
-
-void visitor::visit(const node_float_literal& node) {
-	std::cout << "Accessing float literal of value " << node.value << std::endl;
-}
-
-void visitor::visit(const node_bool_literal& node) {
-	std::cout << "Accessing boolean literal of value " << node.value << std::endl;
-}
-
-void visitor::visit(const node_string_literal& node) {
-	std::cout << "Accessing float literal of value " << node.value << std::endl;
-}
-
-void visitor::visit(const node_binary_operation_expr& node) {
-	std::cout << "Accessing binary operation" << std::endl;
-
-	node.left->accept(*this);
-
-	node.right->accept(*this);
-}
-
-void visitor::visit(const node_location& node) {
-	std::cout << "Accessing location expression" << std::endl;
-
-	for(auto r : node.ids) {
-		std::cout << "Accessing reference " << r << std::endl;
-	}
-
-	node.array_idx_expr->accept(*this);
-}
-
-void visitor::visit(const node_negate_expr& node) {
-	std::cout << "Accessing negate expression" << std::endl;
-
-	node.expression->accept(*this);
-}
-
-void visitor::visit(const node_negative_expr& node) {
-	std::cout << "Accessing negative expression" << std::endl;
-
-	node.expression->accept(*this);
-}
-
-void visitor::visit(const node_parentheses_expr& node) {
-	std::cout << "Accessing parentheses expression" << std::endl;
-
-	node.expression->accept(*this);
-}
-
-
-

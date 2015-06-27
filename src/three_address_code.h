@@ -1,5 +1,5 @@
-#ifndef INTERMEDIATE_H_
-#define INTERMEDIATE_H_
+#ifndef THREE_ADDRESS_CODE_H_
+#define THREE_ADDRESS_CODE_H_
 
 #include <memory>
 #include <string>
@@ -15,8 +15,7 @@ enum class address_type {
 enum class value_type {
 	BOOLEAN,
 	INTEGER,
-	FLOAT,
-	STRING
+	FLOAT
 };
 
 struct address {
@@ -29,9 +28,8 @@ struct address {
 				int ival;
 				float fval;
 				bool bval;
-				std::string *sval;
 			} val;
-		} constant; // Constant, formed by type and a value.
+		} constant; // Constant, formed by type and a value. For now no string as type.
 		unsigned int temp; // Compiler-generated temporary.
 		std::string *label; // In case the address is a label.
 	} value;
@@ -78,14 +76,14 @@ enum class quad_oper {
 
 struct quad {
 	quad_type type;
-	quad_oper op;
-	address_pointer arg1;
-	address_pointer arg2;
-	address_pointer result;
+	quad_oper op = quad_oper::NONE;
+	address_pointer arg1 = nullptr;
+	address_pointer arg2 = nullptr;
+	address_pointer result = nullptr;
 };
 
 typedef std::shared_ptr<quad> quad_pointer;
 
-class instructions : public std::vector<quad_pointer> {};
+class instructions_list : public std::vector<quad_pointer> {};
 
-#endif // INTERMEDIATE_H_
+#endif // THREE_ADDRESS_CODE_H_

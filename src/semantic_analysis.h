@@ -32,7 +32,7 @@ public:
     	ERROR_19,
     	ERROR_20, // Declaration of identifier with unknown type.
     	ERROR_21, // Trying to access a field from a value that is not an object.
-    	ERROR_22, // Method call operation over a value different than a method.
+    	ERROR_22 // Method call operation over a value different than a method.
     };
 
     semantic_analysis (void);
@@ -54,6 +54,7 @@ public:
 	virtual void visit(const node_parameter_identifier& node);
 	virtual void visit(const node_body& node);
 	virtual void visit(const node_block& node);
+
 	// Statements
 	virtual void visit(const node_assignment_statement& node);
 	virtual void visit(const node_method_call& node);
@@ -65,6 +66,7 @@ public:
 	virtual void visit(const node_continue_statement& node);
 	virtual void visit(const node_skip_statement& node);
 	// Expressions
+
 	virtual void visit(const node_int_literal& node);
 	virtual void visit(const node_float_literal& node);
 	virtual void visit(const node_bool_literal& node);
@@ -112,14 +114,6 @@ private:
 	/* Adds, and flush, a string to the error's output and counts the
 	       error. */
 	void register_error(std::string, error_id);
-
-	/* Determines the kind of node_statement that it receives as parameter,
-	 * and calls the appropriate accept method. */
-	void stm_call_appropriate_accept(statement_pointer);
-
-	/* Determines the kind of node_expr that it receives as parameter,
-	 * and calls the appropriate accept method. */
-	void expr_call_appropriate_accept(expr_pointer);
 
 	/* Determines a returns the "wider" type, from the 2 received as parameters,
 	 * by considering the hierarchy of numeric types of the language.
