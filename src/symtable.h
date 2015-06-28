@@ -55,9 +55,6 @@ public:
     /*  Class.                                                               */
     symtable_element(std::string*, std::list<symtable_element>*);
 
-    /*  Copy constructor.                                                    */
-    symtable_element(symtable_element*);
-
 
     /*  Getters.                                                             */
 

@@ -32,15 +32,8 @@ symtable_element::symtable_element(std::string k, id_type t, std::list<symtable_
     key(k), c_id(T_FUNCTION), t_id(t), func_params(f), dim(0), class_fields(NULL), class_type(NULL)  { } 
 
 symtable_element::symtable_element(std::string* k, std::list<symtable_element>* f) :
-    key(*k), c_id(T_CLASS), class_fields(f), class_type(k), dim(0), func_params(NULL) { 
+    key(*k), c_id(T_CLASS), t_id(ID), class_fields(f), class_type(k), dim(0), func_params(NULL) { 
     }
-
-symtable_element::symtable_element(symtable_element* from) :
-    key(from->get_key()), c_id(from->get_class()), t_id(from->get_type())
-  , dim(from->get_dimension()), func_params(from->get_func_params()), class_fields(from->get_class_fields()) { 
-        std::string *s = from->get_class_type();
-        this->class_type = s;
-}
 
 /*  END OF CONSTRUCTORS.    */
 
@@ -200,7 +193,10 @@ void symtables_stack::pop_symtable() {
 /*  START OF VARIABLE TREATMENT METHODS.    */
 
 symtable_element* symtables_stack::get(std::string key) {
-    assert(this->size() != 0);
+    if(this->size() == 0) {
+        symtable_element* s = new symtable_element(symtable_element::NOT_FOUND);
+        return s;
+    }
     symtable* current = (this->stack).front();
 
      /*  Must search from the top of the stack and downwards.        */
@@ -215,8 +211,6 @@ symtable_element* symtables_stack::get(std::string key) {
 }
 
 symtables_stack::put_results symtables_stack::put(std::string key, symtable_element value) {
-    assert((value.get_class() != symtable_element::T_FUNCTION) && (value.get_class() != symtable_element::T_CLASS));
-
     /*  Always insert a new identifier's information in the top
         of the stack; i.e., in the symbols table inserted last.       */
     symtable* current = (this->stack).front();
