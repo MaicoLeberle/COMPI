@@ -21,8 +21,9 @@ struct Type {
 };
 
 /**
- * Enumerator class for binary operators. Operators are sorted according to precedence, from most to least.
- * Operators in the same line have the same precedence.
+ * Enumerator class for binary operators. Operators are sorted according to
+ * precedence, from most to least. Operators in the same line have the same
+ * precedence.
  */
 enum class Oper {
 	TIMES, DIVIDE, MOD,
@@ -79,7 +80,7 @@ public:
 	virtual statement type_of_statement() = 0;
 };
 
-class node_expr : public node_statement {
+class node_expr : public node {
 public:
 	// To resolve type erasure
 	enum expression {
@@ -112,7 +113,7 @@ class node_parameter_identifier;
 class node_body;
 class node_block;
 class node_assignment_statement;
-class node_method_call;
+class node_method_call_statement;
 class node_if_statement;
 class node_for_statement;
 class node_while_statement;
@@ -129,6 +130,7 @@ class node_location;
 class node_negate_expr;
 class node_negative_expr;
 class node_parentheses_expr;
+class node_method_call_expr;
 
 // Smart pointers wrappers ////////////////////////////////////////////////////
 typedef std::shared_ptr<node_class_block>             class_block_pointer;
@@ -143,7 +145,7 @@ typedef std::shared_ptr<node_parameter_identifier>    parameter_pointer;
 typedef std::shared_ptr<node_body>                    body_pointer;
 typedef std::shared_ptr<node_block>                   block_pointer;
 typedef std::shared_ptr<node_assignment_statement>    assignment_pointer;
-typedef std::shared_ptr<node_method_call>             method_call_pointer;
+typedef std::shared_ptr<node_method_call_statement>   method_call_statement_pointer;
 typedef std::shared_ptr<node_if_statement>            if_pointer;
 typedef std::shared_ptr<node_for_statement>           for_pointer;
 typedef std::shared_ptr<node_while_statement>         while_pointer;
@@ -160,6 +162,7 @@ typedef std::shared_ptr<node_location>                location_pointer;
 typedef std::shared_ptr<node_negate_expr>             negate_expr_pointer;
 typedef std::shared_ptr<node_negative_expr>           negative_expr_pointer;
 typedef std::shared_ptr<node_parentheses_expr>        parentheses_expr_pointer;
+typedef std::shared_ptr<node_method_call_expr>        method_call_expr_pointer;
 
 // List wrappers //////////////////////////////////////////////////////////////
 class classes_list      : public std::vector<class_pointer> {};
@@ -392,7 +395,7 @@ public:
 /**
  * Node for a method call. Can be treated both as an expression or as a statement.
  */
-class node_method_call : public node_expr {
+class method_call {
 public:
     /**
      * :field ids: List of ids references in the method call. Can be of size 1.
@@ -401,24 +404,48 @@ public:
     reference_list ids;  // TODO: Change references from string to node?
     expression_list parameters;
 
-    node_method_call(reference_list ids_) : ids(ids_) {}
-    node_method_call(reference_list ids_, expression_list parameters_) :
+    method_call(reference_list ids_) : ids(ids_) {}
+    method_call(reference_list ids_, expression_list parameters_) :
         ids(ids_), parameters(parameters_) {}
 
-    statement type_of_statement(void) {
-    	return method_call_statement;
-    }
+};
 
-    expression type_of_expression(void) {
+class node_method_call_expr : public node_expr{
+public:
+	method_call *method_call_data; // Object that stores information about
+									// the call.
+
+	node_method_call_expr(method_call *_method_call_data) :
+		method_call_data(_method_call_data) {}
+
+	expression type_of_expression(void) {
 		return method_call_expr;
 	}
 
-    template<typename visitor>
+	template<typename visitor>
 	void accept(visitor& v) {
-    	v.visit(*this);
-    }
-};
+		v.visit(*this);
+	}
 
+};
+class node_method_call_statement : public node_statement{
+public:
+	method_call *method_call_data; // Object that stores information about
+									// the call.
+
+	node_method_call_statement(method_call *_method_call_data) :
+		method_call_data(_method_call_data) {}
+
+	statement type_of_statement(void) {
+		return method_call_statement;
+	}
+
+	template<typename visitor>
+	void accept(visitor& v) {
+		v.visit(*this);
+	}
+
+};
 /**
  * Node of an if conditional
  */
