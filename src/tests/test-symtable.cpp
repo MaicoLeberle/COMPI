@@ -461,15 +461,99 @@ void test_symtables_stack () {
     test_symtables_stack_classes();
 }
 
+void test_sample_program() {
+    /*  The program to be tested is 
+            class Program { 
+                void method(){
+                    x = 1;
+                }
+            }
+
+            class main {
+                void Main(){}
+            }
+    */
+
+    /*  Create a symbols tables stack, and push the global symbols table into 
+        it.                                                                  */ 
+    symtables_stack stack1;
+    stack1.push_symtable();
+
+    /*  Create the Program class, along with the list of fields that is to be 
+        filled later when every method is met.
+        Also, put Program in the global symbols table and begin its analysis.*/
+    std::list<symtable_element>* fields1 = new std::list<symtable_element>();
+    std::string* class_name1 = new std::string("Program");
+    symtable_element class1(class_name1, fields1);
+    assert(stack1.put_class(class1.get_key(), class1) == symtables_stack::CLASS_PUT);
+    assert(stack1.size() == 2);
+
+    /*  The method function is met, and its representation created and then 
+        pushed into Program's fields list. Its analysis is begun (its 
+        identifier pushed into Program's symbols table, and new symbols table 
+        is created for its analysis, etc) via put_func, but first its previous
+        nonexistence is checked.                                            */
+    std::list<symtable_element>* parameters1 = new std::list<symtable_element>();
+    symtable_element method1(std::string("method"), symtable_element::VOID, parameters1);
+    fields1->push_front(method1);
+    assert((stack1.get(method1.get_key()))->get_class() == symtable_element::NOT_FOUND);
+    assert(stack1.put_func(method1.get_key(), method1) == symtables_stack::FUNC_PUT);
+    assert(stack1.size() == 3);
+
+    /*  Here would go method's inner analysis.                               */
+
+    /*  Finish method's and Program's analysis.                              */
+    stack1.finish_func_analysis();
+    assert(stack1.size() == 2);
+    stack1.finish_class_analysis();
+    assert(stack1.size() == 1);
+
+    /*  Create the main class, along with the list of fields that is to be
+        filled later when every method is met.
+        Also, put main in the global symbols table and begin its analysis.   */
+    std::list<symtable_element>* fields2 = new std::list<symtable_element>();
+    std::string* class_name2 = new std::string("main");
+    symtable_element class2(class_name2, fields2);
+    assert(stack1.put_class(class2.get_key(), class2) == symtables_stack::CLASS_PUT);
+    assert(stack1.size() == 2);
+
+    /*  The Main function is met, and its representation created and then 
+        pushed into main's fields list. Its analysis is begun (its identifier
+        pushed into main's symbols table, and new symbols table is created for 
+        its analysis, etc) via put_func, but first its previous nonexistence is
+        checked.                                                             */
+    std::list<symtable_element>* parameters2 = new std::list<symtable_element>();
+    symtable_element method2(std::string("Main"), symtable_element::VOID, parameters2);
+    fields2->push_front(method2);
+    assert((stack1.get(std::string("Main")))->get_class() == symtable_element::NOT_FOUND);
+    assert(stack1.put_func(method1.get_key(), method1) == symtables_stack::FUNC_PUT);
+    assert(stack1.size() == 3);
+
+    /*  Here would go Main's inner analysis, if it had one.                  */
+
+    /*  Finish Main's and main's analysis.                                   */
+    stack1.finish_func_analysis();
+    assert(stack1.size() == 2);
+    stack1.finish_class_analysis();
+    assert(stack1.size() == 1);
+
+    std::cout << "OK." << std::endl;
+}
+
 int main(int argc, const char* argv[]) {
-    std::cout << "symtable_element is going to be checked now: " << std::endl;
+    std::cout << "symtable_element: " << std::endl;
     test_symtable_element();
 
-    std::cout << "symtable is going to be checked now: " << std::endl;
+    std::cout << std::endl << "symtable: " << std::endl;
     test_symtable();
 
-    std::cout << "symtables_stack is going to be checked now: " << std::endl;
+    std::cout << std::endl << "symtables_stack: " << std::endl;
     test_symtables_stack();
+
+    std::cout << std::endl << "Analyzing a sample program: ";
+    test_sample_program();
+
+    
 
     return 0;
 }

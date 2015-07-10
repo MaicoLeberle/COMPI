@@ -284,7 +284,7 @@ symtables_stack::put_class_results symtables_stack::put_class(std::string key, s
         return symtables_stack::CLASS_EXISTS;
 
     symtable* current = (this->stack).front();
-    if(current -> put(key, value)) {
+    if(current->put(key, value)) {
         /*  The class has been added to the top of the symbols tables stack.
             Next, it has to be analysed; hence, a new symbols table for it is
             created.                                                         */
