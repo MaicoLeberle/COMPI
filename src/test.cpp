@@ -187,7 +187,8 @@ void test_rule_2(){
 	std::cout << "2) An identifier is declared before it is used:";
 	std::string test_program = "class Program {\n"
 									"void method(){\n"
-										"}\n"
+										"x = 1;"
+									"}\n"
 								"}\n"
 								"class main {\n"
 									"void Main(){\n"
@@ -889,9 +890,9 @@ void test_rule_22(){
 void test_semantic_analysis(){
 	std::cout << "\nTesting semantic analysis: " << std::endl;
 
-	//test_rule_1();
+	test_rule_1();
 	test_rule_2();
-	/*test_rule_3();
+	test_rule_3();
 	test_rule_4();
 	test_rule_5();
 	test_rule_8();
@@ -907,13 +908,13 @@ void test_semantic_analysis(){
 	test_rule_19();
 	test_rule_20();
 	test_rule_21();
-	test_rule_22();*/
+	test_rule_22();
 
 }
 
 int main(int argc, const char* argv[]) {
 	test_parser();
-	//test_semantic_analysis();
+	test_semantic_analysis();
 	test_inter_code_gen_visitor();
 
     return 0;

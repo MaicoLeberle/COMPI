@@ -242,7 +242,7 @@ void semantic_analysis::visit(const node_class_decl& node) {
 #ifdef __DEBUG
 	symtables_stack::put_class_results ret = s_table.put_class(new_class.get_key(), new_class);
 	assert(ret == symtables_stack::CLASS_PUT);
-	assert(s_table.size() == 2);
+	//assert(s_table.size() == 2);
 #else
 	s_table.put_class(new_class.get_key(), new_class);
 #endif
@@ -288,7 +288,7 @@ void semantic_analysis::visit(const node_class_decl& node) {
 	// Close the scope introduced by the class
 	std::cout << "Finishing analysis of class " << node.id << std::endl;
 	s_table.finish_class_analysis();
-	assert(s_table.size() == 1);
+	//assert(s_table.size() == 1);
 }
 
 void semantic_analysis::visit(const node_field_decl& node) {
@@ -388,7 +388,7 @@ void semantic_analysis::visit(const node_method_decl& node){
 	// Add to the symbol table, define a new scope
 #ifdef __DEBUG
 	assert(s_table.put_func(node.id, method) == symtables_stack::FUNC_PUT);
-	assert(s_table.size() == 3);
+	//assert(s_table.size() == 3);
 #else
 	s_table.put_func(node.id, method);
 #endif
@@ -400,7 +400,7 @@ void semantic_analysis::visit(const node_method_decl& node){
 	// Close the scope defined by the method.
 	std::cout << "Finishing analysis of method " << node.id << std::endl;
 	s_table.finish_func_analysis();
-	assert(s_table.size() == 2);
+	//assert(s_table.size() == 2);
 	// TODO: quitar esto cuando se resuelva lo de la tabla
 	into_method = false;
 	actual_method = nullptr;
@@ -457,7 +457,9 @@ void semantic_analysis::visit(const node_block& node) {
 	for(auto s : node.content) {
 		stm_call_appropriate_accept(s);
 	}
+	s_table.pop_symtable();
 }
+
 void semantic_analysis::visit(const node_assignment_statement& node) {
 	#ifdef __DEBUG
 		std::cout << "Accessing assignment statement" << std::endl;
