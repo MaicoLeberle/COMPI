@@ -235,8 +235,9 @@ symtables_stack::put_func_results symtables_stack::put_func(std::string key, sym
     if(value.get_class() != symtable_element::T_FUNCTION) 
         return symtables_stack::NOT_FUNC;
 
-    if((this->get(key))->get_class() != symtable_element::NOT_FOUND)
-        return symtables_stack::FUNC_EXISTS;
+    if((this->get(key))->get_class() != symtable_element::NOT_FOUND 
+        && (this->get(key))->get_class() != symtable_element::T_CLASS)
+            return symtables_stack::FUNC_EXISTS;
 
     symtable* current = (this->stack).front();
     if(current -> put(key, value)) {
