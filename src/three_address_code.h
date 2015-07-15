@@ -40,6 +40,13 @@ struct address {
 typedef std::shared_ptr<address> address_pointer;
 
 enum class quad_type {
+	CREATE_INT,
+	CREATE_FLOAT,
+	CREATE_BOOLEAN,
+	CREATE_ID,
+	CREATE_INT_ARRAY,
+	CREATE_FLOAT_ARRAY,
+	CREATE_BOOLEAN_ARRAY,
 	BINARY_ASSIGN, 		// x = y op z
 	UNARY_ASSIGN,  		// x = op y
 	COPY,				// x = y
