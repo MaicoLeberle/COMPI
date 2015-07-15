@@ -19,6 +19,7 @@ program_pointer ast; // Pointer to the AST
     class_block_list* class_block;
     node_field_decl* field_decl;
     node_method_decl* method_decl;
+    method_call* method_call_data;
     parameter_list* params;
     id_list* ids;
     node_body* body;
@@ -67,8 +68,9 @@ program_pointer ast; // Pointer to the AST
 %type <statement> statement
 %type <ids_reference> ids_reference
 %type <expr_params> expr_params
-%type <expr> expr method_call literal bin_op
+%type <expr> expr literal bin_op
 %type <location> location
+%type <method_call_data> method_call
 
 %nonassoc IFX
 %nonassoc ELSE
@@ -163,7 +165,7 @@ statement
     : field_decl                                 {$$ = $1;}
     | location assign_op expr ';'                {$$ = new node_assignment_statement(location_pointer($1),
                                                    *$2, expr_pointer($3)); delete $2;}
-    | method_call ';'                            {$$ = $1;}
+    | method_call ';'                            {$$ = new node_method_call_statement($1);}
     | IF '(' expr ')' statement %prec IFX        {$$ = new node_if_statement(expr_pointer($3), statement_pointer($5));}
     | IF '(' expr ')' statement ELSE statement   {$$ = new node_if_statement(expr_pointer($3), statement_pointer($5),
                                                    statement_pointer($7));}
@@ -185,9 +187,9 @@ assign_op
     ;
 
 method_call
-    : ID ids_reference '(' expr_params ')'  {$2->insert($2->begin(), *$1); $$ = new node_method_call(*$2, *$4);
+    : ID ids_reference '(' expr_params ')'  {$2->insert($2->begin(), *$1); $$ = new method_call(*$2, *$4);
                                               delete $1; delete $2; delete $4;}
-    | ID ids_reference '(' ')'              {$2->insert($2->begin(), *$1); $$ = new node_method_call(*$2);
+    | ID ids_reference '(' ')'              {$2->insert($2->begin(), *$1); $$ = new method_call(*$2);
                                               delete $1; delete $2;}
     ;
 
@@ -205,7 +207,7 @@ ids_reference
 
 expr
     : location                              {$$ = $1;}
-    | method_call                           {$$ = $1;}
+    | method_call                           {$$ = new node_method_call_expr($1);}
     | literal                               {$$ = $1;}
     | bin_op                                {$$ = $1;}
     | '-' expr %prec NEGATIVE               {$$ = new node_negative_expr(expr_pointer($2));}
