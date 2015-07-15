@@ -120,6 +120,7 @@ symtable_element* semantic_analysis::dereference(reference_list ids){
 	if (aux->get_class() == symtable_element::NOT_FOUND){
 		register_error(std::string("Id "+ids[0]+" must be declared before use."),
 				ERROR_2);
+		well_formed = false;
 	}
 	else{
 		// {aux->get_class() != symtable_element::NOT_FOUND}
@@ -142,14 +143,15 @@ symtable_element* semantic_analysis::dereference(reference_list ids){
 				register_error(std::string("Trying to access a field from id "+ids[i-1]
 				                           +", which is not an object."),
 								ERROR_21);
+				well_formed = false;
 				break;
 
 			}
 			else{
 				// {aux_class == symtable_element::T_OBJ}
 				// Get the class of the object.
-				std::string object_class_name = aux->get_class_type();
-				symtable_element *object_class = s_table.get(object_class_name);
+				std::string *object_class_name = aux->get_class_type();
+				symtable_element *object_class = s_table.get(*object_class_name);
 				// TODO: si, una vez encontrada una declaración de instancia
 				// de clase desconocida, se continua el análisis, llegamos
 				// a una situación como esta, en la que se emplea la referencia
@@ -167,6 +169,7 @@ symtable_element* semantic_analysis::dereference(reference_list ids){
 				if (aux == nullptr){
 					register_error(std::string("Id "+ids[i]+" must be declared before use."),
 							ERROR_2);
+					well_formed = false;
 					// TODO: cortamos esto acá?
 					break;
 				}
@@ -176,15 +179,11 @@ symtable_element* semantic_analysis::dereference(reference_list ids){
 		}
 	}
 	// {aux is the symtable_element referenced by ids or nullptr.}
-	if(aux->get_class() != symtable_element::NOT_FOUND){
+	if(aux != nullptr && aux->get_class() != symtable_element::NOT_FOUND){
 		well_formed = true;
 		ret = aux;
 		//type_l_expr = aux->get_type();
 		//class_l_expr = aux->get_class();
-	}
-	else{
-		// {aux->get_class() == symtable_element::NOT_FOUND}
-		well_formed = false;
 	}
 
 	return ret;
@@ -231,20 +230,26 @@ void semantic_analysis::visit(const node_program& node) {
 	}
 }
 
- void semantic_analysis::visit(const node_class_decl& node) {
+void semantic_analysis::visit(const node_class_decl& node) {
 #ifdef __DEBUG
 	 std::cout << "Accessing class " << node.id << std::endl;
 #endif
-	symtable_element new_class(node.id, new std::list<symtable_element>());
+	// TODO: creo un nuevo std::string, porque node.id es const, y el constructor
+	// de symtable_element me está pidiendo un puntero al mismo
+	symtable_element new_class(new std::string(node.id),
+			new std::list<symtable_element>());
 	// Define a new scope
 #ifdef __DEBUG
-	assert(s_table.put_class(node.id, new_class) == symtables_stack::CLASS_PUT);
+	symtables_stack::put_class_results ret = s_table.put_class(new_class.get_key(), new_class);
+	assert(ret == symtables_stack::CLASS_PUT);
+	assert(s_table.size() == 2);
 #else
-	s_table.put_class(node.id, new_class);
+	s_table.put_class(new_class.get_key(), new_class);
 #endif
 	for(auto cb : node.class_block) {
 		if (cb->is_node_field_decl()){
 			// TODO: por qué tiene que ser node_field_decl&?
+			// TODO: utilizar static_pointer_cast:https://msdn.microsoft.com/es-AR/library/hh279669.aspx
 			node_field_decl& aux = static_cast<node_field_decl&> (*cb);
 			aux.accept(*this);
 		}
@@ -281,15 +286,17 @@ void semantic_analysis::visit(const node_program& node) {
 		}
 	}
 	// Close the scope introduced by the class
+	std::cout << "Finishing analysis of class " << node.id << std::endl;
 	s_table.finish_class_analysis();
+	assert(s_table.size() == 1);
 }
 
 void semantic_analysis::visit(const node_field_decl& node) {
 	symtable_element *id = nullptr;
 
-	#ifdef __DEBUG
-	 	 std::cout << "Accessing field declaration." << std::endl;
-	#endif
+#ifdef __DEBUG
+	std::cout << "Accessing field declaration." << std::endl;
+#endif
 
 	for(auto f : node.ids) {
 		// Rule 1: this is the first time this identifier is declared in this
@@ -326,7 +333,7 @@ void semantic_analysis::visit(const node_field_decl& node) {
 			}
 			// TODO: cómo chequeamos que, en caso de existir el tipo, este
 			// no coincide con el nombre de la clase?
-			id = new symtable_element(f->id, node.type.id);
+			id = new symtable_element(f->id, new std::string(node.type.id));
 		}
 		else{
 			// {node.type.type != Type::ID}
@@ -381,6 +388,7 @@ void semantic_analysis::visit(const node_method_decl& node){
 	// Add to the symbol table, define a new scope
 #ifdef __DEBUG
 	assert(s_table.put_func(node.id, method) == symtables_stack::FUNC_PUT);
+	assert(s_table.size() == 3);
 #else
 	s_table.put_func(node.id, method);
 #endif
@@ -390,7 +398,9 @@ void semantic_analysis::visit(const node_method_decl& node){
 
 	node.body->accept(*this);
 	// Close the scope defined by the method.
+	std::cout << "Finishing analysis of method " << node.id << std::endl;
 	s_table.finish_func_analysis();
+	assert(s_table.size() == 2);
 	// TODO: quitar esto cuando se resuelva lo de la tabla
 	into_method = false;
 	actual_method = nullptr;
@@ -589,7 +599,21 @@ void semantic_analysis::visit(const node_string_literal& node) {
 	well_formed = true;
 }
 
-void semantic_analysis::visit(const node_method_call& node) {
+void semantic_analysis::visit(const node_method_call_expr& node) {
+	#ifdef __DEBUG
+		std::cout << "Accessing method call expression" << std::endl;
+	#endif
+	analyze_method_call(*(node.method_call_data));
+}
+
+void semantic_analysis::visit(const node_method_call_statement& node) {
+	#ifdef __DEBUG
+		std::cout << "Accessing method call statement" << std::endl;
+	#endif
+	analyze_method_call(*(node.method_call_data));
+}
+
+void semantic_analysis::analyze_method_call(const method_call& data) {
 	#ifdef __DEBUG
 		std::cout << "Accessing method call statement" << std::endl;
 	#endif
@@ -599,23 +623,23 @@ void semantic_analysis::visit(const node_method_call& node) {
 						 // instancias que no me hacen falta?
 
 	// Determine the type of the location
-	aux = dereference(node.ids);
+	aux = dereference(data.ids);
 	if(well_formed){
 		if(aux->get_class() == symtable_element::T_FUNCTION){
 			// Rule 5: the number and type of the actual parameters,
 			// must be the same of the formal parameters
 			std::list<symtable_element>* func_params = aux->get_func_params();
 
-			if(func_params->size() != node.parameters.size()){
+			if(func_params->size() != data.parameters.size()){
 				// TODO: estaría bueno poder poner el nombre del método...
 				register_error(std::string("Method call with less parameters"
 										"than expected."), ERROR_5);
 				well_formed = false;
 			}
 			else{
-				// {func_params->size() == node.parameters.size()}
+				// {func_params->size() == data.parameters.size()}
 				std::list<symtable_element>::iterator it = func_params->begin();
-				for(auto r : node.parameters){
+				for(auto r : data.parameters){
 					expr_call_appropriate_accept(r);
 					if(well_formed){
 						if(it->get_type() != type_l_expr){

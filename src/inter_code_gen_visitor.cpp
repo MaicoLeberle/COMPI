@@ -1,150 +1,189 @@
 #include "inter_code_gen_visitor.h"
 
+inter_code_gen_visitor::inter_code_gen_visitor() {
+	inst_list = new instructions_list();
+	offset = 0;
+}
+
+const instructions_list* inter_code_gen_visitor::get_inst_list() {
+	return inst_list;
+}
+
 void inter_code_gen_visitor::visit(const node_program& node){
+#ifdef __DEBUG
+	 std::cout << "Beginning translation." << std::endl;
+#endif
 	for(auto c : node.classes) {
-		quad_pointer quad_class_label = quad_pointer(new quad);
-		quad_class_label->type = quad_type::LABEL;
-		quad_class_label->result = address_pointer(new address);
-		quad_class_label->result->type = address_type::ADDRESS_LABEL;
-		quad_class_label->result->value.label = new std::string(c->id); // TODO: Hay que liberar esta memoria
 		c->accept(*this);
 	}
 }
 
 void inter_code_gen_visitor::visit(const node_class_decl& node) {
+	// TODO: el código de la declaración de clase, al leerlo, debería
+	// servirme para la creación del registro que representa a la instancia?
 #ifdef __DEBUG
-	 std::cout << "Translating class " << node.id << std::endl;
+	std::cout << "Translating class " << node.id << std::endl;
 #endif
-	symtable_element new_class(node.id, new std::list<symtable_element>());
-	// Define a new scope
-#ifdef __DEBUG
-	assert(s_table.put_class(node.id, new_class) == symtables_stack::CLASS_PUT);
-#else
-	s_table.put_class(node.id, new_class);
-#endif
-	// TODO: qué código generamos para la declaración de clase?
+	// Translate the fields of the class.
+	// TODO: divido en métodos y atributos, para poder
+	// realizar la traducción de forma ordenada. Sería
+	// mejor manejar la gramática original?
+	std::list<class_block_pointer> fields;
+	std::list<class_block_pointer> methods;
 	for(auto cb : node.class_block) {
 		if (cb->is_node_field_decl()){
-			node_field_decl& aux = static_cast<node_field_decl&> (*cb);
-			aux.accept(*this);
+			//node_field_decl& aux = static_cast<node_field_decl&> (*cb);
+			//aux.accept(*this);
+			fields.push_back(cb);
 		}
 		else{
 			// {not cb->is_node_field_decl()}
-			node_method_decl& aux = static_cast<node_method_decl&> (*cb);
-			aux.accept(*this);
+			//node_method_decl& aux = static_cast<node_method_decl&> (*cb);
+			//aux.accept(*this);
+			methods.push_back(cb);
 		}
 	}
-	// Close the scope introduced by the class
-	s_table.finish_class_analysis();
+	// Translation of fields
+	// Generate code for the class declaration.
+	// TODO: sería el constructor?
+	inst_list->push_back(new_label(node.id));
+	actual_class_name = node.id;
+	// Relative addresses with respect to the beginning of this
+	// class definition.
+	// TODO: también al traducir la definición de los métodos?
+	int prev_offset = offset;
+	offset = 0;
+
+	for(std::list<class_block_pointer>::iterator it = fields.begin();
+	it != fields.end(); ++it){
+		node_field_decl& aux = static_cast<node_field_decl&> (*(*it));
+		aux.accept(*this);
+	}
+	// End of class declaration -> in offset we have the size of an instance.
+	// TODO: tengo que guardar ese valor en algún lugar...
+
+	// Translation of methods.
+	for(std::list<class_block_pointer>::iterator it = methods.begin();
+	it != methods.end(); ++it){
+		node_method_decl& aux = static_cast<node_method_decl&> (*(*it));
+		aux.accept(*this);
+	}
+
+	// Restore offset value.
+	offset = prev_offset;
 }
 
-void inter_code_gen_visitor::visit(const node_field_decl& node) {
-	symtable_element *id = nullptr;
+	// Statements
+	void inter_code_gen_visitor::visit(const node_assignment_statement& node){}
+	void inter_code_gen_visitor::visit(const node_method_call_statement& node) {}
+	void inter_code_gen_visitor::visit(const node_if_statement& node) {}
+	void inter_code_gen_visitor::visit(const node_for_statement& node) {}
+	void inter_code_gen_visitor::visit(const node_while_statement& node) {}
+	void inter_code_gen_visitor::visit(const node_return_statement& node) {}
+	void inter_code_gen_visitor::visit(const node_break_statement& node) {}
+	void inter_code_gen_visitor::visit(const node_continue_statement& node) {}
+	void inter_code_gen_visitor::visit(const node_skip_statement& node) {}
+	// Expressions
+	void inter_code_gen_visitor::visit(const node_int_literal& node) {}
+	void inter_code_gen_visitor::visit(const node_float_literal& node) {}
+	void inter_code_gen_visitor::visit(const node_bool_literal& node){}
+	void inter_code_gen_visitor::visit(const node_string_literal& node){}
+	void inter_code_gen_visitor::visit(const node_binary_operation_expr& node) {}
+	void inter_code_gen_visitor::visit(const node_location& node) {}
+	void inter_code_gen_visitor::visit(const node_negate_expr& node) {}
+	void inter_code_gen_visitor::visit(const node_negative_expr& node) {}
+	void inter_code_gen_visitor::visit(const node_parentheses_expr& node) {}
+	void inter_code_gen_visitor::visit(const node_method_call_expr& node) {}
 
-	#ifdef __DEBUG
-	 	 std::cout << "Translating field declaration." << std::endl;
-	#endif
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_field_decl& node) {
+	// TODO: hay diferencia entre la creación de un atributo de clase
+	// y una variable local de un método?.
+	// TODO: Hace falta instrucciones para declarar la creación de campos.
+	// TODO: podríamos utilizar Symbolic Type Widths (pagina 386, libro dragon)
+#ifdef __DEBUG
+	std::cout << "Translating field declaration." << std::endl;
+#endif
 
+	// TODO: acá debería usar offsets en vez de ids?
 	for(auto f : node.ids) {
 		// Translate each identifier. Add the identifier to the symbol table.
 		if (node.type.type == Type::ID){
 			// Declaration of instances.
-			// TODO: crear objeto instrucción apropiado
-			inst_list->push_back("CREATE_ID" + f->id + node.type.id);
-			// Create a new symtable_element object, that represents
-			// an object, with the id and the name of the corresponding class.
-			id = new symtable_element(f->id, node.type.id);
+			inst_list->push_back(new_instance_field(f->id, node.type.id));
 		}
 		else{
 			// {node.type.type != Type::ID}
 			// Basic type or array
 			if (f->array_size > 0){
 				// Array
-				// TODO: crear objeto instrucción apropiado. Estudiar
-				// el valor de node.type.id, para elegir la instrucción correcta
-				// (entre CREATE_INT_ARRAY, CREATE_FLOAT_ARRAY y
-				// CREATE_BOOLEAN_ARRAY)
-				inst_list->push_back("CREATE_INT_ARRAY" + f->id + f->array_size);
-				id = new symtable_element(f->id, determine_type(node.type.type),
-					  f->array_size);
+				switch(node.type.type){
+					case Type::INTEGER:
+						inst_list->push_back(new_int_array_field(f->id, f->array_size));
+						break;
+
+					case Type::FLOAT:
+						inst_list->push_back(new_float_array_field(f->id, f->array_size));
+						break;
+
+					case Type::BOOLEAN:
+						inst_list->push_back(new_boolean_array_field(f->id, f->array_size));
+						break;
+				}
 			}
 			else{
 				// {f->array_size < 0}
 				// Basic type
-				// TODO: crear objeto instrucción apropiado. Estudiar
-				// el valor de node.type.id, para elegir la instrucción correcta
-				// (entre CREATE_INT, CREATE_FLOAT y
-				// CREATE_BOOLEAN)
-				inst_list->push_back("CREATE_INT" + f->id);
-				id = new symtable_element(f->id, determine_type(node.type.type));
+				if (f->array_size > 0){
+					switch(node.type.type){
+						case Type::INTEGER:
+							inst_list->push_back(new_int_field(f->id));
+							break;
+
+						case Type::FLOAT:
+							inst_list->push_back(new_float_field(f->id));
+							break;
+
+						case Type::BOOLEAN:
+							inst_list->push_back(new_boolean_field(f->id));
+							break;
+					}
+				}
 			}
-		}
-		// Add the symbol to s_table.
-		if(not into_method){
-#ifdef __DEBUG
-			assert(s_table.put_class_field(f->id, *id) == symtables_stack::FIELD_PUT);
-#else
-			s_table.put_class_field(f->id, *id);
-#endif
-		}
-		else{
-#ifdef __DEBUG
-			assert(s_table.put(f->id, *id) == symtables_stack::ID_PUT);
-#else
-			s_table.put(f->id, *id);
-#endif
 		}
 	}
 }
 
-void inter_code_gen_visitor::visit(const node_id& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_id& node) {
 	// This visitor does not need to do some task into node_id.
 }
 
-void inter_code_gen_visitor::visit(const node_method_decl& node){
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_method_decl& node){
 #ifdef __DEBUG
 	std::cout << "Translating method " << node.id << std::endl;
 #endif
-	symtable_element method(node.id, determine_type(node.type.type),
-							new std::list<symtable_element>());
-	// TODO: quitar esto cuando se resuelva lo de la tabla
-	into_method = true;
-	actual_method = &method;
-	// Add to the symbol table, define a new scope
-#ifdef __DEBUG
-	assert(s_table.put_func(node.id, method) == symtables_stack::FUNC_PUT);
-#else
-	s_table.put_func(node.id, method);
-#endif
-
-	// TODO: crear objeto instrucción apropiado. quizás un label como
-	// nombre_de_clase::nombre_de_metodo para que el label sea único?
-	inst_list->push_back("CREATE_INT_ARRAY" + node.id);
-
+	// Generate code for the method declaration.
+	inst_list->push_back(new_label(actual_class_name+"."+node.id));
 	for(auto p : node.parameters) {
 		p->accept(*this);
 	}
-
+	// Initialize offset.
+	offset = 0;
+	into_method = true;
 	node.body->accept(*this);
-	// Close the scope defined by the method.
-	s_table.finish_func_analysis();
-	// TODO: quitar esto cuando se resuelva lo de la tabla
-	into_method = false;
-	actual_method = nullptr;
 }
 
-void inter_code_gen_visitor::visit(const node_parameter_identifier& node) {
-	#ifdef __DEBUG
-		std::cout << "Translating parameter " << node.id << std::endl;
-	#endif
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_parameter_identifier& node) {
+#ifdef __DEBUG
+	std::cout << "Translating parameter " << node.id << std::endl;
+#endif
 
-	symtable_element param(node.id, determine_type(node.type.type));
-	s_table.put_func_param(node.id, param);
-
-	// TODO: instrucción a generar para este caso?
+	// TODO: en la arquitectura x86_64, es el método el que construye
+	// el stack frame?: "The following enter instruction
+	// sets up the stack frame" (de "x86-64-architecture-guide"). De ser
+	// así, tenemos que colocar una instrucción enter por cada parámetro.
 }
 
-void inter_code_gen_visitor::visit(const node_body& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_body& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating body of method" << std::endl;
 	#endif
@@ -163,25 +202,25 @@ void inter_code_gen_visitor::visit(const node_body& node) {
 	}
 }
 
-void inter_code_gen_visitor::visit(const node_block& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_block& node) {
 #ifdef __DEBUG
 	std::cout << "Translating a block." << std::endl;
 #endif
-	// A block defines a new scope.
-	s_table.push_symtable();
+	// TODO: que hay del código para un bloque?
 	// Analyze the content of the block.
 	for(auto s : node.content) {
 		stm_call_appropriate_accept(s);
 	}
 }
-
-void inter_code_gen_visitor::visit(const node_assignment_statement& node) {
-	#ifdef __DEBUG
-		std::cout << "Translating assignment statement" << std::endl;
-	#endif
-
-	snode.location->accept(*this);
+/*
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_assignment_statement& node) {
+#ifdef __DEBUG
+	std::cout << "Translating assignment statement" << std::endl;
+#endif
+	node.location->accept(*this);
+	std::string l_value(last_expr);
 	expr_call_appropriate_accept(node.expression);
+	std::string r_value(last_expr);
 	// TODO: crear objeto instrucción apropiado. La visita a node.location
 	// y node.expression deberían guardar en un atributo de la instancia
 	// una representación de la location y una direccion en donde se
@@ -190,65 +229,71 @@ void inter_code_gen_visitor::visit(const node_assignment_statement& node) {
 	// adecuada.
 	switch(node.oper){
 		case AssignOper::ASSIGN:
-			inst_list->push_back("ASSIG LOCATION  ADDRESS_EXPRESSION");
-			break
+			inst_list->push_back(new_copy(l_value, r_value));
+			break;
 
 		case AssignOper::PLUS_ASSIGN:
-			inst_list->push_back("ASSIGPLUS LOCATION  ADDRESS_EXPRESSION");
-			break
+			inst_list->push_back(new_plus_assign(l_value, r_value));
+			break;
 
 		case AssignOper::MINUS_ASSIGN:
-			inst_list->push_back("ASSIGMINUS LOCATION  ADDRESS_EXPRESSION");
-			break
+			inst_list->push_back(new_minus_assign(l_value, r_value));
 	}
 }
 
-void inter_code_gen_visitor::visit(const node_location& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_location& node) {
 #ifdef __DEBUG
 	std::cout << "Translating location expression" << std::endl;
 #endif
 
-	// TODO: generar una representación adecuada de la location
-	// y guardarla en un atributo de la instancia actual, para ser
-	// empleado por otros métodos
+	// TODO: lo deberíamos convertir a algo de la forma offset(base,index,scale)?
+	// no está eso dependiendo de la arq. x86_64, siendo que no es la idea del
+	// código intermedio?: vamos generando las direcciones
+
 }
 
-void inter_code_gen_visitor::visit(const node_int_literal& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_int_literal& node) {
 #ifdef __DEBUG
 	std::cout << "Translating int literal of value " << node.value << std::endl;
 #endif
-	// TODO: generar una representación adecuada de la location
-	// y guardarla en un atributo de la instancia actual, para ser
-	// empleado por otros métodos
+	// TODO: convertir a string
+	// TODO: ver el código intermediate.c: no hace falta crear una temporal
+	// para almacenar la constance. Basta con crear un objeto struct
+	// address, que representa la cte (en este caso), o bien una dirección, o
+	// bien una etiqueta, o bien una temporal.
+	// TODO: deberían primero guardarse en una dirección temporal, para que, luego,
+	// desde afuera, utilicemos la misma?. Pensar en el caso de la generación
+	// de las instrucciones que las utilizan: si no se almacenara siempre en
+	// en una dirección, entonces tendría que distinguir, al crear una
+	// instrucción, si se trata de una constante o una dirección.
+	last_expr = std::string("$"+node.value)
 }
 
-void inter_code_gen_visitor::visit(const node_bool_literal& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_bool_literal& node) {
 #ifdef __DEBUG
 	std::cout << "Translating bool literal of value " << node.value << std::endl;
 #endif
-	// TODO: guardar el literal en una nueva dirección A, generar la instrucción
-	// adecuada para ello, y guardar en un atributo de la instancia la dirección
-	// A
+	// TODO: convertir a string
+	last_expr = std::string("$"+node.value)
 }
 
-void inter_code_gen_visitor::visit(const node_float_literal& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_float_literal& node) {
 #ifdef __DEBUG
 	std::cout << "Translating FLOAT literal of value " << node.value << std::endl;
 #endif
-	// TODO: guardar el literal en una nueva dirección A, generar la instrucción
-	// adecuada para ello, y guardar en un atributo de la instancia la dirección
-	// A
+	// TODO: convertir a string
+	last_expr = std::string("$"+node.value)
 }
 
-void inter_code_gen_visitor::visit(const node_string_literal& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_string_literal& node) {
 #ifdef __DEBUG
 	std::cout << "Translating string literal of value " << node.value << std::endl;
 #endif
-	// TODO: guardar el literal en una nueva dirección A, generar la instrucción
-	// adecuada para ello, y guardar en un atributo de la instancia la dirección
-	// A
+	// TODO: representación de literales string?
+	last_expr = std::string("$"+node.value)
+}
 
-void inter_code_gen_visitor::visit(const node_method_call& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_method_call& node) {
 #ifdef __DEBUG
 		std::cout << "Translating method call statement" << std::endl;
 #endif
@@ -267,7 +312,7 @@ void inter_code_gen_visitor::visit(const node_method_call& node) {
 
 }
 
-void inter_code_gen_visitor::visit(const node_if_statement& node){
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_if_statement& node){
 #ifdef __DEBUG
 		std::cout << "Translating if statement" << std::endl;
 #endif
@@ -288,7 +333,7 @@ void inter_code_gen_visitor::visit(const node_if_statement& node){
 	inst_list->push_back("LABEL L2");
 }
 
-void inter_code_gen_visitor::visit(const node_for_statement& node){
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_for_statement& node){
 #ifdef __DEBUG
 		std::cout << "Translating for statement" << std::endl;
 #endif
@@ -312,7 +357,7 @@ void inter_code_gen_visitor::visit(const node_for_statement& node){
 	inst_list->push_back("LABEL L2");
 }
 
-void inter_code_gen_visitor::visit(const node_while_statement& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_while_statement& node) {
 #ifdef __DEBUG
 	std::cout << "Translating while statement" << std::endl;
 #endif
@@ -328,7 +373,7 @@ void inter_code_gen_visitor::visit(const node_while_statement& node) {
 	into_for_or_while = false;
 }
 
-void inter_code_gen_visitor::visit(const node_return_statement& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_return_statement& node) {
 	symtable_element::id_type type_method = actual_method->get_type();
 
 #ifdef __DEBUG
@@ -363,7 +408,7 @@ void inter_code_gen_visitor::visit(const node_return_statement& node) {
 	}
 }
 
-void inter_code_gen_visitor::visit(const node_break_statement& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_break_statement& node) {
 #ifdef __DEBUG
 	std::cout << "Translating break statement" << std::endl;
 #endif
@@ -375,7 +420,7 @@ void inter_code_gen_visitor::visit(const node_break_statement& node) {
 	}
 }
 
-void inter_code_gen_visitor::visit(const node_continue_statement& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_continue_statement& node) {
 #ifdef __DEBUG
 	std::cout << "Translating continue statement" << std::endl;
 #endif
@@ -386,13 +431,13 @@ void inter_code_gen_visitor::visit(const node_continue_statement& node) {
 	}
 }
 
-void inter_code_gen_visitor::visit(const node_skip_statement& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_skip_statement& node) {
 #ifdef __DEBUG
 	std::cout << "Translating skip statement" << std::endl;
 #endif
 }
 
-void inter_code_gen_visitor::visit(const node_binary_operation_expr& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_binary_operation_expr& node) {
 	symtable_element::id_type l_op_type, r_op_type;
 	symtable_element::id_class l_op_class, r_op_class;
 
@@ -475,7 +520,7 @@ void inter_code_gen_visitor::visit(const node_binary_operation_expr& node) {
 	}
 }
 
-void inter_code_gen_visitor::visit(const node_negate_expr& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_negate_expr& node) {
 #ifdef __DEBUG
 	std::cout << "Translating negate expression" << std::endl;
 #endif
@@ -491,7 +536,7 @@ void inter_code_gen_visitor::visit(const node_negate_expr& node) {
 	}
 }
 
-void inter_code_gen_visitor::visit(const node_negative_expr& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_negative_expr& node) {
 #ifdef __DEBUG
 	std::cout << "Translating negative expression" << std::endl;
 #endif
@@ -509,7 +554,7 @@ void inter_code_gen_visitor::visit(const node_negative_expr& node) {
 	}
 }
 
-void inter_code_gen_visitor::visit(const node_parentheses_expr& node) {
+void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_parentheses_expr& node) {
 #ifdef __DEBUG
 	std::cout << "Translating parentheses expression" << std::endl;
 #endif
@@ -517,3 +562,4 @@ void inter_code_gen_visitor::visit(const node_parentheses_expr& node) {
 	expr_call_appropriate_accept(node.expression);
 }
 
+*/

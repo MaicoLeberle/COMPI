@@ -57,7 +57,7 @@ public:
 
 	// Statements
 	virtual void visit(const node_assignment_statement& node);
-	virtual void visit(const node_method_call& node);
+	virtual void visit(const node_method_call_statement& node);
 	virtual void visit(const node_if_statement& node);
 	virtual void visit(const node_for_statement& node);
 	virtual void visit(const node_while_statement& node);
@@ -65,8 +65,8 @@ public:
 	virtual void visit(const node_break_statement& node);
 	virtual void visit(const node_continue_statement& node);
 	virtual void visit(const node_skip_statement& node);
-	// Expressions
 
+	// Expressions
 	virtual void visit(const node_int_literal& node);
 	virtual void visit(const node_float_literal& node);
 	virtual void visit(const node_bool_literal& node);
@@ -76,6 +76,7 @@ public:
 	virtual void visit(const node_negate_expr& node);
 	virtual void visit(const node_negative_expr& node);
 	virtual void visit(const node_parentheses_expr& node);
+	virtual void visit(const node_method_call_expr& node);
 
 private:
 	symtables_stack s_table; // TODO: si no describo este atributo en el constructor
@@ -121,6 +122,8 @@ private:
 	 * */
 	symtable_element::id_type get_wider_type(symtable_element::id_type,
 			symtable_element::id_type);
+
+	void analyze_method_call(const method_call&);
 };
 
 #endif

@@ -1,16 +1,20 @@
 #ifndef _INTER_CODE_GEN_VISITOR_H_
 #define _INTER_CODE_GEN_VISITOR_H_
 
+#include <iostream>
 #include <memory>
 #include "visitor.h" // Visitor's interface
 #include "symtable.h" // Symbol table's implementation.
-#include "three_address_code.h"
+#include "three_address_code.h" // 3-address code's implementation.
+
 
 class inter_code_gen_visitor : public visitor {
 public:
+	inter_code_gen_visitor(void);
+
+	const instructions_list* get_inst_list();
 	// Inherited interface, to allow the definition outside this
 	// class declaration.
-
 	// Program
 	virtual void visit(const node_program&);
 	// Class declaration
@@ -23,7 +27,7 @@ public:
 	virtual void visit(const node_block& node);
 	// Statements
 	virtual void visit(const node_assignment_statement& node);
-	virtual void visit(const node_method_call& node);
+	virtual void visit(const node_method_call_statement& node);
 	virtual void visit(const node_if_statement& node);
 	virtual void visit(const node_for_statement& node);
 	virtual void visit(const node_while_statement& node);
@@ -41,10 +45,25 @@ public:
 	virtual void visit(const node_negate_expr& node);
 	virtual void visit(const node_negative_expr& node);
 	virtual void visit(const node_parentheses_expr& node);
+	virtual void visit(const node_method_call_expr& node);
+
+
 
 private:
-	instructions_list instructions; // List of three-address instructions
-	symtables_stack s_table; // Symbol table
+	// List of three-address instructions
+	instructions_list *inst_list;
+
+	// Information for context-sensitive translation.
+	// TODO: el hecho de salirnos de un esquema puro de traducción
+	// dirigida por sintaxis, señala algún problema de diseño de
+	// nuestro trabajo?
+	std::string actual_class_name;
+	std::string last_expr;
+	int offset; // To keep track of the next available relative address
+				// (page 376 of Dragon book), and share this information
+				// between nodes.
+	bool into_method;
+
 };
 
 #endif

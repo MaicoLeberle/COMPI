@@ -43,7 +43,7 @@ void visitor::expr_call_appropriate_accept(expr_pointer e) {
 				break;
 
 			case node_expr::method_call_expr :
-				node_method_call& aux = static_cast<node_method_call&> (*e);
+				node_method_call_expr& aux = static_cast<node_method_call_expr&> (*e);
 				aux.accept(*this);
 				break;
 		}
@@ -67,7 +67,7 @@ void visitor::stm_call_appropriate_accept(statement_pointer s){
 				break;
 
 		case node_statement::method_call_statement :
-			node_method_call& aux = static_cast<node_method_call&> (*s);
+			node_method_call_statement& aux = static_cast<node_method_call_statement&> (*s);
 			aux.accept(*this);
 			break;
 

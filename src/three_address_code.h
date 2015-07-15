@@ -28,6 +28,8 @@ struct address {
 				int ival;
 				float fval;
 				bool bval;
+				// TODO: esto está bien así?
+				unsigned int dimension; // dimension > 0 => address points to an array
 			} val;
 		} constant; // Constant, formed by type and a value. For now no string as type.
 		unsigned int temp; // Compiler-generated temporary.
@@ -50,7 +52,10 @@ enum class quad_type {
 	PROCEDURE_CALL,		// call p, n
 	FUNCTION_CALL,		// y = call p, n
 	RETURN,				// return [y]
-	LABEL				// L: skip
+	LABEL,				// L: skip
+	// TODO: está bien?
+	BEGIN_PROCEDURE		// BEGIN_PROCEDURE Nmbr. of bytes for locals and
+						// temporals in stack frame
 };
 
 enum class quad_oper {
@@ -85,5 +90,18 @@ struct quad {
 typedef std::shared_ptr<quad> quad_pointer;
 
 class instructions_list : public std::vector<quad_pointer> {};
+
+// Constructors of specific 3-address instructions.
+quad_pointer new_label(const std::string&);
+quad_pointer new_int_field(const std::string&);
+quad_pointer new_float_field(const std::string&);
+quad_pointer new_boolean_field(const std::string&);
+quad_pointer new_instance_field(const std::string&, const std::string&);
+quad_pointer new_int_array_field(const std::string&, const int);
+quad_pointer new_float_array_field(const std::string&, const int);
+quad_pointer new_boolean_array_field(const std::string&, const int);
+
+// Procedures for debugging.
+bool is_label(const quad_pointer& instruction, const std::string& label);
 
 #endif // THREE_ADDRESS_CODE_H_
