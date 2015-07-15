@@ -279,7 +279,7 @@ void semantic_analysis::visit(const node_class_decl& node) {
 		// especial para representa la existencia de expesiones
 		// mal fomadas
 		// TODO: usamos Main y no main, para poder pasar los tests!
-		symtable_element *element = s_table.get(std::string("Main"));
+		symtable_element *element = s_table.get(std::string("main"));
 		if(element->get_class() != symtable_element::T_FUNCTION){
 			register_error(std::string("\"main\" class without a \"main\" method."),
 					ERROR_3);
