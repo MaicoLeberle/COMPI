@@ -3,22 +3,55 @@
 
 #include "symtable.h"
 #include <string>
+#include <list>
 #include <map>
 
 class ids_info {
 public:
-    ids_info(void);
+    /*  The following register_* methods register the id passed as parameter, 
+        as long with their information, into info_map.
+        They return the internal representation of the id just registered. It 
+        is assured that right after calling this method, the id passed as 
+        parameter's representation is unique inside info_map. This 
+        representation is what should be used inside any intermediate 
+        representaion instruction.                                           */
 
+    /*  Parameters: id with which generate the internal representation id
+                  , offset inside the method.                                */
+    std::string register_var(std::string, unsigned int);
+
+    /*  Parameters: id with which generate the internal representation id
+                  , offset inside the method
+                  , name of the parameter id's type (its class).             */
+    std::string register_obj(std::string, unsigned int, std::string);
+
+    /*  Parameters: id with which generate the internal representation id
+                  , number of local variables in the method
+                  , name of the class this method belongs to.                */
+    std::string register_method(std::string, unsigned int, std::string);
+
+    /*  Parameters: id with which generate the internal representation id
+                  , list of attributes in the class (in the same order they 
+                    have been declared in the source code).                  */
+    std::string register_class(std::string, std::list<std::string>);
+
+    /*  Precondition: There have been more calls to register_* with the 
+        parameter id than calls to unregister with the same id.              */
+    void unregister(std::string);
+
+    /*  Returns: true, if the parameter id has been registered previously, and
+        false, if it has not.                                                */
     bool id_exists(std::string);
 
-    /*  TODO: every specific kind of register (for variables,objects, methods, classes)
-        should be implemented.
-    void register(std::string); */
+    /*  Precondition: the id has been registered.
+        Returns: the internal representation of the id inside info_map.      */
+    std::string get_id_rep(std::string);
+
 
     enum id_kind { K_VAR
-              , K_OBJECT
-              , K_CLASS
-              , K_METHOD };
+                 , K_OBJECT
+                 , K_CLASS
+                 , K_METHOD };
 
     id_kind get_kind(std::string);
 
@@ -42,29 +75,40 @@ public:
     std::list<std::string> get_list_attributes(std::string);
 
 private:
-    union t_info {
-        /* For variables. */
-        unsigned int offset;
+    struct entry_info {
+        id_kind entry_kind;
+        union data {
+            /* For variables. */
+            struct var_info {
+                unsigned int offset;
+            };
 
-        /* For objects. */
-        struct obj_info {   
-            unsigned int offset; /* Offset inside the function it belongs to. */
-            std::string owner; /* Object's type. */
+            /* For objects. */
+            struct obj_info {   
+                unsigned int offset; /* Offset inside the function it belongs to. */
+                std::string owner; /* Object's type. */
+            };
+
+            /* For methods. */
+            struct method_info {
+                unsigned int local_vars; /* Number of local variables in the method's 
+                                            body. */
+                std::string owner;  /* Class the method belongs to. */
+            };
+
+            /* For classes. */
+            struct class_info {
+                std::list<std::string> l_atts; /* List of attributes in a class, in the 
+                                                  order they appear in it. */
+            };
         };
-
-        /* For methods. */
-        struct func_info {
-            unsigned int local_vars; /* Number of local variables in the method's 
-                                        body. */
-            std::string owner;  /* Class the method belongs to. */
-        };
-
-        /* For classes. */
-        std::list<std::string> l_atts; /* List of attributes in a class, in the 
-                                          order they appear in it. */
     };
 
-    std::map<std::string, t_info> info_map;
+    std::map<std::string, entry_info> info_map;
+
+    /*  The following contains the information necessary to create new internal
+        representations out of identifier strings.                           */
+    std::map<std::string, unsigned int> internal;
 };
 
 
@@ -81,6 +125,13 @@ public:
         passed onto the next phase of the compilation: the object code 
         generation.                                                          */
     ids_info* get_ids_info(void);
+
+    /*  Precondition: the parameter id has already been put in the current 
+        scope.
+        Returns: the internal representation of the parameter id; it should
+        be used instead of the original name in the construction of any 
+        intermediate representation instruction.                             */
+    std::string get_id_rep(std::string);
 
     enum put_results { IS_RECURSIVE
                      , ID_EXISTS
