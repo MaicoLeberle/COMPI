@@ -169,11 +169,10 @@ private:
     scope.                                                                   */
 class symtables_stack {
 public:
-    /*  This enumeration will be used as a way to inform the symtables_stack 
-        user the result of calling put(...).                                 */
     enum put_results { IS_RECURSIVE
                      , ID_EXISTS
                      , ID_PUT };
+                     
     enum put_func_results { NOT_FUNC
                           , FUNC_EXISTS
                           , FUNC_PUT
