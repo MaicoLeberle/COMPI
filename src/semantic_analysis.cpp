@@ -3,7 +3,6 @@
 semantic_analysis::semantic_analysis () {
 	errors = 0;
 	into_for_or_while = false;
-	// TODO: cambiar esto cuando se resuelva lo de la tabla de símbolos
 	into_method = false;
 	actual_method = nullptr;
 }
@@ -28,10 +27,10 @@ symtable_element::id_type t1, symtable_element::id_type t2){
 
 	symtable_element::id_type ret;
 
-#ifdef __DEBUG
-	assert(t1 == symtable_element::FLOAT || t1 == symtable_element::INTEGER);
-	assert(t2 == symtable_element::FLOAT || t2 == symtable_element::INTEGER);
-#endif
+	#ifdef __DEBUG
+		assert(t1 == symtable_element::FLOAT || t1 == symtable_element::INTEGER);
+		assert(t2 == symtable_element::FLOAT || t2 == symtable_element::INTEGER);
+	#endif
 
 	switch(t1){
 		case symtable_element::INTEGER:
@@ -73,6 +72,10 @@ symtable_element::id_type semantic_analysis::determine_type(Type::_Type type_ast
 			ret = symtable_element::ID;
 			break;
 
+		/*case Type::STRING:
+			ret = symtable_element::STRING;
+			break;*/
+
 		#ifdef __DEBUG
 		default:
 			assert(false);
@@ -83,15 +86,13 @@ symtable_element::id_type semantic_analysis::determine_type(Type::_Type type_ast
 }
 
 symtable_element* semantic_analysis::get_next_symtable_element(symtable_element
-		*actual_element, std::string id){
+*actual_element, std::string id){
+	#ifdef __DEBUG
+		// PRE
+		assert(actual_element->get_class() == symtable_element::T_CLASS);
+	#endif
 
 	symtable_element *ret = nullptr;
-
-	#ifdef __DEBUG
-	// PRE
-	//assert(actual_element->get_class() == symtable_element::T_CLASS ||
-	//		actual_element->get_class() == symtable_element::T_FUNCTION);
-	#endif
 
 	std::list<symtable_element> *fields = actual_element->get_class_fields();
 	for(std::list<symtable_element>::iterator it = fields->begin();
@@ -128,18 +129,14 @@ symtable_element* semantic_analysis::dereference(reference_list ids){
 		std::vector<int>::size_type i = (std::vector<int>::size_type) 1;
 		std::vector<int>::size_type limit = ids.size();
 		// INV : {aux is the symtable_element for the id number i-1 in ids}
-		// TODO: corregir este invariante
 		while(i < limit){
-			// TODO: asumo que en ids se guardan los identificadores en orden
-			// desde 0 (el primer id de la izquierda), hacia la derecha...
-#ifdef __DEBUG
-			std::cout << "Accessing reference " << ids[i] << std::endl;
-#endif
+			#ifdef __DEBUG
+				std::cout << "Accessing reference " << ids[i] << std::endl;
+			#endif
 
 			// Index the previous symtable_element, with the next id.
 			aux_class = aux->get_class();
 			if(aux_class != symtable_element::T_OBJ){
-				// TODO: este error no está enlistado
 				register_error(std::string("Trying to access a field from id "+ids[i-1]
 				                           +", which is not an object."),
 								ERROR_21);
@@ -152,17 +149,9 @@ symtable_element* semantic_analysis::dereference(reference_list ids){
 				// Get the class of the object.
 				std::string *object_class_name = aux->get_class_type();
 				symtable_element *object_class = s_table.get(*object_class_name);
-				// TODO: si, una vez encontrada una declaración de instancia
-				// de clase desconocida, se continua el análisis, llegamos
-				// a una situación como esta, en la que se emplea la referencia
-				// a instancia. Se supone que la primer vez que nos topamos
-				// con la referencia a instancia, no debimos haberla agregado
-				// a la tabla de símbolos?, debería ser ese un criterio de
-				// implementación?. Por ahora, exijo que esto así sea, para
-				// no tener que definir un nuevo código de error.
-#ifdef __DEBUG
-				assert(object_class->get_class() != symtable_element::NOT_FOUND);
-#endif
+				#ifdef __DEBUG
+					assert(object_class->get_class() != symtable_element::NOT_FOUND);
+				#endif
 				// Obtain the next element.
 				aux = get_next_symtable_element(object_class, ids[i]);
 				// Rule 2: declaration before use
@@ -170,11 +159,9 @@ symtable_element* semantic_analysis::dereference(reference_list ids){
 					register_error(std::string("Id "+ids[i]+" must be declared before use."),
 							ERROR_2);
 					well_formed = false;
-					// TODO: cortamos esto acá?
 					break;
 				}
 				i++;
-
 			}
 		}
 	}
@@ -182,8 +169,6 @@ symtable_element* semantic_analysis::dereference(reference_list ids){
 	if(aux != nullptr && aux->get_class() != symtable_element::NOT_FOUND){
 		well_formed = true;
 		ret = aux;
-		//type_l_expr = aux->get_type();
-		//class_l_expr = aux->get_class();
 	}
 
 	return ret;
@@ -199,30 +184,7 @@ void semantic_analysis::visit(const node_program& node) {
 		c->accept(*this);
 	}
 	// {there must be 1 or 0 symbol tables in s_tables}
-	// TODO: cómo chequeamos esto?
-	/*symtable_element* classA = new symtable_element(...);
-	  s.put(classA);
-	  s.push_symtable(classA);
-	  Si ahora analizamos los elementos de la clase:
-	  s.put_class_field(intX);
-	  s.put(intX);
-	  Método:
-	  s.put_class_field(functionF); //Registrar en la clase que corresponde
-	  s.put(functionF); // Registrar en la tabla de símbolos
-	  s.push_symtable(functioF); // Abro
-	  Para los parámetros:
-	  s.put_func_param(parametro)
-	  s.put(parametro)
-	  Para variables locales del método:
-	  s.put(variable local)
-	  Si encuentro un bloque:
-	  s.push_symtable()
 
-	 * */
-	/* TODO: para analizar locations id1.id2 :
-	 * tomo el id1, lo uso para obtener la instancia. Tomo la instancia,
-	 * y llamo a get_class_fields, y busco ahí los métodos
-	 * */
 	// Rule 3: Every program has one class with name "main".
 	if(node.classes.size() == 0 ||
 	s_table.get(std::string("main"))->get_class() == symtable_element::NOT_FOUND){
@@ -231,21 +193,21 @@ void semantic_analysis::visit(const node_program& node) {
 }
 
 void semantic_analysis::visit(const node_class_decl& node) {
-#ifdef __DEBUG
-	 std::cout << "Accessing class " << node.id << std::endl;
-#endif
-	// TODO: creo un nuevo std::string, porque node.id es const, y el constructor
-	// de symtable_element me está pidiendo un puntero al mismo
+	#ifdef __DEBUG
+		std::cout << "Accessing class " << node.id << std::endl;
+	#endif
 	symtable_element new_class(new std::string(node.id),
 			new std::list<symtable_element>());
+	actual_class = &new_class;
+
 	// Define a new scope
-#ifdef __DEBUG
-	symtables_stack::put_class_results ret = s_table.put_class(new_class.get_key(), new_class);
-	assert(ret == symtables_stack::CLASS_PUT);
-	//assert(s_table.size() == 2);
-#else
-	s_table.put_class(new_class.get_key(), new_class);
-#endif
+	#ifdef __DEBUG
+		symtables_stack::put_class_results ret = s_table.put_class(new_class.get_key(), new_class);
+		assert(ret == symtables_stack::CLASS_PUT);
+	#else
+		s_table.put_class(new_class.get_key(), new_class);
+	#endif
+
 	for(auto cb : node.class_block) {
 		if (cb->is_node_field_decl()){
 			// TODO: por qué tiene que ser node_field_decl&?
@@ -264,21 +226,8 @@ void semantic_analysis::visit(const node_class_decl& node) {
 	// defined one method, with name main, with no parameters
 	if (node.id == "main"){
 		#ifdef __DEBUG
-			 std::cout << "Main class found." << std::endl;
+			std::cout << "Main class found." << std::endl;
 		#endif
-		// TODO: necesito un get a realizarse sobre el scope actual
-		// el cual debería ser el interior de esta clase...es decir,
-		// un get que no realice la búsqueda en alcances exteriores,
-		// si la búsqueda en el más interno falló
-		// HACER LA CONSULTA SOBRE EL OBJETO NEW_CLASS
-		// TODO: directamente usamos put, y vemos qué esultado nos devuelve
-		// para sabe si eta o no: NO, en este caso, sólo necesitamos
-		// consultar.
-		// TODO: mantenemos las 2 representaciones de expresiones,
-		// y la tabla de símbolos no tiene por qué tener un enteo
-		// especial para representa la existencia de expesiones
-		// mal fomadas
-		// TODO: usamos Main y no main, para poder pasar los tests!
 		symtable_element *element = s_table.get(std::string("main"));
 		if(element->get_class() != symtable_element::T_FUNCTION){
 			register_error(std::string("\"main\" class without a \"main\" method."),
@@ -286,29 +235,26 @@ void semantic_analysis::visit(const node_class_decl& node) {
 		}
 	}
 	// Close the scope introduced by the class
-	std::cout << "Finishing analysis of class " << node.id << std::endl;
+	#ifdef __DEBUG
+		std::cout << "Finishing analysis of class " << node.id << std::endl;
+	#endif
 	s_table.finish_class_analysis();
-	//assert(s_table.size() == 1);
+	actual_class = nullptr;
 }
 
 void semantic_analysis::visit(const node_field_decl& node) {
 	symtable_element *id = nullptr;
 
-#ifdef __DEBUG
-	std::cout << "Accessing field declaration." << std::endl;
-#endif
+	#ifdef __DEBUG
+		std::cout << "Accessing field declaration." << std::endl;
+	#endif
 
 	for(auto f : node.ids) {
 		// Rule 1: this is the first time this identifier is declared in this
 		// scope
-		// TODO: necesito un método que me diga si un identificador está
-		// declarado en el scope actual o no
 		if(s_table.get(f->id)->get_class() != symtable_element::NOT_FOUND){
-			// TODO: el operador + está sobre-cargado para std::string?.
 			register_error(std::string("Identifier "+f->id+" already declared in this scope."),
 					ERROR_1);
-			// TODO: cuando encontramos un error, continuamos el análisis
-			// con lo que resta del código?
 			continue;
 		}
 		// Rule 4: if it is an array declaration => the length must be > 0
@@ -323,17 +269,29 @@ void semantic_analysis::visit(const node_field_decl& node) {
 			// Declaration of instances.
 			// Create a new symtable_element object, that represents
 			// an object, with the id and the name of the corresponding class.
-			// TODO: chequear que el tipo exista
 			if(s_table.get(node.type.id)->get_class() != symtable_element::T_CLASS){
-				// TODO: este tipo de error no está enlistado...
 				register_error(std::string("Identifier "+f->id+" has unknown type "
 								+ node.type.id + "."),
 						ERROR_20);
 				continue;
 			}
-			// TODO: cómo chequeamos que, en caso de existir el tipo, este
-			// no coincide con el nombre de la clase?
-			id = new symtable_element(f->id, new std::string(node.type.id));
+			else{
+				// {s_table.get(node.type.id)->get_class() ==
+				//  symtable_element::T_CLASS}
+				if (not into_method){
+					// This is a field declaration.
+					// Rule 24: the type of an attribute cannot be the class where
+					// it belongs to.
+					if(node.type.id == actual_class->get_key()){
+						register_error(std::string("Attribute "+f->id+" has as type "
+										"the class"+ node.type.id + "where it belongs to."),
+												ERROR_24);
+						continue;
+					}
+
+				}
+				id = new symtable_element(f->id, new std::string(node.type.id));
+			}
 		}
 		else{
 			// {node.type.type != Type::ID}
@@ -350,24 +308,19 @@ void semantic_analysis::visit(const node_field_decl& node) {
 			}
 		}
 		// Add the symbol to s_table.
-		// TODO: esta bien definida la variable? Notar que recibe directamente
-		// un symtable_element, no un puntero o referencia. Lo copia?
-		// TODO: este nodo puede representar un atributo de clase, como tambien
-		// una variable local a un método. Deberíamos poder disponer de un
-		// único método put, que me sirva para ambos casos, indistintamente.
 		if(not into_method){
-#ifdef __DEBUG
-			assert(s_table.put_class_field(f->id, *id) == symtables_stack::FIELD_PUT);
-#else
-			s_table.put_class_field(f->id, *id);
-#endif
+			#ifdef __DEBUG
+						assert(s_table.put_class_field(f->id, *id) == symtables_stack::FIELD_PUT);
+			#else
+						s_table.put_class_field(f->id, *id);
+			#endif
 		}
 		else{
-#ifdef __DEBUG
-			assert(s_table.put(f->id, *id) == symtables_stack::ID_PUT);
-#else
-			s_table.put(f->id, *id);
-#endif
+			#ifdef __DEBUG
+						assert(s_table.put(f->id, *id) == symtables_stack::ID_PUT);
+			#else
+						s_table.put(f->id, *id);
+			#endif
 		}
 	}
 }
@@ -377,18 +330,16 @@ void semantic_analysis::visit(const node_id& node) {
 }
 
 void semantic_analysis::visit(const node_method_decl& node){
-#ifdef __DEBUG
-	std::cout << "Accessing method " << node.id << std::endl;
-#endif
+	#ifdef __DEBUG
+		std::cout << "Accessing method " << node.id << std::endl;
+	#endif
 	symtable_element method(node.id, determine_type(node.type.type),
 							new std::list<symtable_element>());
-	// TODO: quitar esto cuando se resuelva lo de la tabla
 	into_method = true;
 	actual_method = &method;
 	// Add to the symbol table, define a new scope
 #ifdef __DEBUG
 	assert(s_table.put_func(node.id, method) == symtables_stack::FUNC_PUT);
-	//assert(s_table.size() == 3);
 #else
 	s_table.put_func(node.id, method);
 #endif
@@ -398,10 +349,10 @@ void semantic_analysis::visit(const node_method_decl& node){
 
 	node.body->accept(*this);
 	// Close the scope defined by the method.
-	std::cout << "Finishing analysis of method " << node.id << std::endl;
+	#ifdef __DEBUG
+		std::cout << "Finishing analysis of method " << node.id << std::endl;
+	#endif
 	s_table.finish_func_analysis();
-	//assert(s_table.size() == 2);
-	// TODO: quitar esto cuando se resuelva lo de la tabla
 	into_method = false;
 	actual_method = nullptr;
 }
@@ -413,16 +364,19 @@ void semantic_analysis::visit(const node_parameter_identifier& node) {
 	// We add the identifier to the actual symbol table
 	if(node.type.type == Type::ID &&
 	   s_table.get(node.type.id)->get_class() != symtable_element::T_CLASS){
-		// TODO: este tipo de error no está enlistado...
 		register_error(std::string("Identifier "+node.id+" has unknown type "
 						+ node.type.id + "."),
 				ERROR_20);
 	}
 	else{
 		// {node.type.type != Type::ID ||
-		//   s_table.get(node.type.id)->get_class() == symtable_element::T_CLASS}
-		// TODO: chequear que node.id no coincida con el nombre del
-		// método.
+		//  s_table.get(node.type.id)->get_class() == symtable_element::T_CLASS}
+
+		// Rule 23: Parameter's identifier and method's name must differ.
+		if (node.id == actual_method->get_key()){
+			register_error(std::string("Parameter's identifier and method's name "
+					"coincide:" + node.id), ERROR_23);
+		}
 		symtable_element param(node.id, determine_type(node.type.type));
 		s_table.put_func_param(node.id, param);
 	}
@@ -437,6 +391,9 @@ void semantic_analysis::visit(const node_body& node) {
 		#ifdef __DEBUG
 			std::cout << "The body is extern" << std::endl;
 		#endif
+		// TODO: cuando esté resuelto lo de symtable, indicar
+		// que el método es externo (tenemos la referencia al
+		// método actual en actual_method)
 	}
 	else {
 		#ifdef __DEBUG
@@ -504,7 +461,6 @@ void semantic_analysis::visit(const node_assignment_statement& node) {
 	}
 	else{
 		// {not well_formed}
-		// TODO: continuamos?
 	}
 }
 
@@ -512,11 +468,9 @@ void semantic_analysis::visit(const node_location& node) {
 	symtable_element::id_type type_index, type_id;
 	symtable_element::id_class class_id;
 	symtable_element *aux = nullptr;
-	// Rule 10: the location must be already declared
-	// TODO: por qué este error está separado del error 2?
-#ifdef __DEBUG
-	std::cout << "Accessing location expression" << std::endl;
-#endif
+	#ifdef __DEBUG
+		std::cout << "Accessing location expression" << std::endl;
+	#endif
 
 	aux = dereference(node.ids);
 	if(well_formed){
@@ -528,9 +482,6 @@ void semantic_analysis::visit(const node_location& node) {
 				// Rule 11: if the location is an array position,
 				// the corresponding id must point to an array, and the
 				// index must be an integer
-				// TODO: podría hacer falta un visitor que me genere un string bonito
-				// que represente el texto asociado a esta porción del ast, para
-				// informar mejor sobre la location y el index?
 				register_error(std::string("Trying to index a value that is not an array."),
 										ERROR_11);
 				well_formed = false;
@@ -621,8 +572,7 @@ void semantic_analysis::analyze_method_call(const method_call& data) {
 	#endif
 
 	symtable_element::id_type type_method, type_parameter;
-	symtable_element *aux; // TODO: debería usar un puntero, para no estar creando
-						 // instancias que no me hacen falta?
+	symtable_element *aux = nullptr;
 
 	// Determine the type of the location
 	aux = dereference(data.ids);
@@ -633,7 +583,6 @@ void semantic_analysis::analyze_method_call(const method_call& data) {
 			std::list<symtable_element>* func_params = aux->get_func_params();
 
 			if(func_params->size() != data.parameters.size()){
-				// TODO: estaría bueno poder poner el nombre del método...
 				register_error(std::string("Method call with less parameters"
 										"than expected."), ERROR_5);
 				well_formed = false;
@@ -654,7 +603,10 @@ void semantic_analysis::analyze_method_call(const method_call& data) {
 							// {it->get_type == type_l_expr}
 
 							// Rule 7: string literals only with extern methods.
-							// TODO: string type?
+							/*if(type_l_expr == symtable_element::STRING){
+								// TODO: chequear que si el método que está en
+								// en aux, es extern
+							}*/
 						}
 					}
 					else{
@@ -900,11 +852,9 @@ void semantic_analysis::visit(const node_negate_expr& node) {
 }
 
 void semantic_analysis::visit(const node_negative_expr& node) {
-#ifdef __DEBUG
-	std::cout << "Accessing negative expression" << std::endl;
-#endif
-	// TODO: notar que sí tenemos un nodo especial para esta
-	// situación.
+	#ifdef __DEBUG
+		std::cout << "Accessing negative expression" << std::endl;
+	#endif
 	expr_call_appropriate_accept(node.expression);
 
 	if (well_formed && type_l_expr != symtable_element::INTEGER &&

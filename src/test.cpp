@@ -304,6 +304,63 @@ void test_rule_5(){
 	std::cout << "OK. " << std::endl;
 }
 
+void test_rule_6(){
+	std::cout << "6) If a method call used is used as expression, the"
+			"called method must return a result:";
+
+	// void method in return expression (same as rule 9)
+	std::string test_program = "class Program {\n"
+										"void method1(){\n"
+										"}"
+										"int method2(){\n"
+											"return method1();"
+										"}"
+									"}\n"
+									"class main {\n"
+										"void main(){\n"
+										"}\n"
+									"}\0\0";
+
+	assert(execute_test(test_program) == semantic_analysis::ERROR_9);
+
+	// void method in a conditional's guard (same as rule 12)
+	test_program = "class Program {\n"
+						"void method1(){\n"
+						"}"
+						"void method2(){\n"
+							"if (method1()) ; else ;\n"
+						"}"
+					"}\n"
+					"class main {\n"
+						"void main(){\n"
+						"}\n"
+					"}\0\0";
+
+	assert(execute_test(test_program) == semantic_analysis::ERROR_12);
+
+	std::cout << "OK. " << std::endl;
+}
+
+void test_rule_7(){
+	std::cout << "7) String literals only with extern methods:";
+
+	std::string test_program = "class Program {\n"
+									"boolean method1(){\n"
+									"}\n"
+									"void method2(){\n"
+										"method1(\"string\");"
+									"}\n"
+								"}\n"
+								"class main {\n"
+									"void main(){\n"
+									"}\n"
+								"}\0\0";
+
+	assert(execute_test(test_program) == semantic_analysis::ERROR_9);
+
+	std::cout << "OK. " << std::endl;
+}
+
 void test_rule_8(){
 	std::cout << "8) A return statement must have an associated expression only "
 				"if the method returns a value:";
@@ -887,6 +944,39 @@ void test_rule_22(){
 	std::cout << "OK. " << std::endl;
 }
 
+void test_rule_23(){
+	std::cout << "23) Parameter's identifier and method's name must differ:";
+
+	std::string test_program = "class Program {\n"
+									"void method(int method){\n"
+									"}\n"
+								"}\n"
+								"class main {\n"
+									"void main(){\n"
+									"}\n"
+								"}\0\0";
+
+	assert(execute_test(test_program) == semantic_analysis::ERROR_23);
+
+	std::cout << "OK. " << std::endl;
+}
+
+void test_rule_24(){
+	std::cout << "24) Parameter's identifier and method's name must differ:";
+
+	std::string test_program = "class Program {\n"
+									"Program x;"
+								"}\n"
+								"class main {\n"
+									"void main(){\n"
+									"}\n"
+								"}\0\0";
+
+	assert(execute_test(test_program) == semantic_analysis::ERROR_24);
+
+	std::cout << "OK. " << std::endl;
+}
+
 void test_semantic_analysis(){
 	std::cout << "\nTesting semantic analysis: " << std::endl;
 
@@ -895,6 +985,8 @@ void test_semantic_analysis(){
 	test_rule_3();
 	test_rule_4();
 	test_rule_5();
+	test_rule_6();
+	//test_rule_7()
 	test_rule_8();
 	test_rule_9();
 	test_rule_11();
@@ -909,7 +1001,8 @@ void test_semantic_analysis(){
 	test_rule_20();
 	test_rule_21();
 	test_rule_22();
-
+	test_rule_23();
+	test_rule_24();
 }
 
 int main(int argc, const char* argv[]) {

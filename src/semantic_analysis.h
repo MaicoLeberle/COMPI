@@ -32,7 +32,9 @@ public:
     	ERROR_19,
     	ERROR_20, // Declaration of identifier with unknown type.
     	ERROR_21, // Trying to access a field from a value that is not an object.
-    	ERROR_22 // Method call operation over a value different than a method.
+    	ERROR_22, // Method call operation over a value different than a method.
+    	ERROR_23,  // Parameter's identifier and method's name coincide.
+    	ERROR_24  // Type of attribute is the class where it belongs to.
     };
 
     semantic_analysis (void);
@@ -79,18 +81,17 @@ public:
 	virtual void visit(const node_method_call_expr& node);
 
 private:
-	symtables_stack s_table; // TODO: si no describo este atributo en el constructor
-							// qué pasa al intentar crear una instancia?
+	symtables_stack s_table;
 	symtable_element::id_type type_l_expr; // Type of the last expression analyzed.
 	symtable_element::id_class class_l_expr; // Class of the last expression analyzed.
-	int errors; // Number of errores encountered.
+	int errors; // Number of errors encountered.
 	error_id last_error; // For unit-testing purposes.
 	bool well_formed; // Is well-formed the analyzed expression?
     // Attributes to check context-dependent rules.
-    // TODO: peligroso?
     bool into_for_or_while; // Are we into a for or while loop?
-    bool into_method; // TODO: esto lo pongo por ahora, para resolver el problema de put
-    symtable_element *actual_method; // TODO: esto también...
+    bool into_method;
+    symtable_element *actual_method;
+    symtable_element *actual_class;
 
     /* Converts a type expression described in terms of the Type enum of
 	 * node.h, to a type expression suitable for storage into

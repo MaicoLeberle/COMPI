@@ -8,10 +8,25 @@ inter_code_gen_visitor::inter_code_gen_visitor() {
 const instructions_list* inter_code_gen_visitor::get_inst_list() {
 	return inst_list;
 }
-
+/* _ El código intermedio debería alterar cada identificador, para que sea
+ * único, asistiendose con una tabla de símbolos, que va a generar el
+ * id único.
+ * _ Deberíamos guardar el offset de las variables, que calcula nuestro
+ * visitor.
+ * _ Las temporales van siempre a registros, y yo, en el visitor, invento
+ * los nombres de las temporales, pero al analizar cada expresión, manejo un
+ * contador de temporales que lo inicio a 0.
+ * _ Los métodos y clases tendran etiquetas únicas. Cuando registro un método
+ * tengo que pasarle la cantidad de variables locales, que es información
+ * almacenada en el ast.
+ * _ La traducción de la declaración de una instancia, la podríamos traducir
+ * a instrucciones que inicializan atributos.
+ * _ Al calcular el offset de las variables locales, siempre tengo que recordar
+ * que this esta al comienzo, para sumarle su offset.
+ * */
 void inter_code_gen_visitor::visit(const node_program& node){
 #ifdef __DEBUG
-	 std::cout << "Beginning translation." << std::endl;
+	std::cout << "Beginning translation." << std::endl;
 #endif
 	for(auto c : node.classes) {
 		c->accept(*this);
