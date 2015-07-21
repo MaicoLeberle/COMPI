@@ -495,7 +495,6 @@ void test_sample_program() {
         nonexistence is checked.                                            */
     std::list<symtable_element>* parameters1 = new std::list<symtable_element>();
     symtable_element method1(std::string("method"), symtable_element::VOID, parameters1);
-    fields1->push_front(method1);
     assert((stack1.get(method1.get_key()))->get_class() == symtable_element::NOT_FOUND);
     assert(stack1.put_func(method1.get_key(), method1) == symtables_stack::FUNC_PUT);
     assert(stack1.size() == 3);
@@ -524,7 +523,6 @@ void test_sample_program() {
         checked.                                                             */
     std::list<symtable_element>* parameters2 = new std::list<symtable_element>();
     symtable_element method2(std::string("Main"), symtable_element::VOID, parameters2);
-    fields2->push_front(method2);
     assert((stack1.get(std::string("Main")))->get_class() == symtable_element::NOT_FOUND);
     assert(stack1.put_func(method1.get_key(), method1) == symtables_stack::FUNC_PUT);
     assert(stack1.size() == 3);

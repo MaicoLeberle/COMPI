@@ -174,29 +174,83 @@ public:
         an element from.                                                     */ 
     symtable_element* get (std::string);
 
-    /*  Inserts a new element into the symbols tables stack. 
+    /*  Inserts a new variable as an element into the symbols tables stack. 
+        Parameters: the variable itself
+                  , the key with which it is going to be registered
+                  , the offset inside the variable's method.
         Precondition: There have been more calls to push_symtable(...) than
         to pop_symtable(); i.e., there is still another symbols table to put 
-        an element to. The element to be inserted is not a class nor a 
-        function.                                                            */
-    symtables_stack::put_results put(std::string, symtable_element);
+        an element to. The element to be inserted is a variable.
+        Returns: a pair containing the result of putting the variable into the
+        current scope, along with its representation inside this->information 
+        (as long as putting the object in scope was successful; otherwise, 
+        NULL is returned as second element of the pair).                     */
+    pair<symtables_stack::put_results, std::string*> put_var(symtable_element, std::string, unsigned int);
+
+    /*  Inserts a new object as an element into the symbols tables stack. 
+        Parameters: the object itself
+                  , the key with which it is going to be registered
+                  , the offset inside the object's method
+                  , the object's type (its class).
+        Precondition: There have been more calls to push_symtable(...) than
+        to pop_symtable(); i.e., there is still another symbols table to put 
+        an element to. The element to be inserted is an object.
+        Returns: a pair containing the result of putting the object into the
+        current scope, along with its representation inside this->information 
+        (as long as putting the object in scope was successful; otherwise, 
+        NULL is returned as second element of the pair).                     */
+    pair<symtables_stack::put_results, std::string*> put_obj(symtable_element, std::string, unsigned int, std::string);
 
     /*  Inserts a new function to the symbols tables stack. This function is 
-        remembered for future calls of put_func_param. Also, a new symbols
+        remembered for future calls of put_*_param. Also, a new symbols
         table is pushed on top of the stack, and every subsequent call to 
         put_func_param is performed to this function and this recently created 
-        symbols table.
+        symbols table. Finally, the function's id is registered (with a unique
+        representation, of course) inside this->information.
+        Parameters: the function itself
+                  , the key with which it is going to be registered
+                  , its number of local variables
+                  , the name of the class this function belongs to.
         Precondition: There have been more calls to push_symtable than
         to pop_symtable; i.e., there is still another symbols table to put 
         an element to. The element to be inserted is a function. Every 
         previous function in the current class under analysis has already 
-        been fully analyzed.                                                */
-    symtables_stack::put_func_results put_func(std::string, symtable_element&);
+        been fully analyzed.
+        Returns: a pair containing the result of putting the function into
+        the current scope (which implies pushing a new symbols table and other 
+        things), along with its representation inside this->information (as 
+        long as putting the function in scope was successful; otherwise, NULL
+        is returned as second element of the pair).                          */
+    pair<symtables_stack::put_func_results, std::string> put_func(symtable_element&, std::string, unsigned int, std::string);
 
-    /*  Inserts a new parameter to the lastly inserted function (via put_func).
-        Precondition: The element is not a function or a class, and the string 
-        given to this put_func_param is equal to the element's key.          */
-    symtables_stack::put_param_results put_func_param(std::string, symtable_element&);
+    /*  Inserts a new variable to the lastly inserted function (via put_func) 
+        as a parameter.
+        Parameters: the variable itself
+                  , the key with which it is going to be registered
+                  , the variable's offset inside the method it belongs to.
+        Precondition: The element is a variable, and the string given to this
+        method is equal to the variable's key.
+        Returns: a pair containing the result of putting the variable into the
+        current scope (as well as in the list of parameters of the function it
+        is a parameter of), along with its representation inside 
+        this->information (as long as putting the variable in scope was 
+        successful; otherwise, NULL is returned as second parameter).        */
+    pair<symtables_stack::put_param_results, std::string> put_var_param(symtable_element&, std::string, unsigned int);
+
+    /*  Inserts a new object to the lastly inserted function (via put_func) as
+        a parameter.
+        Parameters: the object itself
+                  , the key with which it is going to be registered
+                  , the object's offset inside the method it belongs to
+                  , the object's type(its class).
+        Precondition: The element is an object, and the second parameter 
+        given to this method is equal to the object's key.
+        Returns: a pair containing the result of putting the object into the
+        current scope (as well as in the list of parameters of the function it
+        is a parameter of), along with its representation inside 
+        this->information (as long as putting the object in scope was 
+        successful; otherwise, NULL is returned as second parameter).        */
+    pair<symtables_stack::put_param_results, std::string> put_obj_param(symtable_element&, std::string, unsigned int, std::string);
 
     /*  Simply performs a pop operation on the stack and resets the value of
         last_func. Caution not to pop some other symbols table on top of the 
@@ -208,20 +262,71 @@ public:
     void finish_func_analysis(void);
 
     /*  Inserts a new class to the symbols tables stack. This class is 
-        remembered for future calls of put_class_field. Also, a new symbols
+        remembered for future calls of put_*_field. Also, a new symbols
         table is pushed on top of the stack, and every subsequent call to
-        put_class_field is performed to this class and this recently created
-        symbols table.
+        put_*_field is performed to this class and the recently created
+        symbols table. Finally, the class's id is registered inside 
+        this->information.
+        Parameters: the class itself
+                  , the key with which it is going to be registered
+                  , the list of local attributes of the class.
         Precondition: There have been more calls to push_symtable than
         to pop_symtable; i.e., there is still another symbols table to put 
         an element to. The element to be inserted is a class. Every previous 
-        class has already been fully analyzed.                               */
-    symtables_stack::put_class_results put_class(std::string, symtable_element&);
+        class has already been fully analyzed.
+        Returns: a pair contaiing the result of putting the class into the 
+        current scope (which implies pushing a new symbols table, and other 
+        things), along with its representation inside this->information (as
+        long as putting the class in scope was succesful; otherwise, NULL is 
+        returned as second element of the pair).                             */
+    pair<symtables_stack::put_class_results, std::string> put_class(symtable_element&, std::string, std::list<std::string>);
 
-    /*  Inserts a new class field to the lastly inserted class (via put_class).
-        Precondition: The element is not a class, and the string given to this
-         put_class_field call is equal to the element's key.                 */
-    symtables_stack::put_field_results put_class_field(std::string, symtable_element&);
+    /*  Inserts a new variable as a field to the lastly inserted class (via 
+        put_class).
+        Parameters: the variable itself
+                  , the key with which it is going to be registered
+                  , the offset inside the method its belong to.
+        Precondition: the second parameter matches the variable's key, and 
+        there is a class to push this field into.
+        Returns: a pair containing the result of putting the variable into the
+        current scope (which implies putting it in the class's list of fields
+        as well, and other things), along with its representation inside 
+        this->information (as long as putting the variable in scope was 
+        successful; otherwise, NULL is returned as second element of the 
+        pair).                                                               */
+    pair<symtables_stack::put_field_results, std::string> put_var_field(symtable_element&, std::string, unsigned int);
+
+    /*  Inserts a new object as a field to the lastly inserted class (via 
+        put_class).
+        Parameters: the object itself
+                  , the key with which it is going to be registered
+                  , the offset inside the method its belong to
+                  , the object's type (its class).
+        Precondition: the second parameter matches the object's key, and 
+        there is a class to push this field into.
+        Returns: a pair containing the result of putting the object into the
+        current scope (which implies putting it in the class's list of fields
+        as well, and other things), along with its representation inside 
+        this->information (as long as putting the object in scope was 
+        successful; otherwise, NULL is returned as second element of the 
+        pair).                                                                */
+    pair<symtables_stack::put_field_results, std::string> put_obj_field(symtable_element&, std::string, unsigned int, std::string);
+
+    /*  Inserts a new function as a field to the lastly inserted class (via 
+        put_class).
+        Parameters: the function itself
+                  , the key with which it is going to be registered
+                  , the number of local variables in it
+                  , the class it belongs to.
+        Precondition: the second parameter matches the function's key, and 
+        there is a class to push this field into.
+        Returns: a pair containing the result of putting the function into the
+        current scope (which implies putting it in the class's list of fields
+        as well, and other things), along with its representation inside 
+        this->information (as long as putting the  in scope was 
+        successful; otherwise, NULL is returned as second element of the 
+        pair.                                                                */
+    pair<symtables_stack::put_field_results, std::string> put_func_field(symtable_element&, std::string, unsigned int, std::string);
 
     /*  Simply performs a pop operation on the stack and resets the value of
         last_class. Caution not to pop some other symbols table on top of the 
