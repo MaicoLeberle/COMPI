@@ -1,11 +1,46 @@
 #include "three_address_code.h"
 
+address_pointer new_integer_constant(int value){
+	address_pointer address = address_pointer(new address);
+	address->type = address_type::ADDRESS_CONSTANT;
+	address->value.constant.val.ival = value;
+
+	return address;
+}
+
+address_pointer new_float_constant(float value){
+	address_pointer address = address_pointer(new address);
+	address->type = address_type::ADDRESS_CONSTANT;
+	address->value.constant.val.fval = value;
+
+	return address;
+}
+
+address_pointer new_boolean_constant(bool value){
+	address_pointer address = address_pointer(new address);
+	address->type = address_type::ADDRESS_CONSTANT;
+	address->value.constant.val.bval = value;
+
+	return address;
+}
+
 quad_pointer new_label(const std::string& label){
 	quad_pointer instruction = quad_pointer(new quad);
 	instruction->type = quad_type::LABEL;
 	instruction->result = address_pointer(new address);
 	instruction->result->type = address_type::ADDRESS_LABEL;
 	instruction->result->value.label = new std::string(label); // TODO: Hay que liberar esta memoria
+
+	return instruction;
+}
+
+quad_pointer new_copy(const std::string& label, const address_pointer arg){
+	quad_pointer instruction = quad_pointer(new quad);
+	instruction->type = quad_type::COPY;
+	instruction->result = address_pointer(new address);
+	instruction->result->type = address_type::ADDRESS_NAME;
+	instruction->result->value.label = new std::string(label);
+	instruction->arg1 = arg;
 
 	return instruction;
 }

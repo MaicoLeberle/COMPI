@@ -3,11 +3,92 @@
 inter_code_gen_visitor::inter_code_gen_visitor() {
 	inst_list = new instructions_list();
 	offset = 0;
+	into_method = false;
+	next_temp = 1;
+
+	// TODO: quizás deberíamos colocar todas estas constantes en un archivo
+	// separado
+	// Initial values of attributes.
+	integer_initial_value = 0;
+	float_initial_value = 0.0;
+	boolean_initial_value = true; // TODO: true?
+
+	// Type's width (in bytes).
+	// TODO: colocar el ancho correcto
+	integer_width = 4;
+	float_width = 4;
+	boolean_width = 4;
 }
 
 const instructions_list* inter_code_gen_visitor::get_inst_list() {
 	return inst_list;
 }
+
+unsigned int inter_code_gen_visitor::calculate_type(Type type){
+	unsigned int ret = 0;
+
+	switch(type.type){
+		case Type::INT:
+			ret = integer_width;
+			break;
+
+		case Type::FLOAT:
+			ret = float_width;
+			break;
+
+		case Type::BOOLEAN:
+			ret = boolean_width;
+			break;
+
+		case Type::ID:
+			// TODO: indexar la tabla de símbolos con el id, y extraer su tamaño.
+			break;
+	}
+
+	return ret;
+}
+
+void inter_code_gen_visitor::instance_initialization(std::string id_class){
+	// Translate instance declaration into a sequence of code to
+	// initialize each attribute.
+	symtable_element *class_object = s_table.get(id_class);
+	std::list<symtable_element> *fields = class_object->get_class_fields();
+
+	for(std::list<symtable_element>::iterator it = fields->begin();
+	it != fields->end(); ++it){
+		if((*it).get_class() == symtable_element::T_VAR){
+			if((*it).get_type() == symtable_element::INTEGER){
+				// TODO: generar nuevo identificador, colocarlo en
+				// la tabla, con offset = offset+integer_width
+				address_pointer constant = new_integer_constant(
+											integer_initial_value);
+
+				inst_list->push_back(new_copy(f->id, constant));
+			}
+			else if((*it).get_type() == symtable_element::FLOAT){
+				// TODO: generar nuevo identificador, colocarlo en
+				// la tabla, con offset = offset+float_width
+				address_pointer constant = new_float_constant(
+											float_initial_value);
+
+				inst_list->push_back(new_copy(f->id, constant));
+
+			}
+			else if((*it).get_type() == symtable_element::BOOLEAN){
+				// TODO: generar nuevo identificador, colocarlo en
+				// la tabla, con offset = offset+boolean_width
+				address_pointer constant = new_boolean_constant(
+											boolean_initial_value);
+
+				inst_list->push_back(new_copy(f->id, constant));
+			}
+			else if((*it).get_type() == symtable_element::ID){
+				instance_initialization((*it).get_key());
+			}
+		}
+	}
+}
+
 /* _ El código intermedio debería alterar cada identificador, para que sea
  * único, asistiendose con una tabla de símbolos, que va a generar el
  * id único.
@@ -20,22 +101,25 @@ const instructions_list* inter_code_gen_visitor::get_inst_list() {
  * tengo que pasarle la cantidad de variables locales, que es información
  * almacenada en el ast.
  * _ La traducción de la declaración de una instancia, la podríamos traducir
- * a instrucciones que inicializan atributos.
+ * a instrucciones que inicializan atributos (ya que no tenemos heap, si se
+ * tradujera a un constructor, no tendríamos forma de recuperar la información
+ * del mismo).
  * _ Al calcular el offset de las variables locales, siempre tengo que recordar
  * que this esta al comienzo, para sumarle su offset.
  * */
 void inter_code_gen_visitor::visit(const node_program& node){
-#ifdef __DEBUG
-	std::cout << "Beginning translation." << std::endl;
-#endif
+	#ifdef __DEBUG
+		std::cout << "Beginning translation." << std::endl;
+	#endif
+	// Define a new block: the global scope
+	s_table.push_symtable();
+
 	for(auto c : node.classes) {
 		c->accept(*this);
 	}
 }
 
 void inter_code_gen_visitor::visit(const node_class_decl& node) {
-	// TODO: el código de la declaración de clase, al leerlo, debería
-	// servirme para la creación del registro que representa a la instancia?
 #ifdef __DEBUG
 	std::cout << "Translating class " << node.id << std::endl;
 #endif
@@ -58,17 +142,25 @@ void inter_code_gen_visitor::visit(const node_class_decl& node) {
 			methods.push_back(cb);
 		}
 	}
-	// Translation of fields
-	// Generate code for the class declaration.
-	// TODO: sería el constructor?
-	inst_list->push_back(new_label(node.id));
-	actual_class_name = node.id;
+	// Saving information of fields..
+	symtable_element new_class(new std::string(node.id),
+			new std::list<symtable_element>());
+	actual_class = &new_class;
+
+	// Define a new scope
+	#ifdef __DEBUG
+		symtables_stack::put_class_results ret = s_table.put_class(new_class.get_key(), new_class);
+		assert(ret == symtables_stack::CLASS_PUT);
+	#else
+		s_table.put_class(new_class.get_key(), new_class);
+	#endif
+
 	// Relative addresses with respect to the beginning of this
 	// class definition.
 	// TODO: también al traducir la definición de los métodos?
 	int prev_offset = offset;
 	offset = 0;
-
+	into_method = false;
 	for(std::list<class_block_pointer>::iterator it = fields.begin();
 	it != fields.end(); ++it){
 		node_field_decl& aux = static_cast<node_field_decl&> (*(*it));
@@ -89,7 +181,6 @@ void inter_code_gen_visitor::visit(const node_class_decl& node) {
 }
 
 	// Statements
-	void inter_code_gen_visitor::visit(const node_assignment_statement& node){}
 	void inter_code_gen_visitor::visit(const node_method_call_statement& node) {}
 	void inter_code_gen_visitor::visit(const node_if_statement& node) {}
 	void inter_code_gen_visitor::visit(const node_for_statement& node) {}
@@ -111,20 +202,26 @@ void inter_code_gen_visitor::visit(const node_class_decl& node) {
 	void inter_code_gen_visitor::visit(const node_method_call_expr& node) {}
 
 void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_field_decl& node) {
-	// TODO: hay diferencia entre la creación de un atributo de clase
-	// y una variable local de un método?.
-	// TODO: Hace falta instrucciones para declarar la creación de campos.
 	// TODO: podríamos utilizar Symbolic Type Widths (pagina 386, libro dragon)
-#ifdef __DEBUG
-	std::cout << "Translating field declaration." << std::endl;
-#endif
+	#ifdef __DEBUG
+		std::cout << "Translating field declaration." << std::endl;
+	#endif
 
 	// TODO: acá debería usar offsets en vez de ids?
 	for(auto f : node.ids) {
 		// Translate each identifier. Add the identifier to the symbol table.
 		if (node.type.type == Type::ID){
 			// Declaration of instances.
-			inst_list->push_back(new_instance_field(f->id, node.type.id));
+			if(into_method){
+				instance_initialization(node.type.id);
+			}
+			else{
+				// {not into_method}
+				// Is an attribute declaration. We just save the corresponding
+				// data, for future use.
+				// TODO: guardar el campo en la tabla, para poder consultarlo
+				// al momento de crear una instancia de esta clase
+			}
 		}
 		else{
 			// {node.type.type != Type::ID}
@@ -133,15 +230,42 @@ void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_field_decl
 				// Array
 				switch(node.type.type){
 					case Type::INTEGER:
-						inst_list->push_back(new_int_array_field(f->id, f->array_size));
+						if(into_method){
+							// TODO: agregar a la tabla de símbolos f->id junto con
+							// el valor actual del offset
+							offset += f->array_size*integer_width;
+						}
+						else{
+							// {not into_method}
+							// TODO: guardar en la tabla de símbolos esta
+							// información
+						}
 						break;
 
 					case Type::FLOAT:
-						inst_list->push_back(new_float_array_field(f->id, f->array_size));
+						if (into_method){
+							// TODO: agregar a la tabla de símbolos f->id junto con
+							// el valor actual del offset
+							offset += f->array_size*float_width;
+						}
+						else{
+							// {not into_method}
+							// TODO: guardar en la tabla de símbolos esta
+							// información
+						}
 						break;
 
 					case Type::BOOLEAN:
-						inst_list->push_back(new_boolean_array_field(f->id, f->array_size));
+						if (int_method){
+							// TODO: agregar a la tabla de símbolos f->id junto con
+							// el valor actual del offset
+							offset += f->array_size*boolean_width;
+						}
+						else{
+							// {not into_method}
+							// TODO: guardar en la tabla de símbolos esta
+							// información
+						}
 						break;
 				}
 			}
@@ -151,15 +275,42 @@ void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_field_decl
 				if (f->array_size > 0){
 					switch(node.type.type){
 						case Type::INTEGER:
-							inst_list->push_back(new_int_field(f->id));
+							if (into_method){
+								// TODO: agregar a la tabla de símbolos f->id junto con
+								// el valor actual del offset
+								offset += integer_width;
+							}
+							else{
+								// {not into_method}
+								// TODO: guardar en la tabla de símbolos esta
+								// información
+							}
 							break;
 
 						case Type::FLOAT:
-							inst_list->push_back(new_float_field(f->id));
+							if (into_method){
+								// TODO: agregar a la tabla de símbolos f->id junto con
+								// el valor actual del offset
+								offset += float_width;
+							}
+							else{
+								// {not into_method}
+								// TODO: guardar en la tabla de símbolos esta
+								// información
+							}
 							break;
 
 						case Type::BOOLEAN:
-							inst_list->push_back(new_boolean_field(f->id));
+							if (into_method){
+								// TODO: agregar a la tabla de símbolos f->id junto con
+								// el valor actual del offset
+								offset += boolean_width;
+							}
+							else{
+								// {not into_method}
+								// TODO: guardar en la tabla de símbolos esta
+								// información
+							}
 							break;
 					}
 				}
@@ -177,14 +328,26 @@ void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_method_dec
 	std::cout << "Translating method " << node.id << std::endl;
 #endif
 	// Generate code for the method declaration.
-	inst_list->push_back(new_label(actual_class_name+"."+node.id));
+	inst_list->push_back(new_label(actual_class->get_key()+"."+node.id));
+	// Initialize offset.
+	// TODO: hace falta esto?
+	unsigned int offset_prev = offset;
+	offset = 0;
 	for(auto p : node.parameters) {
 		p->accept(*this);
 	}
-	// Initialize offset.
-	offset = 0;
+
 	into_method = true;
+	// Save inst_list
+	instructions_list *aux = inst_list;
+	inst_list = new instructions_list(); // TODO: eliminar!
 	node.body->accept(*this);
+	// Into offset we have the size of the sum of the local an temporal variables.
+	// We add the corresponding enter instruction at the beginning of the procedure.
+	aux->push_back(new_beggin_procedure(offset));
+	// TODO: agregar a aux todas las instrucciones en inst_list y hacer que
+	// inst_list apunte a aux
+	offset = offset_prev;
 }
 
 void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_parameter_identifier& node) {
@@ -194,8 +357,10 @@ void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_parameter_
 
 	// TODO: en la arquitectura x86_64, es el método el que construye
 	// el stack frame?: "The following enter instruction
-	// sets up the stack frame" (de "x86-64-architecture-guide"). De ser
-	// así, tenemos que colocar una instrucción enter por cada parámetro.
+	// sets up the stack frame" (de "x86-64-architecture-guide"). Pero es quien
+	// lo llama quien coloca los parametros en los registros. Debemos contabilizar
+	// el tamaño de los parámetros?
+	offset += calculate_size(node.type);
 }
 
 void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_body& node) {
@@ -221,21 +386,23 @@ void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_block& nod
 #ifdef __DEBUG
 	std::cout << "Translating a block." << std::endl;
 #endif
-	// TODO: que hay del código para un bloque?
+	// A block defines a new scope.
+	s_table.push_symtable();
 	// Analyze the content of the block.
 	for(auto s : node.content) {
 		stm_call_appropriate_accept(s);
 	}
+	s_table.pop_symtable();
 }
-/*
+
 void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_assignment_statement& node) {
 #ifdef __DEBUG
 	std::cout << "Translating assignment statement" << std::endl;
 #endif
 	node.location->accept(*this);
-	std::string l_value(last_expr);
+	address_pointer l_value = temp;
 	expr_call_appropriate_accept(node.expression);
-	std::string r_value(last_expr);
+	address_pointer r_value = temp;
 	// TODO: crear objeto instrucción apropiado. La visita a node.location
 	// y node.expression deberían guardar en un atributo de la instancia
 	// una representación de la location y una direccion en donde se
@@ -255,7 +422,7 @@ void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_assignment
 			inst_list->push_back(new_minus_assign(l_value, r_value));
 	}
 }
-
+/*
 void inter_code_gen_visitor::inter_code_gen_visitor::visit(const node_location& node) {
 #ifdef __DEBUG
 	std::cout << "Translating location expression" << std::endl;

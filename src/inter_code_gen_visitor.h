@@ -4,7 +4,7 @@
 #include <iostream>
 #include <memory>
 #include "visitor.h" // Visitor's interface
-#include "symtable.h" // Symbol table's implementation.
+#include "intermediate_symtable.h" // Symbol table's implementation.
 #include "three_address_code.h" // 3-address code's implementation.
 
 
@@ -52,17 +52,39 @@ public:
 private:
 	// List of three-address instructions
 	instructions_list *inst_list;
+	intermediate_symtable s_table;
 
 	// Information for context-sensitive translation.
 	// TODO: el hecho de salirnos de un esquema puro de traducción
 	// dirigida por sintaxis, señala algún problema de diseño de
 	// nuestro trabajo?
-	std::string actual_class_name;
-	std::string last_expr;
-	int offset; // To keep track of the next available relative address
+	symtable_element *actual_class;
+	unsigned int offset; // To keep track of the next available relative address
 				// (page 376 of Dragon book), and share this information
 				// between nodes.
 	bool into_method;
+	unsigned int next_temp; // Next number of temporal variable.
+	address_pointer temp; // Temporal where the value of the last analyzed
+						   // expression is saved.
+
+	// Initial values of attributes.
+	int integer_initial_value;
+	float float_initial_value;
+	bool boolean_initial_value;
+
+	// Type's width (in bytes).
+	unsigned int integer_width;
+	unsigned int float_width;
+	unsigned int boolean_width;
+
+	/* Translate an instance declaration into a sequence of code to
+	 * initialize each attribute.
+	 * PRE : {std::string argument is a valid class name}
+	 * POS : {instructions to initialize the corresponding attributes are
+	 * 		  pushed into the end of inst_list, and the corresponding new
+	 * 		  identifiers and offsets are calculated and added to s_table}
+	 * */
+	void instance_initialization(std::string);
 
 };
 

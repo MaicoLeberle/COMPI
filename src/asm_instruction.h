@@ -129,35 +129,40 @@ class asm_instructions_list : public std::vector<asm_instruction_pointer> {};
 
 // Constructors of special kinds of operands.
 operand_pointer new_register_operand(register_id);
-
 operand_pointer new_immediate_int_operand(int);
-
 operand_pointer new_memory_operand(int offset, int base, int index, int scale);
 
 // Constructors of instructions.
 asm_instruction_pointer new_mov_instruction(address_pointer source,
 											address_pointer destination,
 											data_type ops_type);
-
 asm_instruction_pointer new_shr_instruction(address_pointer imm,
 											address_pointer destination,
 											data_type ops_type);
-
 asm_instruction new_div_instruction(address_pointer, data_type);
-
 asm_instruction new_mul_instruction(address_pointer source,
 								address_pointer destination,
 								data_type ops_type);
-
 asm_instruction_pointer new_add_instruction(address_pointer source,
 								address_pointer destination,
 								data_type ops_type);
-
 asm_instruction_pointer new_sub_instruction(address_pointer source,
 								address_pointer destination,
 								data_type ops_type);
-
 asm_instruction_pointer new_neg_instruction(address_pointer destination,
 											data_type ops_type);
-
+asm_instruction_pointer new_cmp_instruction(address_pointer, address_pointer,
+											data_type);
+asm_instruction_pointer new_jmp_instruction(std::string);
+asm_instruction_pointer new_je_instruction(std::string);
+asm_instruction_pointer new_jne_instruction(std::string);
+asm_instruction_pointer new_jl_instruction(std::string);
+asm_instruction_pointer new_jle_instruction(std::string);
+asm_instruction_pointer new_jg_instruction(std::string);
+asm_instruction_pointer new_jge_instruction(std::string);
+asm_instruction_pointer new_call_instruction(std::string);
+asm_instruction_pointer new_leave_instruction();
+asm_instruction_pointer new_ret_instruction();
+asm_instruction_pointer new_label_instruction(std::string);
+asm_instruction_pointer new_enter_instruction(int);
 #endif

@@ -48,7 +48,7 @@
  * 		mov[b|w|l|q] y[i], x (idem caso anterior)
  * UNCONDITIONAL_JUMP,	// goto L
  *		jmp L
- * CONDITIONAL_JUMP,	// if x goto L || ifFalse x goto L
+ * CONDITIONAL_JUMP,	// if x goto L
  * 		TODO: primero debemos transformar el testeo de x en la comparación
  * 		con el valor 0 o signo del mismo. Usaremos estas instrucciones
  * 		cmp[b|w|l|q] s 2 ,s 1       set flags based on s 1 − s 2
