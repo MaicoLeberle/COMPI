@@ -5,6 +5,7 @@
 #include <string>
 #include <list>
 #include <map>
+#include <utility>
 
 class ids_info {
 public:
@@ -15,6 +16,8 @@ public:
         parameter's representation is unique inside info_map. This 
         representation is what should be used inside any intermediate 
         representaion instruction.                                           */
+
+    std::string get_next_internal(std::string);
 
     /*  Parameters: id with which generate the internal representation id
                   , offset inside the method.                                */
@@ -77,32 +80,21 @@ public:
 private:
     struct entry_info {
         id_kind entry_kind;
-        union data {
-            /* For variables. */
-            struct var_info {
-                unsigned int offset;
-            };
 
-            /* For objects. */
-            struct obj_info {   
-                unsigned int offset; /* Offset inside the function it belongs to. */
-                std::string owner; /* Object's type. */
-            };
+        /*  For variables and objects.                                       */
+        unsigned int* offset = NULL;
 
-            /* For methods. */
-            struct method_info {
-                unsigned int local_vars; /* Number of local variables in the method's 
-                                            body. */
-                std::string owner;  /* Class the method belongs to. */
-            };
+        /*  For objects (declaring the object's type) and methods (declaring
+            the class this method belongs to).                               */
+        std::string* owner = NULL;
 
-            /* For classes. */
-            struct class_info {
-                std::list<std::string> l_atts; /* List of attributes in a class, in the 
-                                                  order they appear in it. */
-            };
-        };
+        /*  For methods.                                                     */
+        unsigned int* local_vars = NULL;
+
+        /*  For classes.                                                     */
+        std::list<std::string>* l_atts = NULL;
     };
+    
 
     std::map<std::string, entry_info> info_map;
 
@@ -185,7 +177,7 @@ public:
         current scope, along with its representation inside this->information 
         (as long as putting the object in scope was successful; otherwise, 
         NULL is returned as second element of the pair).                     */
-    pair<symtables_stack::put_results, std::string*> put_var(symtable_element, std::string, unsigned int);
+    std::pair<symtables_stack::put_results, std::string*> put_var(symtable_element, std::string, unsigned int);
 
     /*  Inserts a new object as an element into the symbols tables stack. 
         Parameters: the object itself
@@ -199,7 +191,7 @@ public:
         current scope, along with its representation inside this->information 
         (as long as putting the object in scope was successful; otherwise, 
         NULL is returned as second element of the pair).                     */
-    pair<symtables_stack::put_results, std::string*> put_obj(symtable_element, std::string, unsigned int, std::string);
+    std::pair<symtables_stack::put_results, std::string*> put_obj(symtable_element& , std::string, unsigned int, std::string);
 
     /*  Inserts a new function to the symbols tables stack. This function is 
         remembered for future calls of put_*_param. Also, a new symbols
@@ -221,7 +213,7 @@ public:
         things), along with its representation inside this->information (as 
         long as putting the function in scope was successful; otherwise, NULL
         is returned as second element of the pair).                          */
-    pair<symtables_stack::put_func_results, std::string> put_func(symtable_element&, std::string, unsigned int, std::string);
+    std::pair<symtables_stack::put_func_results, std::string*> put_func(symtable_element&, std::string, unsigned int, std::string);
 
     /*  Inserts a new variable to the lastly inserted function (via put_func) 
         as a parameter.
@@ -235,7 +227,7 @@ public:
         is a parameter of), along with its representation inside 
         this->information (as long as putting the variable in scope was 
         successful; otherwise, NULL is returned as second parameter).        */
-    pair<symtables_stack::put_param_results, std::string> put_var_param(symtable_element&, std::string, unsigned int);
+    std::pair<symtables_stack::put_param_results, std::string*> put_var_param(symtable_element&, std::string, unsigned int);
 
     /*  Inserts a new object to the lastly inserted function (via put_func) as
         a parameter.
@@ -250,7 +242,7 @@ public:
         is a parameter of), along with its representation inside 
         this->information (as long as putting the object in scope was 
         successful; otherwise, NULL is returned as second parameter).        */
-    pair<symtables_stack::put_param_results, std::string> put_obj_param(symtable_element&, std::string, unsigned int, std::string);
+    std::pair<symtables_stack::put_param_results, std::string*> put_obj_param(symtable_element&, std::string, unsigned int, std::string);
 
     /*  Simply performs a pop operation on the stack and resets the value of
         last_func. Caution not to pop some other symbols table on top of the 
@@ -279,7 +271,7 @@ public:
         things), along with its representation inside this->information (as
         long as putting the class in scope was succesful; otherwise, NULL is 
         returned as second element of the pair).                             */
-    pair<symtables_stack::put_class_results, std::string> put_class(symtable_element&, std::string, std::list<std::string>);
+    std::pair<symtables_stack::put_class_results, std::string*> put_class(symtable_element&, std::string, std::list<std::string>);
 
     /*  Inserts a new variable as a field to the lastly inserted class (via 
         put_class).
@@ -294,7 +286,7 @@ public:
         this->information (as long as putting the variable in scope was 
         successful; otherwise, NULL is returned as second element of the 
         pair).                                                               */
-    pair<symtables_stack::put_field_results, std::string> put_var_field(symtable_element&, std::string, unsigned int);
+    std::pair<symtables_stack::put_field_results, std::string*> put_var_field(symtable_element&, std::string, unsigned int);
 
     /*  Inserts a new object as a field to the lastly inserted class (via 
         put_class).
@@ -310,7 +302,7 @@ public:
         this->information (as long as putting the object in scope was 
         successful; otherwise, NULL is returned as second element of the 
         pair).                                                                */
-    pair<symtables_stack::put_field_results, std::string> put_obj_field(symtable_element&, std::string, unsigned int, std::string);
+    std::pair<symtables_stack::put_field_results, std::string*> put_obj_field(symtable_element&, std::string, unsigned int, std::string);
 
     /*  Inserts a new function as a field to the lastly inserted class (via 
         put_class).
@@ -326,7 +318,7 @@ public:
         this->information (as long as putting the  in scope was 
         successful; otherwise, NULL is returned as second element of the 
         pair.                                                                */
-    pair<symtables_stack::put_field_results, std::string> put_func_field(symtable_element&, std::string, unsigned int, std::string);
+    std::pair<symtables_stack::put_field_results, std::string*> put_func_field(symtable_element&, std::string, unsigned int, std::string);
 
     /*  Simply performs a pop operation on the stack and resets the value of
         last_class. Caution not to pop some other symbols table on top of the 
@@ -343,7 +335,7 @@ public:
 private:
     ids_info* information;
 
-    symbols_stack scopes;
+    symtables_stack scopes;
 };
 
 #endif
