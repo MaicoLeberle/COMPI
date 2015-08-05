@@ -9,6 +9,12 @@
 
 class ids_info {
 public:
+    /*  At the end of the name, a '-' character followed by a number is 
+        appended, such that the whole string is a unique identifier, has never
+        been used before and will not be asigned to any other identifier in 
+        the rest of the source code.                                         */ 
+    std::string get_next_internal(std::string);
+
     /*  The following register_* methods register the id passed as parameter, 
         as long with their information, into info_map.
         They return the internal representation of the id just registered. It 
@@ -17,16 +23,16 @@ public:
         representation is what should be used inside any intermediate 
         representaion instruction.                                           */
 
-    std::string get_next_internal(std::string);
-
     /*  Parameters: id with which generate the internal representation id
                   , offset inside the method.                                */
     std::string register_var(std::string, unsigned int);
 
     /*  Parameters: id with which generate the internal representation id
                   , offset inside the method
-                  , name of the parameter id's type (its class).             */
-    std::string register_obj(std::string, unsigned int, std::string);
+                  , name of the parameter id's type (its class)
+                  , the string that represents the beginning address of the 
+                    object.                                                  */
+    std::string register_obj(std::string, unsigned int, std::string, std::string);
 
     /*  Parameters: id with which generate the internal representation id
                   , number of local variables in the method
@@ -56,6 +62,7 @@ public:
                  , K_CLASS
                  , K_METHOD };
 
+    /*  Precondition: the id has been registered.                            */
     id_kind get_kind(std::string);
 
     /*  Precondition: the id has been registered, and it is of kind K_VAR or 
@@ -77,6 +84,10 @@ public:
         were in the class's definition.                                      */
     std::list<std::string> get_list_attributes(std::string);
 
+    /*  Updates the number of local variables (including the temporary ones).
+        Precondition: the id has been registered, and it is of kind K_METHOD.*/
+    void set_number_vars(std::string, unsigned int);
+
 private:
     struct entry_info {
         id_kind entry_kind;
@@ -91,8 +102,15 @@ private:
         /*  For methods.                                                     */
         unsigned int* local_vars = NULL;
 
+        /*  For methods. Represents the information needed to get the 
+            beginning address of an object (an object interpreted as an array
+            of variables of -possibly- different types; i.e., as an array of
+            its attributes).                                                 */
+        std::string* begin_address;
+
         /*  For classes.                                                     */
         std::list<std::string>* l_atts = NULL;
+
     };
     
 
@@ -111,20 +129,6 @@ private:
 
 class intermediate_symtable {
 public:
-    intermediate_symtable(void);
-
-    /*  After analysis, this method should be called and its return value 
-        passed onto the next phase of the compilation: the object code 
-        generation.                                                          */
-    ids_info* get_ids_info(void);
-
-    /*  Precondition: the parameter id has already been put in the current 
-        scope.
-        Returns: the internal representation of the parameter id; it should
-        be used instead of the original name in the construction of any 
-        intermediate representation instruction.                             */
-    std::string get_id_rep(std::string);
-
     enum put_results { IS_RECURSIVE
                      , ID_EXISTS
                      , ID_PUT };
@@ -149,6 +153,20 @@ public:
                           , NO_PREV_CLASS /* A class should be under analysis 
                                              in order to put a new class 
                                              field in scope. */ };
+
+    intermediate_symtable(void);
+
+    /*  After analysis, this method should be called and its return value 
+        passed onto the next phase of the compilation: the object code 
+        generation.                                                          */
+    ids_info* get_ids_info(void);
+
+    /*  Precondition: the parameter id has already been put in the current 
+        scope.
+        Returns: the internal representation of the parameter id; it should
+        be used instead of the original name in the construction of any 
+        intermediate representation instruction.                             */
+    std::string get_id_rep(std::string);
 
     /*  Create a new symbols table related to a block.                       */
     void push_symtable(void);
@@ -183,7 +201,9 @@ public:
         Parameters: the object itself
                   , the key with which it is going to be registered
                   , the offset inside the object's method
-                  , the object's type (its class).
+                  , the object's type (its class)
+                  , the string that represents the beginning address of the 
+                    object.
         Precondition: There have been more calls to push_symtable(...) than
         to pop_symtable(); i.e., there is still another symbols table to put 
         an element to. The element to be inserted is an object.
@@ -191,7 +211,7 @@ public:
         current scope, along with its representation inside this->information 
         (as long as putting the object in scope was successful; otherwise, 
         NULL is returned as second element of the pair).                     */
-    std::pair<symtables_stack::put_results, std::string*> put_obj(symtable_element& , std::string, unsigned int, std::string);
+    std::pair<symtables_stack::put_results, std::string*> put_obj(symtable_element& , std::string, unsigned int, std::string, std::string);
 
     /*  Inserts a new function to the symbols tables stack. This function is 
         remembered for future calls of put_*_param. Also, a new symbols
@@ -235,6 +255,8 @@ public:
                   , the key with which it is going to be registered
                   , the object's offset inside the method it belongs to
                   , the object's type(its class).
+                  , the string that represents the beginning address of the 
+                    object.
         Precondition: The element is an object, and the second parameter 
         given to this method is equal to the object's key.
         Returns: a pair containing the result of putting the object into the
@@ -242,7 +264,7 @@ public:
         is a parameter of), along with its representation inside 
         this->information (as long as putting the object in scope was 
         successful; otherwise, NULL is returned as second parameter).        */
-    std::pair<symtables_stack::put_param_results, std::string*> put_obj_param(symtable_element&, std::string, unsigned int, std::string);
+    std::pair<symtables_stack::put_param_results, std::string*> put_obj_param(symtable_element&, std::string, unsigned int, std::string, std::string);
 
     /*  Simply performs a pop operation on the stack and resets the value of
         last_func. Caution not to pop some other symbols table on top of the 
@@ -293,7 +315,9 @@ public:
         Parameters: the object itself
                   , the key with which it is going to be registered
                   , the offset inside the method its belong to
-                  , the object's type (its class).
+                  , the object's type (its class)
+                  , the string that represents the beginning address of the 
+                    object.
         Precondition: the second parameter matches the object's key, and 
         there is a class to push this field into.
         Returns: a pair containing the result of putting the object into the
@@ -302,7 +326,7 @@ public:
         this->information (as long as putting the object in scope was 
         successful; otherwise, NULL is returned as second element of the 
         pair).                                                                */
-    std::pair<symtables_stack::put_field_results, std::string*> put_obj_field(symtable_element&, std::string, unsigned int, std::string);
+    std::pair<symtables_stack::put_field_results, std::string*> put_obj_field(symtable_element&, std::string, unsigned int, std::string, std::string);
 
     /*  Inserts a new function as a field to the lastly inserted class (via 
         put_class).
