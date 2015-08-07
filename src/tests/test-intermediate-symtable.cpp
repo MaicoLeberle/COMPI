@@ -5,6 +5,7 @@
 using namespace std;
 
 void test_ids_info();
+
 void test_register_var();
 void test_register_obj();
 void test_register_method();
@@ -20,9 +21,29 @@ void test_get_local_vars();
 void test_get_owner_class();
 void test_get_list_attributes();
 
+
+
 void test_intermediate_symtable();
-void test_intermediate_symtable_constructor();
+
 void test_intermediate_symtable_get_ids_info();
+void test_intermediate_symtable_get_id_rep();
+void test_intermediate_symtable_push_symtable();
+void test_intermediate_symtable_pop_symtable();
+void test_intermediate_symtable_put_var_and_get();
+void test_intermediate_symtable_put_obj();
+void test_intermediate_symtable_put_func();
+void test_intermediate_symtable_put_var_param();
+void test_intermediate_symtable_put_obj_param();
+void test_intermediate_symtable_finish_func_analysis();
+void test_intermediate_symtable_put_class();
+void test_intermediate_symtable_put_var_field();
+void test_intermediate_symtable_put_obj_field();
+void test_intermediate_symtable_put_func_field();
+void test_intermediate_symtable_finish_class_analysis();
+
+
+
+
 
 void test_ids_info() {
     cout << "\t1) register_var: ";
@@ -79,6 +100,8 @@ void test_register_var() {
     assert(res2.compare("variable-1") == 0);
     string res3 = information.register_var(string("variable"), 5);
     assert(res3.compare("variable-2") == 0);
+
+    cout << "OK." << endl;
 }
 
 void test_register_obj() {
@@ -90,6 +113,8 @@ void test_register_obj() {
     assert(res2.compare("object-1") == 0);
     string res3 = information.register_obj(string("object"), 2, string("classC"), string("object.x-1"));
     assert(res3.compare("object-2") == 0); 
+
+    cout << "OK." << endl;
 }
 
 void test_register_method() {
@@ -101,6 +126,8 @@ void test_register_method() {
     assert(res2.compare("method-1") == 0);
     string res3 = information.register_method(string("method"), 2, string("classC"));
     assert(res3.compare("method-2") == 0);
+
+    cout << "OK." << endl;
 }
 
 void test_register_class() {
@@ -111,15 +138,17 @@ void test_register_class() {
     assert(res.compare("class-0") == 0);
 
     list<string> l2;
-    l2.append(string("first"));
-    l2.append(string("second"));
+    l2.push_back(string("first"));
+    l2.push_back(string("second"));
     string res2 = information.register_class(string("class"), l2);
     assert(res2.compare("class-1") == 0);
 
     list<string> l3;
-    l3.append(string("one"));
+    l3.push_back(string("one"));
     string res3 = information.register_class(string("class"), l3);
     assert(res3.compare("class-2") == 0);
+
+    cout << "OK." << endl;
 }
 
 void test_ids_info_id_exists() {
@@ -127,26 +156,32 @@ void test_ids_info_id_exists() {
 
     information.register_var(string("variable"), 16);
     assert(information.id_exists(string("variable")));
+
+    cout << "OK." << endl;
 }
 
 void test_get_next_internal() {
-    ids_information;
+    ids_info information;
     information.register_var(string("variable"), 0);
     information.register_var(string("variable"), 34);
 
-    assert(information.get_next_internal(string("variable")) == 2);
+    assert((information.get_next_internal(string("variable"))).compare(string("variable-2")) == 0);
+
+    cout << "OK." << endl;
 }
 
 void test_unregister() {
-    ids_information;
+    ids_info information;
     information.register_var(string("variable"), 0);
-    assert(information.get_next_internal(string("variable")) == 1);
+    assert((information.get_next_internal(string("variable"))).compare(string("variable-1")) == 0);
     information.register_var(string("variable"), 99);
-    assert(information.get_next_internal(string("variable")) == 2);
+    assert((information.get_next_internal(string("variable"))).compare(string("variable-2")) == 0);
     information.unregister(string("variable"));
-    assert(information.get_next_internal(string("variable")) == 1);
+    assert((information.get_next_internal(string("variable"))).compare(string("variable-1")) == 0);
     information.unregister(string("variable"));
-    assert(information.get_next_internal(string("variable")) == 0);
+    assert((information.get_next_internal(string("variable"))).compare(string("variable-0")) == 0);
+
+    cout << "OK." << endl;
 }
 
 void test_ids_info_get_id_rep() {
@@ -156,75 +191,87 @@ void test_ids_info_get_id_rep() {
     assert(information.get_id_rep(string("variable")) == string("variable-0"));
     information.register_var(string("variable"), 9);
     assert(information.get_id_rep(string("variable")) == string("variable-1"));
+
+    cout << "OK." << endl;
 }
 
 void test_get_kind() {
     ids_info information;
 
     information.register_var(string("variable"), 15);
-    assert(information.get_kind(get_id_rep(string("variable"))) == ids_info::K_VAR);
+    assert(information.get_kind(information.get_id_rep(string("variable"))) == ids_info::K_VAR);
 
     information.register_obj(string("object"), 15, string("classA"), string("object.x-0"));
-    assert(information.get_kind(get_id_rep(string("object"))) == ids_info::K_OBJECT);
+    assert(information.get_kind(information.get_id_rep(string("object"))) == ids_info::K_OBJECT);
 
     information.register_method(string("method"), 43, string("classB"));
-    assert(information.get_kind(get_id_rep(string("method"))) == ids_info::K_METHOD);
+    assert(information.get_kind(information.get_id_rep(string("method"))) == ids_info::K_METHOD);
 
     list<string> l;
-    l.append(string("one"));
-    l.append(string("two"));
+    l.push_back(string("one"));
+    l.push_back(string("two"));
     information.register_class(string("class"), l);
-    assert(information.get_kind(get_id_rep(string("class"))) == ids_info::K_CLASS);
+    assert(information.get_kind(information.get_id_rep(string("class"))) == ids_info::K_CLASS);
+
+    cout << "OK." << endl;
 }
 
 void test_get_offset() {
     ids_info information;
 
     information.register_var(string("variable"), 120);
-    assert(information.get_offset(get_id_rep(string("variable"))) == 120);
+    assert(information.get_offset(information.get_id_rep(string("variable"))) == 120);
 
     information.register_obj(string("object"), 32, string("classD"), string("object.firstAtt-0"));
-    assert(information.get_offset(get_id_rep(string("object"))) == 32);
+    assert(information.get_offset(information.get_id_rep(string("object"))) == 32);
+
+    cout << "OK." << endl;
 }
 
 void test_get_local_vars() {
     ids_info information;
 
     information.register_method(string("method"), 9, string("classE"));
-    assert(information.get_local_vars(get_id_rep(string("method"))) == 9);
+    assert(information.get_local_vars(information.get_id_rep(string("method"))) == 9);
+
+    cout << "OK." << endl;
 }
 
 void test_set_number_vars() {
     ids_info information;
     
     information.register_method(string("method"), 12, string("classE"));
-    assert(information.get_local_vars(get_id_rep(string("method"))) == 12);
+    assert(information.get_local_vars(information.get_id_rep(string("method"))) == 12);
 
-    information.set_number_vars(get_id_rep(string("method"))), 14);
-    assert(information.get_local_vars(get_id_rep(string("method"))) == 14);
+    information.set_number_vars(information.get_id_rep(string("method")), 14);
+    assert(information.get_local_vars(information.get_id_rep(string("method"))) == 14);
+
+    cout << "OK." << endl;
 }
 
 void test_get_owner_class() {
     ids_info information;
 
     information.register_method(string("method"), 15, string("classF"));
-    assert((information.get_owner_class(get_id_rep(string("method")))).compare("classF") == 0);
+    assert((information.get_owner_class(information.get_id_rep(string("method")))).compare("classF") == 0);
 
     information.register_obj(string("object"), 0, string("classG"), string("object.objA-15"));
-    assert((information.get_owner_class(get_id_rep(string("method")))).compare("classG") == 0);
+    assert((information.get_owner_class(information.get_id_rep(string("method")))).compare("classG") == 0);
+
+    cout << "OK." << endl;
 }
 
 void test_get_list_attributes() {
     ids_info information;
 
     list<string> original_list;
-    original_list.append(string("1"));
-    original_list.append(string("2"));
-    original_list.append(string("three"));
-    original_list.append(string("extra string"));
+    original_list.push_back(string("1"));
+    original_list.push_back(string("2"));
+    original_list.push_back(string("three"));
+    original_list.push_back(string("extra string"));
     information.register_class(string("class"), original_list);
 
-    list<string> returned_list = information.get_list_attributes(get_id_rep(string("class")));
+    list<string> returned_list = information.get_list_attributes(information.get_id_rep(string("class")));
 
     bool equal = true;
     while (original_list.size() != 0) {
@@ -237,16 +284,320 @@ void test_get_list_attributes() {
         }
     }
     assert(equal);
+
+    cout << "OK." << endl;
 }
 
 void test_intermediate_symtable() {
     cout << "\t1) get_ids_info: ";
     test_intermediate_symtable_get_ids_info();
+
+    cout << "\t2) get_id_rep: ";
+    test_intermediate_symtable_get_id_rep();
+
+    cout << "\t3) push_symtable: ";
+    test_intermediate_symtable_push_symtable();
+
+    cout << "\t4) pop_symtable: ";
+    test_intermediate_symtable_pop_symtable();
+
+    cout << "\t5) put_var and get: ";
+    test_intermediate_symtable_put_var_and_get();
+
+    cout << "\t6) put_obj: ";
+    test_intermediate_symtable_put_obj();
+
+    cout << "\t7) put_func: ";
+    test_intermediate_symtable_put_func();
+
+    cout << "\t8) put_var_param: ";
+    test_intermediate_symtable_put_var_param();
+
+    cout << "\t9) put_obj_param: ";
+    test_intermediate_symtable_put_obj_param();
+    
+    cout << "\t10) finish_func_analysis: ";
+    test_intermediate_symtable_finish_func_analysis();
+
+    cout << "\t11) put_class: ";
+    test_intermediate_symtable_put_class();
+
+    cout << "\t12) put_var_field: ";
+    test_intermediate_symtable_put_var_field();
+
+    cout << "\t13) put_obj_field: ";
+    test_intermediate_symtable_put_obj_field();
+
+    cout << "\t14) put_func_field: ";
+    test_intermediate_symtable_put_func_field();
+
+    cout << "\t15) finish_class_analysis: ";
+    test_intermediate_symtable_finish_class_analysis();
 }
 
 void test_intermediate_symtable_get_ids_info() {
-    intermediate_symtable table;
-    assert(table.get_ids_info() != NULL);
+    intermediate_symtable stack;
+    assert(stack.get_ids_info() != NULL);
+    
+    cout << "OK." << endl;
+}
+
+void test_intermediate_symtable_get_id_rep() {
+    intermediate_symtable stack;
+    stack.push_symtable();
+
+    symtable_element elem(string("variable"), symtable_element::INTEGER);
+    pair<intermediate_symtable::put_results, string*> res = stack.put_var(elem, elem.get_key(), 17);
+    assert(res.second != NULL);
+    assert(string("variable-0").compare(stack.get_id_rep(string("variable"))) == 0);
+
+    symtable_element elem2(string("variable2"), symtable_element::BOOLEAN);
+    pair<intermediate_symtable::put_results, string*> res2 = stack.put_var(elem2, elem2.get_key(), 0);
+    assert(res.second != NULL);
+    assert(string("variable2-0").compare(stack.get_id_rep(string("variable2"))) == 0);
+
+    cout << "OK." << endl;
+}
+
+void test_intermediate_symtable_push_symtable() {
+    intermediate_symtable stack;
+    
+    cout << endl;
+    cout << "\t* push_symtable(): ";
+    assert(stack.size() == 0);
+    stack.push_symtable();
+    assert(stack.size() == 1);
+    stack.push_symtable();
+    assert(stack.size() == 2);
+    cout << "OK." << endl;
+
+    cout << "\t* push_symtable(symtable_element&): ";
+    list<symtable_element>* l = new list<symtable_element>();
+    symtable_element var(string("variable"), symtable_element::FLOAT);
+    l->push_back(var);
+    symtable_element method(string("method"), symtable_element::VOID, l);
+    stack.push_symtable(method);
+    assert(stack.size() == 3);
+    cout << "OK." << endl;
+}
+
+void test_intermediate_symtable_pop_symtable() {
+    intermediate_symtable stack;
+    assert(stack.size() == 0);
+    
+    stack.push_symtable();
+    assert(stack.size() == 1);
+
+    list<symtable_element>* l = new list<symtable_element>();
+    symtable_element method(string("method"), symtable_element::BOOLEAN, l);
+    stack.push_symtable(method);
+    assert(stack.size() == 2);
+
+    stack.pop_symtable();
+    assert(stack.size() == 1);
+
+    stack.pop_symtable();
+    assert(stack.size() == 0);
+
+    cout << "OK." << endl;
+}
+
+void test_intermediate_symtable_put_var_and_get() {
+    intermediate_symtable stack;
+    stack.push_symtable();
+
+    symtable_element elem(string("variable"), symtable_element::INTEGER);
+    pair<intermediate_symtable::put_results, string*> res = stack.put_var(elem, elem.get_key(), 89);
+    assert(res.first == intermediate_symtable::ID_PUT);
+    assert(res.second != NULL);
+    assert((*(res.second)).compare(string("variable-0")) == 0);
+
+    list<symtable_element>* l = new list<symtable_element>();
+    string* c = new string("classA");
+    symtable_element obj(string("object"), c);
+    l->push_back(obj);
+    symtable_element method(string("method"), symtable_element::VOID, l);
+    pair<intermediate_symtable::put_func_results, string*> res2 = stack.put_func(method, method.get_key(), 71, string("classB"));
+    assert(res2.first == intermediate_symtable::FUNC_PUT);
+    assert(res2.second != NULL);
+    assert((*(res2.second)).compare(string("method-0")) == 0);
+
+    cout << "OK." << endl;
+}
+
+void test_intermediate_symtable_put_obj() {
+    intermediate_symtable stack;
+    stack.push_symtable();
+
+    symtable_element obj(string("object"), new string("classC"));
+    pair<intermediate_symtable::put_results, string*> res = stack.put_obj(obj, obj.get_key(), 4, string("classC"), string("object.x-0"));
+    assert(res.first == intermediate_symtable::ID_PUT);
+    assert(res.second != NULL);
+    assert((*(res.second)).compare(string("object-0")) == 0);
+
+    cout << "OK." << endl;
+}
+
+void test_intermediate_symtable_put_func() {
+    intermediate_symtable stack;
+    stack.push_symtable();
+
+    list<symtable_element>* l = new list<symtable_element>();
+    symtable_element var(string("variable"), symtable_element::FLOAT);
+    l->push_back(var);
+    symtable_element method(string("method"), symtable_element::BOOLEAN, l);
+    pair<intermediate_symtable::put_func_results, string*> res = stack.put_func(method, method.get_key(), 16, string("classD"));
+    assert(res.first == intermediate_symtable::FUNC_PUT);
+    assert(res.second != NULL);
+    assert((*(res.second)).compare(string("method-0")) == 0);
+    assert(stack.size() == 2);
+
+    cout << "OK." << endl;
+}
+
+void test_intermediate_symtable_put_var_param() {
+    intermediate_symtable stack;
+    stack.push_symtable();
+
+    list<symtable_element>* l = new list<symtable_element>();
+    symtable_element method(string("method"), symtable_element::VOID, l);
+    stack.put_func(method, method.get_key(), 52, string("classE"));
+
+    symtable_element var(string("variable"), symtable_element::BOOLEAN);
+    pair<intermediate_symtable::put_param_results, string*> res = stack.put_var_param(var, var.get_key(), 8);
+    assert(res.first == intermediate_symtable::PARAM_PUT);
+    assert(res.second != NULL);
+    assert((*(res.second)).compare(string("variable-0")) == 0);
+    assert((stack.get(string("variable")))->get_class() == symtable_element::T_VAR);
+
+    cout << "OK." << endl;
+}
+
+void test_intermediate_symtable_put_obj_param() {
+    intermediate_symtable stack;
+    stack.push_symtable();
+
+    list<symtable_element>* l = new list<symtable_element>();
+    symtable_element method(string("method"), symtable_element::VOID, l);
+    stack.put_func(method, method.get_key(), 2, string("classF"));
+
+    string* c = new string("classG");
+    symtable_element obj(string("object"), c);
+    pair<intermediate_symtable::put_param_results, string*> res = stack.put_obj_param(obj, obj.get_key(), 15, *c, string("object.a-0"));
+    assert(res.first == intermediate_symtable::PARAM_PUT);
+    assert(res.second != NULL);
+    assert((*(res.second)).compare(string("object-0")) == 0);
+    assert((stack.get(string("object")))->get_class() == symtable_element::T_OBJ);
+
+    cout << "OK." << endl;
+}
+
+void test_intermediate_symtable_finish_func_analysis() {
+    intermediate_symtable stack;
+    stack.push_symtable();
+
+    list<symtable_element>* l = new list<symtable_element>();
+    symtable_element method(string("method"), symtable_element::VOID, l);
+    stack.put_func(method, method.get_key(), 2, string("classF"));
+
+    string* c = new string("classG");
+    symtable_element obj(string("object"), c);
+    pair<intermediate_symtable::put_param_results, string*> res = stack.put_obj_param(obj, obj.get_key(), 15, *c, string("object.a-0"));
+
+    assert(stack.size() == 2);
+    assert(stack.get(string("method")) != NULL);
+    assert(stack.get(string("object")) == NULL);
+    stack.finish_func_analysis();
+    assert(stack.size() == 1);
+    assert(stack.get(string("method")) != NULL);
+    assert(stack.get(string("object")) == NULL);
+
+    cout << "OK." << endl;
+}
+
+void test_intermediate_symtable_put_class() {
+    intermediate_symtable stack;
+    stack.push_symtable();
+    assert(stack.size() == 1);
+    assert(stack.get(string("classG")) == NULL);
+
+    symtable_element c(new string("classG"), new list<symtable_element>());
+    stack.put_class(c, c.get_key(), list<string>());
+
+    assert(stack.size() == 2);
+    assert(stack.get(string("classG"))->get_class() == symtable_element::T_CLASS);
+
+    cout << "OK." << endl;
+}
+
+void test_intermediate_symtable_put_var_field() {
+    intermediate_symtable stack;
+    stack.push_symtable();
+
+    symtable_element c(new string("classG"), new list<symtable_element>());
+    stack.put_class(c, c.get_key(), list<string>());
+
+    symtable_element var(string("variable"), symtable_element::BOOLEAN);
+    pair<intermediate_symtable::put_field_results, string*> res = stack.put_var_field(var, var.get_key(), 17);
+    assert(res.first == intermediate_symtable::FIELD_PUT);
+    assert(res.second != NULL);
+    assert((*(res.second)).compare(string("variable-0")) == 0);
+    assert((stack.get(string("variable")))->get_class() == symtable_element::T_VAR);
+
+    cout << "OK." << endl;
+}
+
+void test_intermediate_symtable_put_obj_field() {
+    intermediate_symtable stack;
+    stack.push_symtable();
+
+    symtable_element c(new string("classG"), new list<symtable_element>());
+    stack.put_class(c, c.get_key(), list<string>());
+
+    symtable_element obj(string("object"), new string("classH"));
+    pair<intermediate_symtable::put_field_results, string*> res = stack.put_obj_field(obj, obj.get_key(), 17, string("classH"), string("object.y-0"));
+    assert(res.first == intermediate_symtable::FIELD_PUT);
+    assert(res.second != NULL);
+    assert((*(res.second)).compare(string("object-0")) == 0);
+    assert((stack.get(string("object")))->get_class() == symtable_element::T_VAR);
+
+    cout << "OK." << endl;
+}
+
+void test_intermediate_symtable_put_func_field() {
+    intermediate_symtable stack;
+    stack.push_symtable();
+
+    symtable_element c(new string("classG"), new list<symtable_element>());
+    stack.put_class(c, c.get_key(), list<string>());
+
+    symtable_element method(string("method"), symtable_element::VOID, new list<symtable_element>());
+    pair<intermediate_symtable::put_field_results, string*> res = stack.put_func_field(method, method.get_key(), 50, string("classI"));
+    assert(res.first == intermediate_symtable::FIELD_PUT);
+    assert(res.second != NULL);
+    assert((*(res.second)).compare(string("method-0")) == 0);
+    assert((stack.get(string("method")))->get_class() == symtable_element::T_FUNCTION);
+
+    cout << "OK." << endl;
+}
+
+void test_intermediate_symtable_finish_class_analysis() {
+    intermediate_symtable stack;
+    stack.push_symtable();
+
+    symtable_element c(new string("classG"), new list<symtable_element>());
+    stack.put_class(c, c.get_key(), list<string>());
+
+    symtable_element method(string("method"), symtable_element::VOID, new list<symtable_element>());
+    stack.put_func_field(method, method.get_key(), 50, string("classI"));
+
+    assert(stack.size() == 2);
+    stack.finish_func_analysis();
+    assert(stack.size() == 1);
+    assert((stack.get(string("classG")))->get_class() != symtable_element::NOT_FOUND);
+    assert((stack.get(string("method")))->get_class() == symtable_element::NOT_FOUND);
+
+    cout << "OK." << endl;
 }
 
 
@@ -255,7 +606,7 @@ int main() {
     test_ids_info();
 
     cout << "intermediate_symtable: " << endl;
-    test_symtables_stack();
+    test_intermediate_symtable();
 
     return 0;
 }

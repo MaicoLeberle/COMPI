@@ -195,7 +195,7 @@ public:
         current scope, along with its representation inside this->information 
         (as long as putting the object in scope was successful; otherwise, 
         NULL is returned as second element of the pair).                     */
-    std::pair<symtables_stack::put_results, std::string*> put_var(symtable_element, std::string, unsigned int);
+    std::pair<intermediate_symtable::put_results, std::string*> put_var(symtable_element, std::string, unsigned int);
 
     /*  Inserts a new object as an element into the symbols tables stack. 
         Parameters: the object itself
@@ -211,7 +211,7 @@ public:
         current scope, along with its representation inside this->information 
         (as long as putting the object in scope was successful; otherwise, 
         NULL is returned as second element of the pair).                     */
-    std::pair<symtables_stack::put_results, std::string*> put_obj(symtable_element& , std::string, unsigned int, std::string, std::string);
+    std::pair<intermediate_symtable::put_results, std::string*> put_obj(symtable_element& , std::string, unsigned int, std::string, std::string);
 
     /*  Inserts a new function to the symbols tables stack. This function is 
         remembered for future calls of put_*_param. Also, a new symbols
@@ -233,7 +233,7 @@ public:
         things), along with its representation inside this->information (as 
         long as putting the function in scope was successful; otherwise, NULL
         is returned as second element of the pair).                          */
-    std::pair<symtables_stack::put_func_results, std::string*> put_func(symtable_element&, std::string, unsigned int, std::string);
+    std::pair<intermediate_symtable::put_func_results, std::string*> put_func(symtable_element&, std::string, unsigned int, std::string);
 
     /*  Inserts a new variable to the lastly inserted function (via put_func) 
         as a parameter.
@@ -247,7 +247,7 @@ public:
         is a parameter of), along with its representation inside 
         this->information (as long as putting the variable in scope was 
         successful; otherwise, NULL is returned as second parameter).        */
-    std::pair<symtables_stack::put_param_results, std::string*> put_var_param(symtable_element&, std::string, unsigned int);
+    std::pair<intermediate_symtable::put_param_results, std::string*> put_var_param(symtable_element&, std::string, unsigned int);
 
     /*  Inserts a new object to the lastly inserted function (via put_func) as
         a parameter.
@@ -264,7 +264,7 @@ public:
         is a parameter of), along with its representation inside 
         this->information (as long as putting the object in scope was 
         successful; otherwise, NULL is returned as second parameter).        */
-    std::pair<symtables_stack::put_param_results, std::string*> put_obj_param(symtable_element&, std::string, unsigned int, std::string, std::string);
+    std::pair<intermediate_symtable::put_param_results, std::string*> put_obj_param(symtable_element&, std::string, unsigned int, std::string, std::string);
 
     /*  Simply performs a pop operation on the stack and resets the value of
         last_func. Caution not to pop some other symbols table on top of the 
@@ -293,7 +293,7 @@ public:
         things), along with its representation inside this->information (as
         long as putting the class in scope was succesful; otherwise, NULL is 
         returned as second element of the pair).                             */
-    std::pair<symtables_stack::put_class_results, std::string*> put_class(symtable_element&, std::string, std::list<std::string>);
+    std::pair<intermediate_symtable::put_class_results, std::string*> put_class(symtable_element&, std::string, std::list<std::string>);
 
     /*  Inserts a new variable as a field to the lastly inserted class (via 
         put_class).
@@ -308,7 +308,7 @@ public:
         this->information (as long as putting the variable in scope was 
         successful; otherwise, NULL is returned as second element of the 
         pair).                                                               */
-    std::pair<symtables_stack::put_field_results, std::string*> put_var_field(symtable_element&, std::string, unsigned int);
+    std::pair<intermediate_symtable::put_field_results, std::string*> put_var_field(symtable_element&, std::string, unsigned int);
 
     /*  Inserts a new object as a field to the lastly inserted class (via 
         put_class).
@@ -326,7 +326,7 @@ public:
         this->information (as long as putting the object in scope was 
         successful; otherwise, NULL is returned as second element of the 
         pair).                                                                */
-    std::pair<symtables_stack::put_field_results, std::string*> put_obj_field(symtable_element&, std::string, unsigned int, std::string, std::string);
+    std::pair<intermediate_symtable::put_field_results, std::string*> put_obj_field(symtable_element&, std::string, unsigned int, std::string, std::string);
 
     /*  Inserts a new function as a field to the lastly inserted class (via 
         put_class).
@@ -342,7 +342,7 @@ public:
         this->information (as long as putting the  in scope was 
         successful; otherwise, NULL is returned as second element of the 
         pair.                                                                */
-    std::pair<symtables_stack::put_field_results, std::string*> put_func_field(symtable_element&, std::string, unsigned int, std::string);
+    std::pair<intermediate_symtable::put_field_results, std::string*> put_func_field(symtable_element&, std::string, unsigned int, std::string);
 
     /*  Simply performs a pop operation on the stack and resets the value of
         last_class. Caution not to pop some other symbols table on top of the 
