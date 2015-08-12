@@ -92,6 +92,8 @@ private:
     struct entry_info {
         id_kind entry_kind;
 
+        std::string rep;
+
         /*  For variables and objects.                                       */
         unsigned int* offset = NULL;
 
@@ -152,7 +154,9 @@ public:
                                                 another classes. */
                           , NO_PREV_CLASS /* A class should be under analysis 
                                              in order to put a new class 
-                                             field in scope. */ };
+                                             field in scope. */ 
+                          , FIELD_ERROR /*  This last value is meant only for
+                                            debugging purposes. */ };
 
     intermediate_symtable(void);
 

@@ -451,13 +451,13 @@ void test_symtables_stack () {
     std::cout << "\t5) pop: " << std::endl;
     test_symtables_stack_pop();
 
-    std::cout << "\t1) get: " << std::endl;
+    std::cout << "\t6) get: " << std::endl;
     test_symtables_stack_get();
 
-    std::cout << "\t1) put_func, put_func_params and finish_func_analysis: " << std::endl;
+    std::cout << "\t7) put_func, put_func_params and finish_func_analysis: " << std::endl;
     test_symtables_stack_functions();
 
-    std::cout << "\t1) put_class, put_class_field and finish_class_analysis: " << std::endl;
+    std::cout << "\t8) put_class, put_class_field and finish_class_analysis: " << std::endl;
     test_symtables_stack_classes();
 }
 
@@ -539,6 +539,7 @@ void test_sample_program() {
 }
 
 int main(int argc, const char* argv[]) {
+    std::cout << std::endl << "SYMTABLE TESTS" << std::endl << std::endl;
     std::cout << "symtable_element: " << std::endl;
     test_symtable_element();
 

@@ -307,8 +307,17 @@ symtables_stack::put_field_results symtables_stack::put_class_field(std::string 
         return symtables_stack::FIELD_TYPE_ERROR;
 
     ((this->last_class)->get_class_fields())->push_front(value);
-    this->put(key, value);
-    return symtables_stack::FIELD_PUT;
+
+    if (value.get_class() == symtable_element::T_FUNCTION) {
+        symtables_stack::put_func_results res = this->put_func(key, value);
+        if(res != symtables_stack::FUNC_PUT)
+            return symtables_stack::FIELD_ERROR;
+        else
+            return symtables_stack::FIELD_PUT;
+    } else {
+        this->put(key, value);
+        return symtables_stack::FIELD_PUT;
+    }
 }
 
 void symtables_stack::finish_class_analysis() {

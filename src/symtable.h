@@ -192,7 +192,9 @@ public:
                                                 another classes. */
                           , NO_PREV_CLASS /* A class should be under analysis 
                                              in order to put a new class 
-                                             field in scope. */ };
+                                             field in scope. */
+                          , FIELD_ERROR /*  This last value is meant only for
+                                            debugging purposes. */ };
 
     /*  This constructor is meant only for the empty stack.                  */
     symtables_stack(void);

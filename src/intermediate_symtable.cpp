@@ -1,5 +1,6 @@
 #include "intermediate_symtable.h"
 
+
 /*  ----------------------------------------------------------------------------------------------------    
                                             ids_info                                                 
     ----------------------------------------------------------------------------------------------------    */
@@ -9,59 +10,68 @@ std::string ids_info::get_next_internal(std::string key) {
     if ((this->internal).find(key) == (this->internal).end()) 
         (this->internal).insert(std::pair<std::string, unsigned int>(key, 0));
     
+
     return ((key + '-') + std::to_string(((this->internal).find(key))->second));
 }
 
 std::string ids_info::register_var(std::string key, unsigned int offset) {
-    std::string internal_key = this->get_next_internal(key);
-    ++((this->internal).find(key))->second;
-
     entry_info information;
+    
     information.entry_kind = ids_info::K_VAR;
     information.offset =  new unsigned int(offset);
 
-    (this->info_map).insert(std::pair<std::string, entry_info>(internal_key, information));
+    std::string internal_key = this->get_next_internal(key);
+    ++((this->internal).find(key))->second;
+    information.rep = internal_key;
+
+    (this->info_map).insert(std::pair<std::string, entry_info>(key, information));
 
     return internal_key;
 }
 
 std::string ids_info::register_obj(std::string key, unsigned int offset, std::string owner, std::string address) {
-    std::string internal_key = this->get_next_internal(key);
-    ++((this->internal).find(key))->second;
-
     entry_info information;
+    
     information.entry_kind = ids_info::K_OBJECT;
     information.offset = new unsigned int(offset);
     information.owner = new std::string(owner);
     information.begin_address = new std::string(address);
 
-    (this->info_map).insert(std::pair<std::string, entry_info>(internal_key, information));
+    std::string internal_key = this->get_next_internal(key);
+    ++((this->internal).find(key))->second;
+    information.rep = internal_key;
+
+    (this->info_map).insert(std::pair<std::string, entry_info>(key, information));
 
     return internal_key;
 }
 
 std::string ids_info::register_method(std::string key, unsigned int locals, std::string owner) {
-    std::string internal_key = key + "::" + owner;
-
     entry_info information;
+
     information.entry_kind = ids_info::K_METHOD;
     information.local_vars = new unsigned int(locals);
     information.owner = new std::string(owner);
 
-    (this->info_map).insert(std::pair<std::string, entry_info>(internal_key, information));
+    std::string internal_key = key + "::" + owner;
+    information.rep = internal_key;
+
+    (this->info_map).insert(std::pair<std::string, entry_info>(key, information));
 
     return internal_key;
 }
 
 std::string ids_info::register_class(std::string key, std::list<std::string> attributes) {
-    std::string internal_key = this->get_next_internal(key);
-    ++((this->internal).find(key))->second;
-
     entry_info information;
+    
     information.entry_kind = ids_info::K_CLASS;
     information.l_atts = new std::list<std::string>(attributes);
+    
+    std::string internal_key = this->get_next_internal(key);
+    ++((this->internal).find(key))->second;
+    information.rep = internal_key;
 
-    (this->info_map).insert(std::pair<std::string, entry_info>(internal_key, information));
+    (this->info_map).insert(std::pair<std::string, entry_info>(key, information));
 
     return internal_key;
 }
@@ -79,9 +89,13 @@ bool ids_info::id_exists(std::string key) {
 
 std::string ids_info::get_id_rep(std::string key) {
     assert((this->info_map).find(key) != (this->info_map).end());
-    assert((this->internal).find(key) != (this->internal).end());
-
-    return (key + '-' + std::to_string(((this->internal).find(key))->second - 1));
+    
+    if ((((this->info_map).find(key))->second).entry_kind == ids_info::K_METHOD) {
+        return (key + "::" + *((((this->info_map).find(key))->second).owner));
+    } else {
+        assert((this->internal).find(key) != (this->internal).end());
+        return (key + '-' + std::to_string(((this->internal).find(key))->second - 1));
+    }
 }
 
 ids_info::id_kind ids_info::get_kind(std::string key) {
@@ -117,14 +131,13 @@ std::list<std::string> ids_info::get_list_attributes(std::string key) {
 }
 
 void ids_info::set_number_vars(std::string key, unsigned int number) {
-    std::map<std::string, entry_info>::iterator it = (this->info_map).find(key);
-    assert(it != (this->info_map).end());
-    assert((it->second).entry_kind == ids_info::K_METHOD);
+    assert((this->info_map).find(key) != (this->info_map).end());
+    assert((((this->info_map).find(key))->second).entry_kind == ids_info::K_METHOD);
 
-    if(!(it->second).local_vars)
-        (it->second).local_vars = new unsigned int(number);
+    if(!(((this->info_map).find(key))->second).local_vars)
+        (((this->info_map).find(key))->second).local_vars = new unsigned int(number);
     else
-        *((it->second).local_vars) = number;
+        *((((this->info_map).find(key))->second).local_vars) = number;
 }
 
 
