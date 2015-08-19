@@ -169,7 +169,8 @@ semantic_analysis::error_id execute_test(std::string program){
 }
 
 void test_rule_1(){
-	std::cout << "1) An identifier is declared at most once, into a given scope:";
+	std::cout << "1) An identifier is declared at most once, into a "
+			"given scope:\n";
 	std::string test_program = "class Program {\n"
 										"int x,x;\n"
 									"}\n"
@@ -180,11 +181,11 @@ void test_rule_1(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_1);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_2(){
-	std::cout << "2) An identifier is declared before it is used:";
+	std::cout << "2) An identifier is declared before it is used:\n";
 	std::string test_program = "class Program {\n"
 									"void method(){\n"
 										"x = 1;"
@@ -197,11 +198,12 @@ void test_rule_2(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_2);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_3(){
-	std::cout << "3) Every program has one class with name \"main\", and a \"main\" method: ";
+	std::cout << "3) Every program has one class with name \"main\", and a "
+			"\"main\" method:\n";
 
 	// No main class declared
 	std::string test_program = "class Program {}\0\0";
@@ -213,11 +215,11 @@ void test_rule_3(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_3);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_4(){
-	std::cout << "4) In an array declaration, the length must be > 0:";
+	std::cout << "4) In an array declaration, the length must be > 0:\n";
 
 	// Array declaration with length == 0
 	std::string test_program = "class Program {\n"
@@ -230,12 +232,12 @@ void test_rule_4(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_4);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_5(){
 	std::cout << "5) The number and type of the actual parameters, must be the "
-				"same of the formal parameters:";
+				"same of the formal parameters:\n";
 
 	// Wrong quantity of actual parameters.
 	std::string test_program = "class Program {\n"
@@ -301,12 +303,12 @@ void test_rule_5(){
 
 	//assert(execute_test(test_program) == semantic_analysis::ERROR_5);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_6(){
 	std::cout << "6) If a method call used is used as expression, the"
-			"called method must return a result:";
+			"called method must return a result:\n";
 
 	// void method in return expression (same as rule 9)
 	std::string test_program = "class Program {\n"
@@ -338,11 +340,11 @@ void test_rule_6(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_12);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_7(){
-	std::cout << "7) String literals only with extern methods:";
+	std::cout << "7) String literals only with extern methods:\n";
 
 	std::string test_program = "class Program {\n"
 									"boolean method1(){\n"
@@ -358,12 +360,12 @@ void test_rule_7(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_9);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_8(){
 	std::cout << "8) A return statement must have an associated expression only "
-				"if the method returns a value:";
+				"if the method returns a value:\n";
 
 	std::string test_program = "class Program {\n"
 									"void method(){\n"
@@ -389,12 +391,12 @@ void test_rule_8(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_8);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_9(){
 	std::cout << "9) The type of the value returned from the method must be the "
-				"same than the type of the expression of the return statement:";
+				"same than the type of the expression of the return statement:\n";
 
 	std::string test_program = "class Program {\n"
 									"boolean method(){\n"
@@ -408,12 +410,12 @@ void test_rule_9(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_9);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_11(){
 	std::cout << "11) If the location is an array position, the corresponding "
-				 "id must point to an array, and the index must be an integer:";
+				 "id must point to an array, and the index must be an integer:\n";
 
 	// Wrong index
 	std::string test_program = "class Program {\n"
@@ -459,12 +461,12 @@ void test_rule_11(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_11);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_12(){
 	std::cout << "12) The guard, of a conditional and a while loop, must be a "
-				"boolean expression:";
+				"boolean expression:\n";
 
 	// If statement
 	std::string test_program = "class Program {\n"
@@ -520,12 +522,12 @@ void test_rule_12(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_12);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_13(){
 	std::cout << "13) Operands of arithmetic and relational operations,"
-				"must have type int or float:";
+				"must have type int or float:\n";
 
 	std::string test_program = "class Program {\n"
 									"boolean method(){\n"
@@ -587,12 +589,12 @@ void test_rule_13(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_13);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_14(){
 	std::cout << "14) eq_op operands must have the same type (int, float or "
-			"boolean):";
+			"boolean):\n";
 
 	// Operands of different type
 	std::string test_program = "class Program {\n"
@@ -634,11 +636,11 @@ void test_rule_14(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_14);*/
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_15(){
-	std::cout << "15) cond_op and ! operands, must evaluate to a boolean:";
+	std::cout << "15) cond_op and ! operands, must evaluate to a boolean:\n";
 
 	// cond_op
 	std::string test_program = "class Program {\n"
@@ -696,12 +698,12 @@ void test_rule_15(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_15);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_16(){
 	std::cout << "16) Both, the type of the location and the expression to "
-				"be assigned, must be the same:";
+				"be assigned, must be the same:\n";
 
 	// Wrong r-value's type, in attribute assignment.
 	std::string test_program = "class Program {\n"
@@ -776,12 +778,12 @@ void test_rule_16(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_16);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_17(){
 	std::cout << "17) In a -= or += assignment, the location and the expression "
-				"assigned must evaluated to integer or float:";
+				"assigned must evaluated to integer or float:\n";
 
 	std::string test_program = "class Program {\n"
 									"void method(){\n"
@@ -810,12 +812,12 @@ void test_rule_17(){
 	assert(execute_test(test_program) == semantic_analysis::ERROR_17);
 
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_18(){
 	std::cout << "18) In a for loop, \"from\" and \"to\" expression must "
-					"evaluate to integers:";
+					"evaluate to integers:\n";
 
 	std::string test_program = "class Program {\n"
 									"void method(){\n"
@@ -843,11 +845,11 @@ void test_rule_18(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_18);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_19(){
-	std::cout << "19) break and continue, only into a loop's body:";
+	std::cout << "19) break and continue, only into a loop's body:\n";
 
 	std::string test_program = "class Program {\n"
 									"void method(){\n"
@@ -873,11 +875,11 @@ void test_rule_19(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_19);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_20(){
-	std::cout << "20) Identifiers have known type:";
+	std::cout << "20) Identifiers have known type:\n";
 
 	// Attributes
 	std::string test_program = "class Program {\n"
@@ -902,11 +904,11 @@ void test_rule_20(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_20);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_21(){
-	std::cout << "21) Access of attributes only over instances:";
+	std::cout << "21) Access of attributes only over instances:\n";
 
 	std::string test_program = "class Program {\n"
 									"int x,y;\n"
@@ -921,12 +923,12 @@ void test_rule_21(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_21);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 
 void test_rule_22(){
-	std::cout << "22) Method call operation over...methods only:";
+	std::cout << "22) Method call operation over...methods only:\n";
 
 	std::string test_program = "class Program {\n"
 									"int x[1];\n"
@@ -941,11 +943,11 @@ void test_rule_22(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_22);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_23(){
-	std::cout << "23) Parameter's identifier and method's name must differ:";
+	std::cout << "23) Parameter's identifier and method's name must differ:\n";
 
 	std::string test_program = "class Program {\n"
 									"void method(int method){\n"
@@ -958,11 +960,11 @@ void test_rule_23(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_23);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_rule_24(){
-	std::cout << "24) Parameter's identifier and method's name must differ:";
+	std::cout << "24) Attributes cannot have as type the class where they belong to: \n";
 
 	std::string test_program = "class Program {\n"
 									"Program x;"
@@ -974,7 +976,7 @@ void test_rule_24(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_24);
 
-	std::cout << "OK. " << std::endl;
+	std::cout << "OK.\n" << std::endl;
 }
 
 void test_semantic_analysis(){

@@ -9,7 +9,7 @@
 /*  Checking of the semantic rules. */
 class semantic_analysis : public visitor {
 public:
-    // See COMPI's documentation for a description of error 1 to 18.
+    // See COMPI's documentation for a description of error 1 to 19.
     enum error_id {
     	ERROR_1,
     	ERROR_2,

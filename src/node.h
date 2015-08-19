@@ -170,7 +170,22 @@ class class_block_list  : public std::vector<class_block_pointer> {};
 class id_list           : public std::vector<id_pointer> {};
 class parameter_list    : public std::vector<parameter_pointer> {};
 class statement_list    : public std::vector<statement_pointer> {};
-class reference_list    : public std::vector<std::string> {};
+class reference_list    : public std::vector<std::string> {
+public:
+	/* Construct a string representation of a variable, represented by a reference_list.
+	 * It uses the dotted representation, if the variable references to an
+	 * instance's field. */
+	std::string printable_field_id() const{
+		reference_list::const_iterator it = this->begin();
+		std::string name(*it), dot(".");
+		it++;
+		for(; it != this->end(); it++){
+			name += dot + *it;
+		}
+
+		return name;
+	}
+};
 class expression_list   : public std::vector<expr_pointer> {};
 
 // Classes ////////////////////////////////////////////////////////////////////
@@ -487,7 +502,7 @@ public:
      * :field to: Expression to end the loop
      * :field body: Statement(s) to execute inside the loop
      */
-    std::string id;  // TODO: How to check which id is? Is declared for the loop?
+    std::string id;  // TODO: How to check which id is? It is declared for the loop?
     expr_pointer from;
     expr_pointer to;
     statement_pointer body;

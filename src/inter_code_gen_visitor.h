@@ -6,13 +6,15 @@
 #include "visitor.h" // Visitor's interface
 #include "intermediate_symtable.h" // Symbol table's implementation.
 #include "three_address_code.h" // 3-address code's implementation.
-
+#include "constants.h" // Information about types.
 
 class inter_code_gen_visitor : public visitor {
 public:
 	inter_code_gen_visitor(void);
 
-	const instructions_list* get_inst_list();
+	instructions_list* get_inst_list();
+
+	intermediate_symtable* get_symtable(void);
 	// Inherited interface, to allow the definition outside this
 	// class declaration.
 	// Program
@@ -67,15 +69,6 @@ private:
 	address_pointer temp; // Temporal where the value of the last analyzed
 						   // expression is saved.
 
-	// Initial values of attributes.
-	int integer_initial_value;
-	float float_initial_value;
-	bool boolean_initial_value;
-
-	// Type's width (in bytes).
-	unsigned int integer_width;
-	unsigned int float_width;
-	unsigned int boolean_width;
 
 	/* Translate an instance declaration into a sequence of code to
 	 * initialize each attribute.
@@ -84,7 +77,16 @@ private:
 	 * 		  pushed into the end of inst_list, and the corresponding new
 	 * 		  identifiers and offsets are calculated and added to s_table}
 	 * */
-	void instance_initialization(std::string);
+	void instance_initialization(std::string, std::string);
+
+	unsigned int calculate_size(symtable_element::id_type);
+
+	symtable_element::id_type determine_type(Type::_Type);
+
+	void translate_var_decl(symtable_element::id_type, std::string, std::string,
+							unsigned int array_size);
+
+	std::string obtain_methods_label(reference_list ids);
 
 };
 

@@ -32,7 +32,7 @@ struct address {
 				unsigned int dimension; // dimension > 0 => address points to an
 										// array.
 			} val;
-		} constant; // Constant, formed by type and a value. For now no string
+		} constant; // Constant, formed by type and a value. For the moment no string
 					// as type.
 		unsigned int temp; // Compiler-generated temporary.
 		std::string *label; // In case the address is a label.
@@ -59,8 +59,8 @@ enum class quad_type {
 	RETURN,				// return [y]
 	LABEL,				// L: skip
 	// TODO: está bien?
-	BEGIN_PROCEDURE		// BEGIN_PROCEDURE Nmbr. of bytes for locals and
-						// temporals in stack frame
+	ENTER_PROCEDURE		// ENTER_PROCEDURE Nmbr. of bytes for locals and
+						// temporal variables in stack frame
 };
 
 enum class quad_oper {
@@ -97,20 +97,40 @@ typedef std::shared_ptr<quad> quad_pointer;
 class instructions_list : public std::vector<quad_pointer> {};
 
 // Constructors of specific 3-address instructions.
+// TODO: cambiarles el nombre, para quede claro que generan instrucciones
+// TODO: utilizar address_pointers solo en situaciones en las que se pueda
+// recibir por parámetros addresses de distinto tipo, y no cuando la instrucción
+// debe recibir un address de un tipo en particular. Ejemplo: functional call
+// recibe algo que necesariamente va a ser un label (y, por lo tanto, bastaría
+// con recibir sólo un std::string)
 quad_pointer new_label(const std::string&);
-quad_pointer new_copy(const std::string&, const address_pointer arg);
-quad_pointer new_int_field(const std::string&);
-quad_pointer new_float_field(const std::string&);
-quad_pointer new_boolean_field(const std::string&);
-quad_pointer new_instance_field(const std::string&, const std::string&);
-quad_pointer new_int_array_field(const std::string&, const int);
-quad_pointer new_float_array_field(const std::string&, const int);
-quad_pointer new_boolean_array_field(const std::string&, const int);
+quad_pointer new_copy(const address_pointer dest, const address_pointer orig);
+quad_pointer new_enter_procedure(const unsigned int);
+quad_pointer new_binary_assign(const address_pointer dest,
+							   const address_pointer arg1,
+							   const address_pointer arg2,
+							   quad_oper op);
+quad_pointer new_parameter_inst(const address_pointer param);
+quad_pointer new_function_call_inst(const address_pointer dest,
+									const address_pointer func_label,
+									const address_pointer param_quantity);
+quad_pointer new_procedure_call_inst(const address_pointer proc_label,
+									const address_pointer param_quantity);
+quad_pointer new_conditional_jump_inst(const address_pointer guard,
+									std::string label,
+									quad_oper op);
+quad_pointer new_unconditional_jump_inst(std::string label);
 
+// if x relop y goto label
+quad_pointer new_relational_jump_inst(const address_pointer x, const address_pointer y,
+								quad_oper relop, std::string label);
 // Constructors of specific type of addresses
+// TODO: cambiarles el nombre, para que quede claro que construyen addresses
 address_pointer new_integer_constant(int value);
 address_pointer new_float_constant(float value);
 address_pointer new_boolean_constant(bool value);
+address_pointer new_name_address(std::string name);
+address_pointer new_label_address(std::string label);
 
 // Procedures for debugging.
 // TODO: quizás debería recibir un address_pointer
@@ -176,10 +196,47 @@ bool is_negation_oper(const quad_pointer& instruction, const std::string& x,
 					const std::string& y);
 
 // x = y
-bool is_copy(const quad_pointer& instruction, const std::string& x,
-					const std::string& y);
+bool is_copy(const quad_pointer& instruction, const address_pointer& dest,
+		const address_pointer& orig);
 
+// x = y op z
+bool is_binary_assignment(const quad_pointer& instruction,
+						 const address_pointer& dest,
+						 const address_pointer& arg1,
+						 const address_pointer& arg2,
+						 quad_oper op);
+
+
+// x[i] = y
 bool is_indexed_copy_to(const quad_pointer& instruction, const std::string& x,
 		const std::string& i, const std::string& y);
+
+bool is_enter_procedure(const quad_pointer& instruction, unsigned int bytes);
+
+bool is_procedure_call(const quad_pointer& instruction,
+						const address_pointer proc_label,
+						int param_quantity);
+
+bool is_function_call(const quad_pointer& instruction,
+						const address_pointer dest,
+						const address_pointer func_label,
+						int param_quantity);
+
+bool is_parameter_inst(const quad_pointer& instruction,
+						const address_pointer param);
+
+bool is_conditional_jump_inst(const quad_pointer& instruction,
+								const address_pointer guard,
+								std::string label,
+								quad_oper op);
+
+bool is_unconditional_jump_inst(const quad_pointer& instruction,
+								std::string label);
+
+bool is_relational_jump(const quad_pointer& instruction,
+		const address_pointer x, const address_pointer y,
+		quad_oper relop, std::string label);
+
+bool are_equal_pointers(const address_pointer&, const address_pointer&);
 
 #endif // THREE_ADDRESS_CODE_H_
