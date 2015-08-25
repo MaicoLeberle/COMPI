@@ -84,7 +84,8 @@ public:
         were in the class's definition.                                      */
     std::list<std::string> get_list_attributes(std::string);
 
-    /*  Updates the number of local variables (including the temporary ones).
+    /*  Updates the number of local variables (this includes the temporary 
+        ones).
         Precondition: the id has been registered, and it is of kind K_METHOD.*/
     void set_number_vars(std::string, unsigned int);
 
@@ -269,6 +270,11 @@ public:
         this->information (as long as putting the object in scope was 
         successful; otherwise, NULL is returned as second parameter).        */
     std::pair<intermediate_symtable::put_param_results, std::string*> put_obj_param(symtable_element&, std::string, unsigned int, std::string, std::string);
+
+    /*  Updates the number of local variables (this includes the temporary 
+        ones).
+        Precondition: the id has been previously put.                        */
+    void set_number_vars(std::string, unsigned int);
 
     /*  Simply performs a pop operation on the stack and resets the value of
         last_func. Caution not to pop some other symbols table on top of the 

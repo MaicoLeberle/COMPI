@@ -264,6 +264,10 @@ std::pair<intermediate_symtable::put_param_results, std::string*>
         return(std::pair<intermediate_symtable::put_param_results, std::string*>(intermediate_symtable::PARAM_PUT, rep));
 }
 
+void intermediate_symtable::set_number_vars(std::string key, unsigned int number) {
+    (this->information)->set_number_vars(key, number);
+}
+
 void intermediate_symtable::finish_func_analysis() {
     (this->scopes).finish_func_analysis();
 }
