@@ -14,6 +14,21 @@ std::string ids_info::get_next_internal(std::string key) {
     return ((key + '-') + std::to_string(((this->internal).find(key))->second));
 }
 
+std::string* ids_info::new_temp(unsigned int o) {
+    std::string* ret = new std::string("t-" + std::to_string(this->temp_number));
+    assert((this->info_map).find(*ret) == (this->info_map).end());
+
+    entry_info information;
+
+    information.entry_kind = ids_info::K_TEMP;
+    information.offset = new unsigned int(o);
+
+    (this->info_map).insert(std::pair<std::string, entry_info>(*ret, information));
+    
+    (this->temp_number)++;
+    return ret;
+}
+
 std::string ids_info::register_var(std::string key, unsigned int offset) {
     entry_info information;
     
@@ -106,7 +121,8 @@ ids_info::id_kind ids_info::get_kind(std::string key) {
 
 unsigned int ids_info::get_offset(std::string key) {
     assert((((this->info_map).find(key))->second).entry_kind == ids_info::K_VAR
-        || (((this->info_map).find(key))->second).entry_kind == ids_info::K_OBJECT);
+        || (((this->info_map).find(key))->second).entry_kind == ids_info::K_OBJECT
+        || (((this->info_map).find(key))->second).entry_kind == ids_info::K_TEMP);
 
     return *((((this->info_map).find(key))->second).offset);
 }
@@ -177,6 +193,11 @@ void intermediate_symtable::pop_symtable() {
 
 symtable_element* intermediate_symtable::get (std::string key) {
     return((this->scopes).get(key));
+}
+
+std::pair<intermediate_symtable::put_results, std::string*> intermediate_symtable::new_temp(unsigned int offset) {
+    return (std::pair<intermediate_symtable::put_results, std::string*>
+            (intermediate_symtable::ID_PUT,(this->information)->new_temp(offset)) );
 }
 
 std::pair<intermediate_symtable::put_results, std::string*> 
@@ -337,6 +358,12 @@ std::pair<intermediate_symtable::put_field_results, std::string*>
 
 void intermediate_symtable::finish_class_analysis() {
     (this->scopes).finish_class_analysis();
+}
+
+std::string intermediate_symtable::new_label() {
+    std::string ret = 'L' + std::to_string(this->number_label);
+    (this->number_label)++;
+    return ret;
 }
 
 unsigned int intermediate_symtable::size() {

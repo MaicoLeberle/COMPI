@@ -23,6 +23,9 @@ public:
         representation is what should be used inside any intermediate 
         representaion instruction.                                           */
 
+    /*  Parameters: offset inside the method.                                */
+    std::string* new_temp(unsigned int);
+
     /*  Parameters: id with which generate the internal representation id
                   , offset inside the method.                                */
     std::string register_var(std::string, unsigned int);
@@ -57,7 +60,8 @@ public:
     std::string get_id_rep(std::string);
 
 
-    enum id_kind { K_VAR
+    enum id_kind { K_TEMP
+                 , K_VAR
                  , K_OBJECT
                  , K_CLASS
                  , K_METHOD };
@@ -122,6 +126,8 @@ private:
     /*  The following contains the information necessary to create new internal
         representations out of identifier strings.                           */
     std::map<std::string, unsigned int> internal;
+
+    unsigned int temp_number = 0;
 };
 
 
@@ -188,6 +194,15 @@ public:
         to pop_symtable; i.e., there is still another symbols table to get 
         an element from.                                                     */ 
     symtable_element* get (std::string);
+
+    /*  Creates a new temporary variable that will not be inserted into the 
+        symbols tables stack, but will be registered in this->information.
+        Parameters: the offset inside the temporary variable's method.       
+        Returns: a pair containing the result of putting the variable into the
+        current scope, along with its representation inside this->information
+        (as long as putting the object in scope was succesful; otherwise, NULL
+        is returned as second element of the pair). */
+    std::pair<intermediate_symtable::put_results, std::string*> new_temp(unsigned int);
 
     /*  Inserts a new variable as an element into the symbols tables stack. 
         Parameters: the variable itself
@@ -363,6 +378,8 @@ public:
         popped.                                                        */
     void finish_class_analysis(void);
 
+    std::string new_label(void);
+
     /*  Returns the quantity of symbols tables in the stack.                 */
     unsigned int size(void);
 
@@ -370,6 +387,8 @@ private:
     ids_info* information;
 
     symtables_stack scopes;
+
+    unsigned int number_label = 0;
 };
 
 #endif
