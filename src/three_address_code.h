@@ -110,6 +110,9 @@ quad_pointer new_binary_assign(const address_pointer dest,
 							   const address_pointer arg1,
 							   const address_pointer arg2,
 							   quad_oper op);
+quad_pointer new_unary_assign(const address_pointer dest,
+							   const address_pointer arg,
+							   quad_oper op);
 quad_pointer new_parameter_inst(const address_pointer param);
 quad_pointer new_function_call_inst(const address_pointer dest,
 									const address_pointer func_label,
@@ -120,6 +123,7 @@ quad_pointer new_conditional_jump_inst(const address_pointer guard,
 									std::string label,
 									quad_oper op);
 quad_pointer new_unconditional_jump_inst(std::string label);
+quad_pointer new_return_inst(address_pointer);
 
 // if x relop y goto label
 quad_pointer new_relational_jump_inst(const address_pointer x, const address_pointer y,
@@ -233,7 +237,7 @@ bool is_conditional_jump_inst(const quad_pointer& instruction,
 bool is_unconditional_jump_inst(const quad_pointer& instruction,
 								std::string label);
 
-bool is_relational_jump(const quad_pointer& instruction,
+bool is_relational_jump_inst(const quad_pointer& instruction,
 		const address_pointer x, const address_pointer y,
 		quad_oper relop, std::string label);
 

@@ -499,6 +499,248 @@ void test_if_statement(){
 	std::cout << "OK. " << std::endl;
 }
 
+void test_for_statement(){
+	std::cout << "8) Loop \"for\":";
+
+	std::string test_program = "class class1 { void method1() {"
+													"y = 1;"
+													"for x = 1 , 2 y += 1;"
+												"}\n"
+								"}"
+								"class main {\n"
+									"void main(){\n"
+									"}\n"
+								"}\0\0";
+	inter_code_gen_visitor v1;
+
+	translate(v1, test_program);
+
+	instructions_list *translation = v1.get_inst_list();
+
+	// Class 1.
+
+	// Method1's label.
+	instructions_list::iterator it = translation->begin();
+
+	// Enter procedure.
+	it++;
+
+	// Variable y.
+	it++;
+
+
+	// Variable x.
+	it++;
+	address_pointer x = new_name_address("x");
+	address_pointer from = new_integer_constant(1);
+	assert(is_copy(*it, x, from));
+
+	// Label
+	it++;
+	std::string label_beginning ("L1");
+	// TODO: el valor concreto de la etiqueta podría llegar a cambiar
+	assert(is_label(*it, label_beginning));
+
+	// Relational jump
+	it++;
+	address_pointer to = new_integer_constant(2);
+	std::string label_ending("L2");
+	assert(is_relational_jump_inst(*it, to, x, quad_oper::LESS, label_ending));
+
+	// Body code
+	it++;
+	address_pointer y = new_name_address("y");
+	address_pointer increment = new_integer_constant(1);
+	assert(is_binary_assignment(*it, y, y, increment, quad_oper::PLUS));
+
+	// Increment of the loop's variable.
+	it++;
+	assert(is_binary_assignment(*it, x, x, increment, quad_oper::PLUS));
+
+	// Return to the beginning
+	it++;
+	assert(is_unconditional_jump_inst(*it, label_beginning));
+
+	// Label
+	it++;
+	// TODO: el valor concreto de la etiqueta podría llegar a cambiar
+	assert(is_label(*it, label_ending));
+
+	std::cout << "OK. " << std::endl;
+}
+
+void test_while_statement(){
+	std::cout << "9) Loop \"while\":";
+
+	std::string test_program = "class class1 { void method1() {"
+													"y = 1;"
+													"while true y += 1;"
+												"}\n"
+								"}"
+								"class main {\n"
+									"void main(){\n"
+									"}\n"
+								"}\0\0";
+	inter_code_gen_visitor v1;
+
+	translate(v1, test_program);
+
+	instructions_list *translation = v1.get_inst_list();
+
+	// Class 1.
+
+	// Method1's label.
+	instructions_list::iterator it = translation->begin();
+
+	// Enter procedure.
+	it++;
+
+	// Variable y.
+	it++;
+
+	// Label
+	it++;
+	std::string label_beginning ("L1");
+	// TODO: el valor concreto de la etiqueta podría llegar a cambiar
+	assert(is_label(*it, label_beginning));
+
+	// Conditional jump
+	it++;
+	address_pointer guard = new_boolean_constant(true);
+	std::string label_ending("L2");
+	assert(is_conditional_jump_inst(*it, guard, label_ending, quad_oper::IFFALSE));
+
+	// Body code
+	it++;
+	address_pointer y = new_name_address("y");
+	address_pointer increment = new_integer_constant(1);
+	assert(is_binary_assignment(*it, y, y, increment, quad_oper::PLUS));
+
+	// Return to the beginning
+	it++;
+	assert(is_unconditional_jump_inst(*it, label_beginning));
+
+	// Label
+	it++;
+	// TODO: el valor concreto de la etiqueta podría llegar a cambiar
+	assert(is_label(*it, label_ending));
+
+	std::cout << "OK. " << std::endl;
+}
+
+void test_return_statement(){
+	std::cout << "10) Statement \"return\":";
+
+	std::string test_program = "class class1 { void method1() {"
+													"return 1;"
+												"}\n"
+								"}"
+								"class main {\n"
+									"void main(){\n"
+									"}\n"
+								"}\0\0";
+	inter_code_gen_visitor v1;
+
+	translate(v1, test_program);
+
+	instructions_list *translation = v1.get_inst_list();
+
+	// Class 1.
+
+	// Method1's label.
+	instructions_list::iterator it = translation->begin();
+
+	// Enter procedure.
+	it++;
+
+	// Evaluation of the value returned.
+	it++;
+	address_pointer val = new_integer_constant(1);
+	// TODO: cómo evaluo el hecho de que sea una instrucción copy, si no
+	// se cual es el valor de la etiqueta temporal?
+
+	// Return.
+	it++;
+	// TODO: idem al caso anterior. No se cual es el valor de la temporal
+	// en donde se almacena el valor de retorno.
+
+	std::cout << "OK. " << std::endl;
+}
+
+void test_break_statement(){
+	std::cout << "11) Statement \"break\":";
+
+	std::string test_program = "class class1 { void method1() {"
+													"while true break;"
+												"}\n"
+								"}"
+								"class main {\n"
+									"void main(){\n"
+									"}\n"
+								"}\0\0";
+	inter_code_gen_visitor v1;
+
+	translate(v1, test_program);
+
+	instructions_list *translation = v1.get_inst_list();
+
+	// Class 1.
+
+	// Method1's label.
+	instructions_list::iterator it = translation->begin();
+
+	// Enter procedure.
+	it++;
+
+	// Label
+	it++;
+
+	// Conditional jump
+	it++;
+
+	// Body code
+	assert(is_unconditional_jump_inst(*it, std::string("L2")));
+
+	std::cout << "OK. " << std::endl;
+}
+
+void test_continue_statement(){
+	std::cout << "12) Statement \"continue\":";
+
+	std::string test_program = "class class1 { void method1() {"
+													"while true continue;"
+												"}\n"
+								"}"
+								"class main {\n"
+									"void main(){\n"
+									"}\n"
+								"}\0\0";
+	inter_code_gen_visitor v1;
+
+	translate(v1, test_program);
+
+	instructions_list *translation = v1.get_inst_list();
+
+	// Class 1.
+
+	// Method1's label.
+	instructions_list::iterator it = translation->begin();
+
+	// Enter procedure.
+	it++;
+
+	// Label
+	it++;
+
+	// Conditional jump
+	it++;
+
+	// Body code
+	assert(is_unconditional_jump_inst(*it, std::string("L1")));
+
+	std::cout << "OK. " << std::endl;
+}
+
 void test_inter_code_gen_visitor(){
 	std::cout << "\nTesting intermediate code generation:" << std::endl;
 	test_three_address_code();
@@ -508,4 +750,9 @@ void test_inter_code_gen_visitor(){
 	test_assignment_stm();
 	test_method_call_statement();
 	test_if_statement();
+	test_for_statement();
+	test_while_statement();
+	test_return_statement();
+	test_break_statement();
+	test_continue_statement();
 }

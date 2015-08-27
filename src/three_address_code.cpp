@@ -88,6 +88,19 @@ quad_pointer new_binary_assign(const address_pointer dest,
 	return instruction;
 }
 
+quad_pointer new_unary_assign(const address_pointer dest,
+							   const address_pointer arg,
+							   quad_oper op){
+
+	quad_pointer instruction = quad_pointer(new quad);
+	instruction->type = quad_type::UNARY_ASSIGN;
+	instruction->op = op;
+	instruction->arg1 = arg;
+	instruction->result = dest;
+
+	return instruction;
+}
+
 quad_pointer new_parameter_inst(const address_pointer param){
 	quad_pointer instruction = quad_pointer(new quad);
 	instruction->type = quad_type::PARAMETER;
@@ -156,6 +169,16 @@ quad_pointer new_relational_jump_inst(const address_pointer x, const address_poi
 	instruction->result = new_label_address(label);
 	return instruction;
 }
+
+quad_pointer new_return_inst(address_pointer value){
+	quad_pointer instruction = quad_pointer(new quad);
+	instruction->type = quad_type::RETURN;
+	instruction->op = quad_oper::NONE;
+	instruction->arg1 = value;
+
+	return instruction;
+}
+
 
 bool is_label(const quad_pointer& instruction, const std::string& label){
 	return instruction->type == quad_type::LABEL &&

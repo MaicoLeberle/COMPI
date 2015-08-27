@@ -250,6 +250,8 @@ void inter_code_gen_visitor::instance_initialization(std::string id_class,
  * _ TODO: std::pair<symtables_stack::put_results, std::string*> put_var(symtable_element, std::string, unsigned int);
  * me devuelve ahora un par: std::string es el id
  * _ Para traducir métodos, recordar la utilización de la referencia this
+ * _ Recordar que la semántica de los operadores booleanos es short-circuit
+ * (ver página 400 del dragon book)
  * */
 void inter_code_gen_visitor::visit(const node_program& node){
 	#ifdef __DEBUG
@@ -321,19 +323,6 @@ void inter_code_gen_visitor::visit(const node_class_decl& node) {
 	offset = prev_offset;
 	s_table.finish_class_analysis();
 }
-
-
-	// Statements
-	void inter_code_gen_visitor::visit(const node_while_statement& node) {}
-	void inter_code_gen_visitor::visit(const node_return_statement& node) {}
-	void inter_code_gen_visitor::visit(const node_break_statement& node) {}
-	void inter_code_gen_visitor::visit(const node_continue_statement& node) {}
-	void inter_code_gen_visitor::visit(const node_skip_statement& node) {}
-	// Expressions
-	void inter_code_gen_visitor::visit(const node_binary_operation_expr& node) {}
-	void inter_code_gen_visitor::visit(const node_negate_expr& node) {}
-	void inter_code_gen_visitor::visit(const node_negative_expr& node) {}
-	void inter_code_gen_visitor::visit(const node_parentheses_expr& node) {}
 
 void inter_code_gen_visitor::visit(const node_field_decl& node) {
 	// TODO: podríamos utilizar Symbolic Type Widths (pagina 386, libro dragon)
@@ -762,6 +751,9 @@ void inter_code_gen_visitor::visit(const node_if_statement& node){
 	// el valor de la referencia (temp) en donde se almacena el
 	// resultado de evaluar node.expression
 	// TODO: L1 y L2 son 2 etiquetas de valores fijos, a definir
+	// TODO: la intermediate_symtable va a generarme etiquetas únicas.
+	// TODO: leer página 410 del libro Dragón: backpatching, para ver el temita
+	// de cómo definir correctamente las etiquetas
 	std::string label_else("L1");
 	inst_list->push_back(new_conditional_jump_inst(temp, label_else, quad_oper::IFFALSE));
 	// Code for the "if" branch.
@@ -787,10 +779,11 @@ void inter_code_gen_visitor::visit(const node_for_statement& node){
 	expr_call_appropriate_accept(node.from);
 	// TODO: var es la variable sobre la que itera el ciclo, temp es la dirección
 	// en donde se almacenó la evaluación de node.from
-	// TODO: la variable x es declarada fuera del ciclo?
+
+	// The variable node.id is local to the loop.
 	address_pointer var = new_name_address(node.id);
 	inst_list->push_back(new_copy(var, temp));
-	expr_call_appropriate_accept(node.to);
+
 	// TODO: L1 es una etiqueta a definir, de valor fijo.
 	std::string label_beginning("L1");
 	inst_list->push_back(new_label(label_beginning));
@@ -806,6 +799,7 @@ void inter_code_gen_visitor::visit(const node_for_statement& node){
 	inst_list->push_back("IFFALSE z L2");*/
 
 	std::string label_ending("L2");
+	expr_call_appropriate_accept(node.to);
 	// if temp < var goto label_ending
 	inst_list->push_back(new_relational_jump_inst(temp, var, quad_oper::LESS,
 						label_ending));
@@ -823,210 +817,226 @@ void inter_code_gen_visitor::visit(const node_for_statement& node){
 	// Ending.
 	inst_list->push_back(new_label(label_ending));
 }
-/*
-void inter_code_gen_visitor::visit(const node_while_statement& node) {
-#ifdef __DEBUG
-	std::cout << "Translating while statement" << std::endl;
-#endif
 
+void inter_code_gen_visitor::visit(const node_while_statement& node) {
+	#ifdef __DEBUG
+		std::cout << "Translating while statement" << std::endl;
+	#endif
+	/*
+	 *  LABEL L1, (EXPRESSION CODE, it returns t1), IFFALSE t1 L2, (BODY CODE),
+	 *  GOTO L1, LABEL L2
+	 * */
+	// TODO: podríamos colocar como comentarios de todos los métodos el código
+	// intermedio que nos inventamos.
+	// TODO: el valor de esta etiqueta podría cambiar
+	std::string label_beginning("L1");
+	inst_list->push_back(new_label(label_beginning));
+
+	// Evaluate the guard. Its value is in temp.
 	expr_call_appropriate_accept(node.expression);
-	if(well_formed && type_l_expr != symtable_element::BOOLEAN){
-		register_error(std::string("Non-boolean guard of while loop."),
-						ERROR_12);
-	}
-	// To check rules that depend on this information...
-	into_for_or_while = true;
+
+	// If the guard is false, jump to the end of the code.
+	std::string label_ending("L2");
+	inst_list->push_back(new_conditional_jump_inst(temp, label_ending,
+										quad_oper::IFFALSE));
+
+	// Body.
 	stm_call_appropriate_accept(node.body);
-	into_for_or_while = false;
+
+	// Return to the beginning.
+	inst_list->push_back(new_unconditional_jump_inst(label_beginning));
+
+	// The end of the loop.
+	inst_list->push_back(new_label(label_ending));
 }
 
 void inter_code_gen_visitor::visit(const node_return_statement& node) {
-	symtable_element::id_type type_method = actual_method->get_type();
+	#ifdef __DEBUG
+		std::cout << "Translating return statement" << std::endl;
+	#endif
 
-#ifdef __DEBUG
-	std::cout << "Translating return statement" << std::endl;
-#endif
+	// Evaluate the returned value. Its value is in temp.
+	expr_call_appropriate_accept(node.expression);
 
-	if(node.expression != nullptr) {
-		if(type_method == symtable_element::VOID){
-			// Rule 8: a return statement must have an associated expression
-			// only if the method returns a value.
-			register_error(std::string("Non-void returned value, from a method "
-										"whose return type is void."), ERROR_8);
-		}
-		else{
-			// {type_method != symtable_element::VOID}
-			// Rule 9: the type of the value returned from the method must
-			// be the same than the type of the expression of the return statement
-			expr_call_appropriate_accept(node.expression);
-			if(well_formed && type_l_expr != type_method){
-				register_error(std::string("Method's return type differs from"
-						"type of returned value."), ERROR_9);
-			}
-		}
-	}
-	else{
-		// {node.expression == nullptr}
-		if(type_method != symtable_element::VOID){
-			// Rule 8.
-			register_error(std::string("No value returned, from a method "
-										"whose return type is not void."), ERROR_8);
-		}
-	}
+	inst_list->push_back(new_return_inst(temp));
 }
 
 void inter_code_gen_visitor::visit(const node_break_statement& node) {
-#ifdef __DEBUG
-	std::cout << "Translating break statement" << std::endl;
-#endif
+	#ifdef __DEBUG
+		std::cout << "Translating break statement" << std::endl;
+	#endif
 
-	// Rule 19: break and continue, only into a loop's body.
-	if (!into_for_or_while){
-		register_error(std::string("Break statement outside a loop."),
-				ERROR_19);
-	}
+	// Break is translated as an unconditional jump to the end of the loop.
+	inst_list->push_back(new_unconditional_jump_inst(std::string("L2")));
 }
 
 void inter_code_gen_visitor::visit(const node_continue_statement& node) {
-#ifdef __DEBUG
-	std::cout << "Translating continue statement" << std::endl;
-#endif
-	// Rule 19: break and continue, only into a loop's body.
-	if (!into_for_or_while){
-		register_error(std::string("Continue statement outside a loop."),
-				ERROR_19);
-	}
+	#ifdef __DEBUG
+		std::cout << "Translating continue statement" << std::endl;
+	#endif
+	// Continue is translated as an unconditional jump to the beginning of the loop.
+	inst_list->push_back(new_unconditional_jump_inst(std::string("L1")));
 }
 
 void inter_code_gen_visitor::visit(const node_skip_statement& node) {
-#ifdef __DEBUG
-	std::cout << "Translating skip statement" << std::endl;
-#endif
+	#ifdef __DEBUG
+		std::cout << "Translating skip statement" << std::endl;
+	#endif
+
 }
 
 void inter_code_gen_visitor::visit(const node_binary_operation_expr& node) {
-	symtable_element::id_type l_op_type, r_op_type;
-	symtable_element::id_class l_op_class, r_op_class;
+	quad_oper oper;
+	address_pointer right_operand = nullptr;
+	address_pointer left_operand = nullptr;
+	address_pointer dest = nullptr;
 
-#ifdef __DEBUG
-	std::cout << "Translating binary operation" << std::endl;
-#endif
+	#ifdef __DEBUG
+		std::cout << "Translating binary operation" << std::endl;
+	#endif
 
+	// Evaluate the operands.
 	expr_call_appropriate_accept(node.left);
-	if(well_formed){
-		l_op_type = type_l_expr;
-		l_op_class = class_l_expr;
-		well_formed = false;
-		expr_call_appropriate_accept(node.right);
-		if(well_formed){
-			r_op_type = type_l_expr;
-			r_op_class = class_l_expr;
+	left_operand = temp;
 
-			// Rule 13: operands of arithmetic and relational operations,
-			// must have type int or float.
-			if (node.oper != Oper::EQUAL && node.oper != Oper::DISTINCT &&
-				node.oper != Oper::AND && node.oper != Oper::OR){
+	expr_call_appropriate_accept(node.right);
+	right_operand = temp;
 
-				if ((l_op_type == symtable_element::INTEGER ||
-				l_op_type == symtable_element::FLOAT) &&
-				(r_op_type == symtable_element::INTEGER ||
-				r_op_type == symtable_element::FLOAT)){
+	// New temporal for the result.
+	std::pair<intermediate_symtable::put_results, std::string*> pair =  s_table.new_temp(offset);
+	// TODO: chequear put_results
+	// TODO: no estoy usando new_temp_address
+	// TODO: notar que aquí habría ayudado que semantic_analysis guarde en el node
+	// el tipo que le asigno a la expresión, para actualizar el offset
+	// como corresponde.
+	dest = new_name_address(*std::get<1>(pair));
 
-					well_formed = true;
-					// TODO: hay conversión implícita de tipos?
-					// TODO: determinar el tipo a retornar
-					if (node.oper == Oper::LESS || node.oper == Oper::GREATER ||
-					node.oper == Oper::LESS_EQUAL || node.oper == Oper::GREATER_EQUAL){
-						type_l_expr = symtable_element::BOOLEAN;
-					}
-					else{
-						type_l_expr = get_wider_type(l_op_type, r_op_type);
-					}
-				}
-				else{
-					register_error(std::string("Non-numeric operands of "
-							"arithmetic or relational operation."), ERROR_13);
-					well_formed = false;
-				}
-			}
-			else{
-				// {node.oper == Oper::EQUAL || node.oper == Oper::DISTINCT ||
-				//  node.oper == Oper::AND || node.oper == Oper::OR}
+	switch(node.oper){
+		case Oper::TIMES:
+			oper = quad_oper::TIMES;
+			break;
 
-				// Rule 14: eq_op operands must have the same type (int, float or boolean)
-				if (node.oper == Oper::EQUAL || node.oper == Oper::DISTINCT){
-					if (l_op_type != r_op_type ||
-						(l_op_type != symtable_element::INTEGER &&
-						 l_op_type != symtable_element::FLOAT &&
-						 l_op_type != symtable_element::BOOLEAN)){
+		case Oper::PLUS:
+			oper = quad_oper::PLUS;
+			break;
 
-						register_error(std::string("eq_op operands with "
-								"different or wrong types."), ERROR_14);
-						well_formed = false;
-					}
-					else{
-						well_formed = true;
-						type_l_expr = symtable_element::BOOLEAN;
-					}
-				}
-				else{
-					// {node.oper == Oper::AND || node.oper == Oper::OR}
-					// Rule 15: cond_op and ! operands, must evaluate to a boolean
-					if (l_op_type != r_op_type || l_op_type != symtable_element::BOOLEAN){
-						register_error(std::string("cond_op operands must "
-								"evaluate to boolean."), ERROR_15);
-						well_formed = false;
-					}
-					else{
-						well_formed = true;
-						type_l_expr = symtable_element::BOOLEAN;
-					}
-				}
-			}
-		}
+		case Oper::MINUS:
+			oper = quad_oper::MINUS;
+			break;
+
+		case Oper::DIVIDE:
+			oper = quad_oper::DIVIDE;
+			break;
+
+		case Oper::MOD:
+			oper = quad_oper::MOD;
+			break;
+
+		case Oper::LESS:
+			oper = quad_oper::LESS;
+			break;
+
+		case Oper::LESS_EQUAL:
+			oper = quad_oper::LESS_EQUAL;
+			break;
+
+		case Oper::GREATER:
+			oper = quad_oper::GREATER;
+			break;
+
+		case Oper::GREATER_EQUAL:
+			oper = quad_oper::GREATER_EQUAL;
+			break;
+
+		case Oper::EQUAL:
+			oper = quad_oper::EQUAL;
+			break;
+
+		case Oper::DISTINCT:
+			oper = quad_oper::DISTINCT;
+			break;
+
+		case Oper::AND:
+			// TODO: nuestro and es chort-circuit
+			break;
+
+		case Oper::OR:
+			// TODO: nuestro or es chort-circuit
+			break;
 	}
+
+	inst_list->push_back(new_binary_assign(dest,
+			   left_operand, right_operand, oper));
+
 }
 
 void inter_code_gen_visitor::visit(const node_negate_expr& node) {
-#ifdef __DEBUG
-	std::cout << "Translating negate expression" << std::endl;
-#endif
+	address_pointer dest = nullptr;
 
+	#ifdef __DEBUG
+		std::cout << "Translating negate expression" << std::endl;
+	#endif
+
+	// Evaluate the operand.
 	expr_call_appropriate_accept(node.expression);
-	if(well_formed){
-		// Rule 15: cond_op and ! operands, must evaluate to a boolean.
-		if (type_l_expr != symtable_element::BOOLEAN){
-			register_error(std::string("! operand must evaluate to boolean."),
-					ERROR_15);
-			well_formed = false;
-		}
-	}
+
+	// New temporal for the result.
+	std::pair<intermediate_symtable::put_results, std::string*> pair =  s_table.new_temp(offset);
+	// TODO: chequear put_results
+	// TODO: no estoy usando new_temp_address
+	dest = new_name_address(*std::get<1>(pair));
+	inst_list->push_back(new_unary_assign(dest, temp, quad_oper::NEGATION));
+
+	// Update offset.
+	offset += boolean_width;
+
+	temp = dest;
 }
 
 void inter_code_gen_visitor::visit(const node_negative_expr& node) {
-#ifdef __DEBUG
-	std::cout << "Translating negative expression" << std::endl;
-#endif
-	// TODO: notar que sí tenemos un nodo especial para esta
-	// situación.
+	address_pointer dest = nullptr;
+
+	#ifdef __DEBUG
+		std::cout << "Translating negative expression" << std::endl;
+	#endif
+	// Evaluate the operand.
 	expr_call_appropriate_accept(node.expression);
 
-	if (well_formed && type_l_expr != symtable_element::INTEGER &&
-	type_l_expr != symtable_element::FLOAT){
-		// Rule 13: operands of arithmetic and relational operations,
-		// must have type int or float
-		register_error(std::string("Non-numeric operand for an arithmetic "
-								"negation operation."), ERROR_13);
-		well_formed = false;
-	}
+	// New temporal for the result.
+	std::pair<intermediate_symtable::put_results, std::string*> pair =  s_table.new_temp(offset);
+	// TODO: chequear put_results
+	// TODO: no estoy usando new_temp_address
+	dest = new_name_address(*std::get<1>(pair));
+	inst_list->push_back(new_unary_assign(dest, temp, quad_oper::NEGATIVE));
+
+	// Update offset.
+	// TODO: aquí haría falta que el analizador semántico me indique el tipo
+	// de la expresión.
+
+	temp = dest;
 }
 
 void inter_code_gen_visitor::visit(const node_parentheses_expr& node) {
-#ifdef __DEBUG
-	std::cout << "Translating parentheses expression" << std::endl;
-#endif
+	address_pointer dest = nullptr;
+
+	#ifdef __DEBUG
+		std::cout << "Translating parentheses expression" << std::endl;
+	#endif
 
 	expr_call_appropriate_accept(node.expression);
+
+	// New temporal for the result.
+	std::pair<intermediate_symtable::put_results, std::string*> pair =  s_table.new_temp(offset);
+	// TODO: chequear put_results
+	// TODO: no estoy usando new_temp_address
+	dest = new_name_address(*std::get<1>(pair));
+
+	inst_list->push_back(new_copy(dest, temp));
+
+	temp = dest;
+
+	// Update offset.
+	// TODO: aquí haría falta que el analizador semántico me indique el tipo
+	// de la expresión.
 }
 
-*/
