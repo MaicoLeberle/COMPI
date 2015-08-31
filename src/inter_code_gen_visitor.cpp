@@ -253,7 +253,7 @@ void inter_code_gen_visitor::instance_initialization(std::string id_class,
  * _ Recordar que la semántica de los operadores booleanos es short-circuit
  * (ver página 400 del dragon book)
  * */
-void inter_code_gen_visitor::visit(const node_program& node){
+void inter_code_gen_visitor::visit(node_program& node){
 	#ifdef __DEBUG
 		std::cout << "Beginning translation." << std::endl;
 	#endif
@@ -265,7 +265,7 @@ void inter_code_gen_visitor::visit(const node_program& node){
 	}
 }
 
-void inter_code_gen_visitor::visit(const node_class_decl& node) {
+void inter_code_gen_visitor::visit(node_class_decl& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating class " << node.id << std::endl;
 	#endif
@@ -324,7 +324,7 @@ void inter_code_gen_visitor::visit(const node_class_decl& node) {
 	s_table.finish_class_analysis();
 }
 
-void inter_code_gen_visitor::visit(const node_field_decl& node) {
+void inter_code_gen_visitor::visit(node_field_decl& node) {
 	// TODO: podríamos utilizar Symbolic Type Widths (pagina 386, libro dragon)
 	#ifdef __DEBUG
 		std::cout << "Translating field declaration." << std::endl;
@@ -439,11 +439,11 @@ void inter_code_gen_visitor::visit(const node_field_decl& node) {
 	}
 }
 
-void inter_code_gen_visitor::visit(const node_id& node) {
+void inter_code_gen_visitor::visit(node_id& node) {
 	// This visitor does not need to do some task into node_id.
 }
 
-void inter_code_gen_visitor::visit(const node_method_decl& node){
+void inter_code_gen_visitor::visit(node_method_decl& node){
 	// TODO: aquí debería agregar la variable "this" a la tabla de símbolos?
 	// donde debería utilizar this en la traducción?
 	#ifdef __DEBUG
@@ -494,7 +494,7 @@ void inter_code_gen_visitor::visit(const node_method_decl& node){
 	s_table.finish_func_analysis();
 }
 
-void inter_code_gen_visitor::visit(const node_parameter_identifier& node) {
+void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 	/* Paso por parámetro los atributos de la clase, prefijandoles "self.". */
 	#ifdef __DEBUG
 		std::cout << "Translating parameter " << node.id << std::endl;
@@ -551,7 +551,7 @@ void inter_code_gen_visitor::visit(const node_parameter_identifier& node) {
 	//offset += calculate_size(determine_type(node.type.type));
 }
 
-void inter_code_gen_visitor::visit(const node_body& node) {
+void inter_code_gen_visitor::visit(node_body& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating body of method" << std::endl;
 	#endif
@@ -570,7 +570,7 @@ void inter_code_gen_visitor::visit(const node_body& node) {
 	}
 }
 
-void inter_code_gen_visitor::visit(const node_block& node) {
+void inter_code_gen_visitor::visit(node_block& node) {
 #ifdef __DEBUG
 	std::cout << "Translating a block." << std::endl;
 #endif
@@ -584,7 +584,7 @@ void inter_code_gen_visitor::visit(const node_block& node) {
 	s_table.pop_symtable();
 }
 
-void inter_code_gen_visitor::visit(const node_assignment_statement& node) {
+void inter_code_gen_visitor::visit(node_assignment_statement& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating assignment statement." << std::endl;
 	#endif
@@ -619,7 +619,7 @@ void inter_code_gen_visitor::visit(const node_assignment_statement& node) {
 	}
 }
 
-void inter_code_gen_visitor::visit(const node_location& node) {
+void inter_code_gen_visitor::visit(node_location& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating location expression" << std::endl;
 	#endif
@@ -633,13 +633,12 @@ void inter_code_gen_visitor::visit(const node_location& node) {
 	temp = new_name_address(name);
 }
 
-void inter_code_gen_visitor::visit(const node_int_literal& node) {
+void inter_code_gen_visitor::visit(node_int_literal& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating int literal with value " << node.value << std::endl;
 	#endif
-	// TODO: convertir a string
 	// TODO: ver el código intermediate.c: no hace falta crear una temporal
-	// para almacenar la constance. Basta con crear un objeto struct
+	// para almacenar la constante. Basta con crear un objeto struct
 	// address, que representa la cte (en este caso), o bien una dirección, o
 	// bien una etiqueta, o bien una temporal.
 	// TODO: deberían primero guardarse en una dirección temporal, para que, luego,
@@ -651,7 +650,7 @@ void inter_code_gen_visitor::visit(const node_int_literal& node) {
 	temp = new_integer_constant(node.value);
 }
 
-void inter_code_gen_visitor::visit(const node_bool_literal& node) {
+void inter_code_gen_visitor::visit(node_bool_literal& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating bool literal with value " << node.value << std::endl;
 	#endif
@@ -659,7 +658,7 @@ void inter_code_gen_visitor::visit(const node_bool_literal& node) {
 	temp = new_boolean_constant(node.value);
 }
 
-void inter_code_gen_visitor::visit(const node_float_literal& node) {
+void inter_code_gen_visitor::visit(node_float_literal& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating FLOAT literal with value " << node.value << std::endl;
 	#endif
@@ -667,7 +666,7 @@ void inter_code_gen_visitor::visit(const node_float_literal& node) {
 	temp = new_boolean_constant(node.value);
 }
 
-void inter_code_gen_visitor::visit(const node_string_literal& node) {
+void inter_code_gen_visitor::visit(node_string_literal& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating string literal of value " << node.value << std::endl;
 	#endif
@@ -676,7 +675,7 @@ void inter_code_gen_visitor::visit(const node_string_literal& node) {
 	//temp = std::string("$"+node.value);
 }
 
-void inter_code_gen_visitor::visit(const node_method_call_expr& node) {
+void inter_code_gen_visitor::visit(node_method_call_expr& node) {
 	#ifdef __DEBUG
 			std::cout << "Translating method call statement" << std::endl;
 	#endif
@@ -710,7 +709,7 @@ void inter_code_gen_visitor::visit(const node_method_call_expr& node) {
 						new_integer_constant(node.method_call_data->parameters.size())));
 }
 
-void inter_code_gen_visitor::visit(const node_method_call_statement& node) {
+void inter_code_gen_visitor::visit(node_method_call_statement& node) {
 	#ifdef __DEBUG
 			std::cout << "Translating method call statement" << std::endl;
 	#endif
@@ -742,7 +741,7 @@ void inter_code_gen_visitor::visit(const node_method_call_statement& node) {
 						new_integer_constant(node.method_call_data->parameters.size()+1)));
 }
 
-void inter_code_gen_visitor::visit(const node_if_statement& node){
+void inter_code_gen_visitor::visit(node_if_statement& node){
 	#ifdef __DEBUG
 			std::cout << "Translating if statement" << std::endl;
 	#endif
@@ -771,7 +770,7 @@ void inter_code_gen_visitor::visit(const node_if_statement& node){
 	inst_list->push_back(new_label(label_end));
 }
 
-void inter_code_gen_visitor::visit(const node_for_statement& node){
+void inter_code_gen_visitor::visit(node_for_statement& node){
 	#ifdef __DEBUG
 			std::cout << "Translating for statement" << std::endl;
 	#endif
@@ -818,7 +817,7 @@ void inter_code_gen_visitor::visit(const node_for_statement& node){
 	inst_list->push_back(new_label(label_ending));
 }
 
-void inter_code_gen_visitor::visit(const node_while_statement& node) {
+void inter_code_gen_visitor::visit(node_while_statement& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating while statement" << std::endl;
 	#endif
@@ -850,7 +849,7 @@ void inter_code_gen_visitor::visit(const node_while_statement& node) {
 	inst_list->push_back(new_label(label_ending));
 }
 
-void inter_code_gen_visitor::visit(const node_return_statement& node) {
+void inter_code_gen_visitor::visit(node_return_statement& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating return statement" << std::endl;
 	#endif
@@ -861,7 +860,7 @@ void inter_code_gen_visitor::visit(const node_return_statement& node) {
 	inst_list->push_back(new_return_inst(temp));
 }
 
-void inter_code_gen_visitor::visit(const node_break_statement& node) {
+void inter_code_gen_visitor::visit(node_break_statement& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating break statement" << std::endl;
 	#endif
@@ -870,7 +869,7 @@ void inter_code_gen_visitor::visit(const node_break_statement& node) {
 	inst_list->push_back(new_unconditional_jump_inst(std::string("L2")));
 }
 
-void inter_code_gen_visitor::visit(const node_continue_statement& node) {
+void inter_code_gen_visitor::visit(node_continue_statement& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating continue statement" << std::endl;
 	#endif
@@ -878,14 +877,13 @@ void inter_code_gen_visitor::visit(const node_continue_statement& node) {
 	inst_list->push_back(new_unconditional_jump_inst(std::string("L1")));
 }
 
-void inter_code_gen_visitor::visit(const node_skip_statement& node) {
+void inter_code_gen_visitor::visit(node_skip_statement& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating skip statement" << std::endl;
 	#endif
-
 }
 
-void inter_code_gen_visitor::visit(const node_binary_operation_expr& node) {
+void inter_code_gen_visitor::visit(node_binary_operation_expr& node) {
 	quad_oper oper;
 	address_pointer right_operand = nullptr;
 	address_pointer left_operand = nullptr;
@@ -957,20 +955,21 @@ void inter_code_gen_visitor::visit(const node_binary_operation_expr& node) {
 			break;
 
 		case Oper::AND:
-			// TODO: nuestro and es chort-circuit
+			// TODO: nuestro and es short-circuit
 			break;
 
 		case Oper::OR:
-			// TODO: nuestro or es chort-circuit
+			// TODO: nuestro or es short-circuit
 			break;
 	}
 
 	inst_list->push_back(new_binary_assign(dest,
 			   left_operand, right_operand, oper));
 
+	temp = dest;
 }
 
-void inter_code_gen_visitor::visit(const node_negate_expr& node) {
+void inter_code_gen_visitor::visit(node_negate_expr& node) {
 	address_pointer dest = nullptr;
 
 	#ifdef __DEBUG
@@ -993,7 +992,7 @@ void inter_code_gen_visitor::visit(const node_negate_expr& node) {
 	temp = dest;
 }
 
-void inter_code_gen_visitor::visit(const node_negative_expr& node) {
+void inter_code_gen_visitor::visit(node_negative_expr& node) {
 	address_pointer dest = nullptr;
 
 	#ifdef __DEBUG
@@ -1016,16 +1015,19 @@ void inter_code_gen_visitor::visit(const node_negative_expr& node) {
 	temp = dest;
 }
 
-void inter_code_gen_visitor::visit(const node_parentheses_expr& node) {
+void inter_code_gen_visitor::visit(node_parentheses_expr& node) {
 	address_pointer dest = nullptr;
 
 	#ifdef __DEBUG
 		std::cout << "Translating parentheses expression" << std::endl;
 	#endif
 
+	// TODO: no debemos hacer nada?. Ya en el análisis sintáctico, al momento
+	// de reconocer las expresiones parentizadas, se impone el orden adecuado
+	// de evaluación.
 	expr_call_appropriate_accept(node.expression);
 
-	// New temporal for the result.
+	/*// New temporal for the result.
 	std::pair<intermediate_symtable::put_results, std::string*> pair =  s_table.new_temp(offset);
 	// TODO: chequear put_results
 	// TODO: no estoy usando new_temp_address
@@ -1037,6 +1039,6 @@ void inter_code_gen_visitor::visit(const node_parentheses_expr& node) {
 
 	// Update offset.
 	// TODO: aquí haría falta que el analizador semántico me indique el tipo
-	// de la expresión.
+	// de la expresión.*/
 }
 

@@ -5,6 +5,7 @@ semantic_analysis::semantic_analysis () {
 	into_for_or_while = false;
 	into_method = false;
 	actual_method = nullptr;
+	well_formed = false;
 }
 
 void semantic_analysis::register_error(std::string error, error_id error_encountered){
@@ -48,7 +49,7 @@ symtable_element::id_type t1, symtable_element::id_type t2){
 	return ret;
 }
 
-symtable_element::id_type semantic_analysis::determine_type(Type::_Type type_ast){
+symtable_element::id_type semantic_analysis::determine_symtable_type(Type::_Type type_ast){
 	symtable_element::id_type ret;
 
 	switch(type_ast){
@@ -74,6 +75,43 @@ symtable_element::id_type semantic_analysis::determine_type(Type::_Type type_ast
 
 		/*case Type::STRING:
 			ret = symtable_element::STRING;
+			break;*/
+
+		#ifdef __DEBUG
+		default:
+			assert(false);
+		#endif
+	}
+
+	return ret;
+}
+
+Type::_Type semantic_analysis::determine_node_type(symtable_element::id_type type_symtable){
+	Type::_Type ret;
+
+	switch(type_symtable){
+		case symtable_element::INTEGER:
+			ret = Type::INTEGER;
+			break;
+
+		case symtable_element::FLOAT:
+			ret = Type::FLOAT;
+			break;
+
+		case symtable_element::BOOLEAN:
+			ret = Type::BOOLEAN;
+			break;
+
+		case symtable_element::VOID:
+			ret = Type::VOID;
+			break;
+
+		case symtable_element::ID:
+			ret = Type::ID;
+			break;
+
+		/*case symtable_element::STRING:
+			ret = Type::STRING;
 			break;*/
 
 		#ifdef __DEBUG
@@ -174,7 +212,7 @@ symtable_element* semantic_analysis::dereference(reference_list ids){
 	return ret;
 }
 
-void semantic_analysis::visit(const node_program& node) {
+void semantic_analysis::visit(node_program& node) {
 	#ifdef __DEBUG
 	 	 std::cout << "Beginning analysis." << std::endl;
 	#endif
@@ -192,7 +230,7 @@ void semantic_analysis::visit(const node_program& node) {
 	}
 }
 
-void semantic_analysis::visit(const node_class_decl& node) {
+void semantic_analysis::visit(node_class_decl& node) {
 	#ifdef __DEBUG
 		std::cout << "Accessing class " << node.id << std::endl;
 	#endif
@@ -242,7 +280,7 @@ void semantic_analysis::visit(const node_class_decl& node) {
 	actual_class = nullptr;
 }
 
-void semantic_analysis::visit(const node_field_decl& node) {
+void semantic_analysis::visit(node_field_decl& node) {
 	symtable_element *id = nullptr;
 
 	#ifdef __DEBUG
@@ -298,13 +336,13 @@ void semantic_analysis::visit(const node_field_decl& node) {
 			// Basic type or array
 			if (f->array_size > 0){
 				// Array
-				id = new symtable_element(f->id, determine_type(node.type.type),
+				id = new symtable_element(f->id, determine_symtable_type(node.type.type),
 					  f->array_size);
 			}
 			else{
 				// {f->array_size < 0}
 				// Basic type
-				id = new symtable_element(f->id, determine_type(node.type.type));
+				id = new symtable_element(f->id, determine_symtable_type(node.type.type));
 			}
 		}
 		// Add the symbol to s_table.
@@ -325,15 +363,15 @@ void semantic_analysis::visit(const node_field_decl& node) {
 	}
 }
 
-void semantic_analysis::visit(const node_id& node) {
+void semantic_analysis::visit(node_id& node) {
 	// This visitor does not need to do some task into node_id.
 }
 
-void semantic_analysis::visit(const node_method_decl& node){
+void semantic_analysis::visit(node_method_decl& node){
 	#ifdef __DEBUG
 		std::cout << "Accessing method " << node.id << std::endl;
 	#endif
-	symtable_element method(node.id, determine_type(node.type.type),
+	symtable_element method(node.id, determine_symtable_type(node.type.type),
 							new std::list<symtable_element>());
 	into_method = true;
 	actual_method = &method;
@@ -357,7 +395,7 @@ void semantic_analysis::visit(const node_method_decl& node){
 	actual_method = nullptr;
 }
 
-void semantic_analysis::visit(const node_parameter_identifier& node) {
+void semantic_analysis::visit(node_parameter_identifier& node) {
 	#ifdef __DEBUG
 		std::cout << "Accessing parameter " << node.id << std::endl;
 	#endif
@@ -377,12 +415,12 @@ void semantic_analysis::visit(const node_parameter_identifier& node) {
 			register_error(std::string("Parameter's identifier and method's name "
 					"coincide:" + node.id), ERROR_23);
 		}
-		symtable_element param(node.id, determine_type(node.type.type));
+		symtable_element param(node.id, determine_symtable_type(node.type.type));
 		s_table.put_func_param(node.id, param);
 	}
 }
 
-void semantic_analysis::visit(const node_body& node) {
+void semantic_analysis::visit(node_body& node) {
 	#ifdef __DEBUG
 		std::cout << "Accessing body of method" << std::endl;
 	#endif
@@ -404,7 +442,7 @@ void semantic_analysis::visit(const node_body& node) {
 	}
 }
 
-void semantic_analysis::visit(const node_block& node) {
+void semantic_analysis::visit(node_block& node) {
 #ifdef __DEBUG
 	std::cout << "Accessing a block." << std::endl;
 #endif
@@ -417,7 +455,7 @@ void semantic_analysis::visit(const node_block& node) {
 	s_table.pop_symtable();
 }
 
-void semantic_analysis::visit(const node_assignment_statement& node) {
+void semantic_analysis::visit(node_assignment_statement& node) {
 	#ifdef __DEBUG
 		std::cout << "Accessing assignment statement" << std::endl;
 	#endif
@@ -464,7 +502,7 @@ void semantic_analysis::visit(const node_assignment_statement& node) {
 	}
 }
 
-void semantic_analysis::visit(const node_location& node) {
+void semantic_analysis::visit(node_location& node) {
 	symtable_element::id_type type_index, type_id;
 	symtable_element::id_class class_id;
 	symtable_element *aux = nullptr;
@@ -519,7 +557,7 @@ void semantic_analysis::visit(const node_location& node) {
 	}
 }
 
-void semantic_analysis::visit(const node_int_literal& node) {
+void semantic_analysis::visit(node_int_literal& node) {
 #ifdef __DEBUG
 	std::cout << "Accessing int literal of value " << node.value << std::endl;
 #endif
@@ -527,7 +565,7 @@ void semantic_analysis::visit(const node_int_literal& node) {
 	well_formed = true;
 }
 
-void semantic_analysis::visit(const node_bool_literal& node) {
+void semantic_analysis::visit(node_bool_literal& node) {
 #ifdef __DEBUG
 	std::cout << "Accessing bool literal of value " << node.value << std::endl;
 #endif
@@ -535,7 +573,7 @@ void semantic_analysis::visit(const node_bool_literal& node) {
 	well_formed = true;
 }
 
-void semantic_analysis::visit(const node_float_literal& node) {
+void semantic_analysis::visit(node_float_literal& node) {
 #ifdef __DEBUG
 	std::cout << "Accessing FLOAT literal of value " << node.value << std::endl;
 #endif
@@ -543,7 +581,7 @@ void semantic_analysis::visit(const node_float_literal& node) {
 	well_formed = true;
 }
 
-void semantic_analysis::visit(const node_string_literal& node) {
+void semantic_analysis::visit(node_string_literal& node) {
 #ifdef __DEBUG
 	std::cout << "Accessing string literal of value " << node.value << std::endl;
 #endif
@@ -552,21 +590,30 @@ void semantic_analysis::visit(const node_string_literal& node) {
 	well_formed = true;
 }
 
-void semantic_analysis::visit(const node_method_call_expr& node) {
+void semantic_analysis::visit(node_method_call_expr& node) {
 	#ifdef __DEBUG
 		std::cout << "Accessing method call expression" << std::endl;
 	#endif
 	analyze_method_call(*(node.method_call_data));
+
+	// We set the type of the expression.
+	if(type_l_expr == symtable_element::ID){
+		node.set_type(class_name_l_expr);
+	}
+	else{
+		// {type_l_expr != Type::ID}
+		node.set_type(determine_node_type(type_l_expr));
+	}
 }
 
-void semantic_analysis::visit(const node_method_call_statement& node) {
+void semantic_analysis::visit(node_method_call_statement& node) {
 	#ifdef __DEBUG
 		std::cout << "Accessing method call statement" << std::endl;
 	#endif
 	analyze_method_call(*(node.method_call_data));
 }
 
-void semantic_analysis::analyze_method_call(const method_call& data) {
+void semantic_analysis::analyze_method_call(method_call& data) {
 	#ifdef __DEBUG
 		std::cout << "Accessing method call statement" << std::endl;
 	#endif
@@ -615,11 +662,14 @@ void semantic_analysis::analyze_method_call(const method_call& data) {
 					}
 					it++;
 				}
-				type_l_expr = aux->get_type();
-				class_l_expr = aux->get_class();
 				// Rule 6: if a method call is used as an expression, the method
 				// must return some value. We just simply return the type of return
 				// of the method.
+				type_l_expr = aux->get_type();
+				if (type_l_expr == symtable_element::ID){
+					class_name_l_expr = *aux->get_class_type();
+				}
+				class_l_expr = aux->get_class();
 			}
 		}
 		else{
@@ -632,7 +682,7 @@ void semantic_analysis::analyze_method_call(const method_call& data) {
 	}
 }
 
-void semantic_analysis::visit(const node_if_statement& node){
+void semantic_analysis::visit(node_if_statement& node){
 	expr_call_appropriate_accept(node.expression);
 	if(well_formed){
 		// Rule 12: the guard must be a boolean expression.
@@ -649,7 +699,7 @@ void semantic_analysis::visit(const node_if_statement& node){
 	}
 }
 
-void semantic_analysis::visit(const node_for_statement& node){
+void semantic_analysis::visit(node_for_statement& node){
 	symtable_element::id_type type_expr;
 
 	std::cout << "Accessing for statement" << std::endl;
@@ -672,7 +722,7 @@ void semantic_analysis::visit(const node_for_statement& node){
 	into_for_or_while = false;
 }
 
-void semantic_analysis::visit(const node_while_statement& node) {
+void semantic_analysis::visit(node_while_statement& node) {
 #ifdef __DEBUG
 	std::cout << "Accessing while statement" << std::endl;
 #endif
@@ -688,7 +738,7 @@ void semantic_analysis::visit(const node_while_statement& node) {
 	into_for_or_while = false;
 }
 
-void semantic_analysis::visit(const node_return_statement& node) {
+void semantic_analysis::visit(node_return_statement& node) {
 	symtable_element::id_type type_method = actual_method->get_type();
 
 #ifdef __DEBUG
@@ -723,7 +773,7 @@ void semantic_analysis::visit(const node_return_statement& node) {
 	}
 }
 
-void semantic_analysis::visit(const node_break_statement& node) {
+void semantic_analysis::visit(node_break_statement& node) {
 #ifdef __DEBUG
 	std::cout << "Accessing break statement" << std::endl;
 #endif
@@ -735,7 +785,7 @@ void semantic_analysis::visit(const node_break_statement& node) {
 	}
 }
 
-void semantic_analysis::visit(const node_continue_statement& node) {
+void semantic_analysis::visit(node_continue_statement& node) {
 #ifdef __DEBUG
 	std::cout << "Accessing continue statement" << std::endl;
 #endif
@@ -746,13 +796,13 @@ void semantic_analysis::visit(const node_continue_statement& node) {
 	}
 }
 
-void semantic_analysis::visit(const node_skip_statement& node) {
+void semantic_analysis::visit(node_skip_statement& node) {
 #ifdef __DEBUG
 	std::cout << "Accessing skip statement" << std::endl;
 #endif
 }
 
-void semantic_analysis::visit(const node_binary_operation_expr& node) {
+void semantic_analysis::visit(node_binary_operation_expr& node) {
 	symtable_element::id_type l_op_type, r_op_type;
 	symtable_element::id_class l_op_class, r_op_class;
 
@@ -835,7 +885,7 @@ void semantic_analysis::visit(const node_binary_operation_expr& node) {
 	}
 }
 
-void semantic_analysis::visit(const node_negate_expr& node) {
+void semantic_analysis::visit(node_negate_expr& node) {
 #ifdef __DEBUG
 	std::cout << "Accessing negate expression" << std::endl;
 #endif
@@ -851,7 +901,7 @@ void semantic_analysis::visit(const node_negate_expr& node) {
 	}
 }
 
-void semantic_analysis::visit(const node_negative_expr& node) {
+void semantic_analysis::visit(node_negative_expr& node) {
 	#ifdef __DEBUG
 		std::cout << "Accessing negative expression" << std::endl;
 	#endif
@@ -867,7 +917,7 @@ void semantic_analysis::visit(const node_negative_expr& node) {
 	}
 }
 
-void semantic_analysis::visit(const node_parentheses_expr& node) {
+void semantic_analysis::visit(node_parentheses_expr& node) {
 #ifdef __DEBUG
 	std::cout << "Accessing parentheses expression" << std::endl;
 #endif

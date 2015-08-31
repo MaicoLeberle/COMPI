@@ -18,36 +18,36 @@ public:
 	// Inherited interface, to allow the definition outside this
 	// class declaration.
 	// Program
-	virtual void visit(const node_program&);
+	virtual void visit(node_program&);
 	// Class declaration
-	virtual void visit(const node_class_decl& node);
-	virtual void visit(const node_field_decl& node);
-	virtual void visit(const node_id& node);
-	virtual void visit(const node_method_decl& node);
-	virtual void visit(const node_parameter_identifier& node);
-	virtual void visit(const node_body& node);
-	virtual void visit(const node_block& node);
+	virtual void visit(node_class_decl& node);
+	virtual void visit(node_field_decl& node);
+	virtual void visit(node_id& node);
+	virtual void visit(node_method_decl& node);
+	virtual void visit(node_parameter_identifier& node);
+	virtual void visit(node_body& node);
+	virtual void visit(node_block& node);
 	// Statements
-	virtual void visit(const node_assignment_statement& node);
-	virtual void visit(const node_method_call_statement& node);
-	virtual void visit(const node_if_statement& node);
-	virtual void visit(const node_for_statement& node);
-	virtual void visit(const node_while_statement& node);
-	virtual void visit(const node_return_statement& node);
-	virtual void visit(const node_break_statement& node);
-	virtual void visit(const node_continue_statement& node);
-	virtual void visit(const node_skip_statement& node);
+	virtual void visit(node_assignment_statement& node);
+	virtual void visit(node_method_call_statement& node);
+	virtual void visit(node_if_statement& node);
+	virtual void visit(node_for_statement& node);
+	virtual void visit(node_while_statement& node);
+	virtual void visit(node_return_statement& node);
+	virtual void visit(node_break_statement& node);
+	virtual void visit(node_continue_statement& node);
+	virtual void visit(node_skip_statement& node);
 	// Expressions
-	virtual void visit(const node_int_literal& node);
-	virtual void visit(const node_float_literal& node);
-	virtual void visit(const node_bool_literal& node);
-	virtual void visit(const node_string_literal& node);
-	virtual void visit(const node_binary_operation_expr& node);
-	virtual void visit(const node_location& node);
-	virtual void visit(const node_negate_expr& node);
-	virtual void visit(const node_negative_expr& node);
-	virtual void visit(const node_parentheses_expr& node);
-	virtual void visit(const node_method_call_expr& node);
+	virtual void visit(node_int_literal& node);
+	virtual void visit(node_float_literal& node);
+	virtual void visit(node_bool_literal& node);
+	virtual void visit(node_string_literal& node);
+	virtual void visit(node_binary_operation_expr& node);
+	virtual void visit(node_location& node);
+	virtual void visit(node_negate_expr& node);
+	virtual void visit(node_negative_expr& node);
+	virtual void visit(node_parentheses_expr& node);
+	virtual void visit(node_method_call_expr& node);
 
 
 

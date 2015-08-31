@@ -140,6 +140,7 @@ address_pointer new_label_address(std::string label);
 // TODO: quizás debería recibir un address_pointer
 bool is_label(const quad_pointer& instruction, const std::string& label);
 
+// TODO: no hace falta todas estas is_plus_oper, etc: basta con is_binary_assignment
 // x = y + z
 bool is_plus_oper(const quad_pointer& instruction, const std::string& x,
 					const std::string& y, const std::string& z);
@@ -210,6 +211,10 @@ bool is_binary_assignment(const quad_pointer& instruction,
 						 const address_pointer& arg2,
 						 quad_oper op);
 
+bool is_unary_assignment(const quad_pointer& instruction,
+						 const address_pointer& dest,
+						 const address_pointer& arg,
+						 quad_oper op);
 
 // x[i] = y
 bool is_indexed_copy_to(const quad_pointer& instruction, const std::string& x,

@@ -241,6 +241,17 @@ bool is_binary_assignment(const quad_pointer& instruction,
 		   are_equal_pointers(instruction->result, dest);
 }
 
+bool is_unary_assignment(const quad_pointer& instruction,
+						 const address_pointer& dest,
+						 const address_pointer& arg,
+						 quad_oper op){
+
+	return instruction->type == quad_type::UNARY_ASSIGN &&
+		   instruction->op == op &&
+		   are_equal_pointers(instruction->arg1, arg) &&
+		   are_equal_pointers(instruction->result, dest);
+}
+
 bool is_parameter_inst(const quad_pointer& instruction,
 						const address_pointer param){
 

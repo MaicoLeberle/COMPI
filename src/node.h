@@ -16,7 +16,12 @@ struct Type {
     _Type type;
     std::string id;
 
+    // Empty constructor, that lets us declare Type variables, with unknown
+    // type information.
+    Type() {}
+
     Type(_Type type_) : type(type_) {}
+    // TODO: no haría falta el parámetro type_ en este caso?.
     Type(_Type type_, std::string id_) : type(type_), id(id_) {}
 };
 
@@ -61,6 +66,7 @@ public:
 };
 
 class node_statement : public node {
+
 public:
 	// To resolve type erasure
 	enum statement {
@@ -81,6 +87,10 @@ public:
 };
 
 class node_expr : public node {
+private:
+	// Type of the expression, to be inferred by the semantic analysis.
+	Type type_expr;
+
 public:
 	// To resolve type erasure
 	enum expression {
@@ -99,6 +109,15 @@ public:
 	};
 
 	virtual expression type_of_expression(void) = 0;
+
+	void set_type(Type::_Type _type){
+		type_expr.type = _type;
+	}
+
+	void set_type(std::string id){
+		type_expr.type = Type::_Type::ID;
+		type_expr.id = id;
+	}
 };
 
 class node_literal : public node_expr {};

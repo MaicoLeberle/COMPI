@@ -33,6 +33,10 @@ class node_method_call_expr;
 
 /* Implementation of the class "visitor", that defines the interface for
    every visitor. */
+
+/* TODO: necesité eliminar el calificador const porque hay visitors (como
+ 	 el de semantic analysis) cuyos métodos sí modifican el nodo que reciben
+ 	 por parámetro */
 class visitor {
 public:
 	/* Determines the kind of node_expr that it receives as parameter,
@@ -167,39 +171,39 @@ public:
 	}
 
 	// Program
-	virtual void visit(const node_program& node) = 0;
+	virtual void visit(node_program& node) = 0;
 
 	// Class declaration
-	virtual void visit(const node_class_decl& node) = 0;
-	virtual void visit(const node_field_decl& node) = 0;
-	virtual void visit(const node_id& node) = 0;
-	virtual void visit(const node_method_decl& node) = 0;
-	virtual void visit(const node_parameter_identifier& node) = 0;
-	virtual void visit(const node_body& node) = 0;
-	virtual void visit(const node_block& node) = 0;
+	virtual void visit(node_class_decl& node) = 0;
+	virtual void visit(node_field_decl& node) = 0;
+	virtual void visit(node_id& node) = 0;
+	virtual void visit(node_method_decl& node) = 0;
+	virtual void visit(node_parameter_identifier& node) = 0;
+	virtual void visit(node_body& node) = 0;
+	virtual void visit(node_block& node) = 0;
 
 	// Statements
-	virtual void visit(const node_assignment_statement& node) = 0;
-	virtual void visit(const node_method_call_statement& node) = 0;
-	virtual void visit(const node_if_statement& node) = 0;
-	virtual void visit(const node_for_statement& node) = 0;
-	virtual void visit(const node_while_statement& node) = 0;
-	virtual void visit(const node_return_statement& node) = 0;
-	virtual void visit(const node_break_statement& node) = 0;
-	virtual void visit(const node_continue_statement& node) = 0;
-	virtual void visit(const node_skip_statement& node) = 0;
+	virtual void visit(node_assignment_statement& node) = 0;
+	virtual void visit(node_method_call_statement& node) = 0;
+	virtual void visit(node_if_statement& node) = 0;
+	virtual void visit(node_for_statement& node) = 0;
+	virtual void visit(node_while_statement& node) = 0;
+	virtual void visit(node_return_statement& node) = 0;
+	virtual void visit(node_break_statement& node) = 0;
+	virtual void visit(node_continue_statement& node) = 0;
+	virtual void visit(node_skip_statement& node) = 0;
 
 	// Expressions
-	virtual void visit(const node_int_literal& node) = 0;
-	virtual void visit(const node_float_literal& node) = 0;
-	virtual void visit(const node_bool_literal& node) = 0;
-	virtual void visit(const node_string_literal& node) = 0;
-	virtual void visit(const node_binary_operation_expr& node) = 0;
-	virtual void visit(const node_location& node) = 0;
-	virtual void visit(const node_negate_expr& node) = 0;
-	virtual void visit(const node_negative_expr& node) = 0;
-	virtual void visit(const node_parentheses_expr& node) = 0;
-	virtual void visit(const node_method_call_expr& node) = 0;
+	virtual void visit(node_int_literal& node) = 0;
+	virtual void visit(node_float_literal& node) = 0;
+	virtual void visit(node_bool_literal& node) = 0;
+	virtual void visit(node_string_literal& node) = 0;
+	virtual void visit(node_binary_operation_expr& node) = 0;
+	virtual void visit(node_location& node) = 0;
+	virtual void visit(node_negate_expr& node) = 0;
+	virtual void visit(node_negative_expr& node) = 0;
+	virtual void visit(node_parentheses_expr& node) = 0;
+	virtual void visit(node_method_call_expr& node) = 0;
 
 	// Destructor
 	//virtual ~visitor() = 0;
