@@ -1,13 +1,55 @@
 #include "code_generator.h"
 
-code_generator::code_generator(instructions_list *_ir) : ir(_ir) {
+code_generator::code_generator(instructions_list *_ir, ids_info *_s_table) :
+ir(_ir), s_table(_s_table) {
+
 	translation = new asm_instructions_list();
+}
+
+/*void code_generator::print_intel_syntax(){
+	for(asm_instruction_list::iterator it = translation.size())
+}*/
+
+operand_pointer code_generator::get_address(address_pointer address){
+	// TODO: cómo discriminamos los demás casos de operand?
+	operand_pointer ret = operand_pointer(new operand);
+
+	switch(address->type){
+		case address_type::ADDRESS_NAME:
+			ret->op_addr = operand_addressing::MEMORY;
+			ret->value.mem.offset = -s_table->get_offset(*address->value.name);
+			// TODO: no utilizamos base, scale, index.
+			ret->value.mem.base = 0;
+			ret->value.mem.scale = 0;
+			ret->value.mem.index = 0;
+			break;
+
+		case address_type::ADDRESS_CONSTANT:
+			ret->op_addr = operand_addressing::IMMEDIATE;
+
+			switch(address->value.constant.type){
+				case value_type::BOOLEAN:
+					ret->value.imm.bval = address->value.constant.val.bval;
+					break;
+
+				case value_type::INTEGER:
+					ret->value.imm.ival = address->value.constant.val.ival;
+					break;
+
+				case value_type::FLOAT:
+					ret->value.imm.fval = address->value.constant.val.fval;
+					break;
+			}
+
+			break;
+	}
+
 }
 
 void code_generator::translate_binary_op(const quad_pointer& instruction){
 
 	switch(instruction->op){
-		case TIMES:
+		case quad_oper::TIMES:{
 			// BINARY_ASSIGN x = y * z:
 			//		mov[b|w|l|q] z,register
 			// 		imulw y,z (z = z ∗ y, z debe ser un registro)
@@ -16,28 +58,30 @@ void code_generator::translate_binary_op(const quad_pointer& instruction){
 			operand_pointer x = get_address(instruction->result);
 			operand_pointer y = get_address(instruction->arg1);
 			operand_pointer z = get_address(instruction->arg2);
-			data_type ops_type; // TODO: cómo determino el tipo de los operandos?
 			// We use a new register to ensure that the second operand can be
 			// the destination of the product.
 			// TODO: en la generación de código intermedio, no nos aseguramos de
 			// esto?
-			translation->push_back(new_mov_instruction(z, new_register, ops_type));
-			translation->push_back(new_mul_instruction(y, new_register, ops_type));
-			translation->push_back(new_mov_instruction(new_register, x, ops_type));
+			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
+			translation->push_back(new_mov_instruction(z, new_register, data_type::L));
+			translation->push_back(new_mul_instruction(y, new_register, data_type::L));
+			translation->push_back(new_mov_instruction(new_register, x, data_type::L));
+			break;
+		}
 
-		case DIVIDE:
+		case quad_oper::DIVIDE:{
 			// BINARY_ASSIGN x = y / z:
 			//		mov[b|w|l|q] y,%edx::%eax (puede ir así?)
 			// 		idivl z (signed divide of %edx::%eax by z; quotient in %eax, remainder in %edx)
 			// 		mov[b|w|l|q] %eax,x
 			operand_pointer edx_reg = new_register_operand(register_id::EDX);
 			operand_pointer eax_reg = new_register_operand(register_id::EAX);
-			data_type ops_type; // TODO: cómo determino el tipo de los operandos?
+			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 			operand_pointer x = get_address(instruction->result);
 			operand_pointer y = get_address(instruction->arg1);
 			operand_pointer z = get_address(instruction->arg2);
 			// TODO: estoy moviendo los primeros 32 bits de y en eax?
-			translation->push_back(new_mov_instruction(y, eax_reg, ops_type));
+			translation->push_back(new_mov_instruction(y, eax_reg, data_type::L));
 			// TODO: quizás deberíamos guardar "y" en algún registro, hacer corrimiento
 			// de 32 posiciones hacia la derecha (para quedarnos con los 32 bits
 			// de mayor peso), y guardar el resultado en EDX
@@ -46,8 +90,10 @@ void code_generator::translate_binary_op(const quad_pointer& instruction){
 			translation->push_back(new_mov_instruction(zero, edx_reg, ops_type));
 			translation->push_back(new_div_instruction(z, ops_type));
 			translation->push_back(new_mov_instruction(eax_reg, x, ops_type));
+			break;
+		}
 
-		case MOD:
+		case quad_oper::MOD:{
 			// BINARY_ASSIGN x = y / z:
 			//		mov[b|w|l|q] y,%edx::%eax (puede ir así?)
 			// 		idivl z (signed divide of %edx::%eax by z; quotient in %eax, remainder in %edx)
@@ -56,7 +102,7 @@ void code_generator::translate_binary_op(const quad_pointer& instruction){
 			// 		mov[b|w|l|q] %edx,x
 			operand_pointer edx_reg = new_register_operand(register_id::EDX);
 			operand_pointer eax_reg = new_register_operand(register_id::EAX);
-			data_type ops_type; // TODO: cómo determino el tipo de los operandos?
+			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 			operand_pointer x = get_address(instruction->result);
 			operand_pointer y = get_address(instruction->arg1);
 			operand_pointer z = get_address(instruction->arg2);
@@ -70,8 +116,10 @@ void code_generator::translate_binary_op(const quad_pointer& instruction){
 			translation->push_back(new_mov_instruction(zero, edx_reg, ops_type));
 			translation->push_back(new_div_instruction(z, ops_type));
 			translation->push_back(new_mov_instruction(edx_reg, x, ops_type));
+			break;
+		}
 
-		case PLUS:
+		case quad_oper::PLUS:{
 			// BINARY_ASSIGN x = y + z:
 			//		addw y,z (z = y+z) Los operandos son de tipo word
 			// 		mov[b|w|l|q] z,x (tendremos que ver el tipo de los operandos
@@ -80,12 +128,14 @@ void code_generator::translate_binary_op(const quad_pointer& instruction){
 			operand_pointer x = get_address(instruction->result);
 			operand_pointer y = get_address(instruction->arg1);
 			operand_pointer z = get_address(instruction->arg2);
-			data_type ops_type; // TODO: cómo determino el tipo de los operandos?
+			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 			translation->push_back(new_mov_instruction(z, new_register, ops_type));
 			translation->push_back(new_add_instruction(y, new_register, ops_type));
 			translation->push_back(new_mov_instruction(new_register, x, ops_type));
+			break;
+		}
 
-		case MINUS:
+		case quad_oper::MINUS:{
 			// BINARY_ASSIGN x = y - z:
 			//		subw y,z (z = z − y)
 			//		mov[b|w|l|q] z,x
@@ -93,41 +143,43 @@ void code_generator::translate_binary_op(const quad_pointer& instruction){
 			operand_pointer x = get_address(instruction->result);
 			operand_pointer y = get_address(instruction->arg1);
 			operand_pointer z = get_address(instruction->arg2);
-			data_type ops_type; // TODO: cómo determino el tipo de los operandos?
+			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 			translation->push_back(new_mov_instruction(z, new_register, ops_type));
 			translation->push_back(new_sub_instruction(y, new_register, ops_type));
 			translation->push_back(new_mov_instruction(new_register, x, ops_type));
+			break;
+		}
 
 		// TODO: está bien poner less, less_equal, etc aquí?
-		case LESS:
+		/*case quad_oper::LESS:
 
-		case LESS_EQUAL:
+		case quad_oper::LESS_EQUAL:
 
-		case GREATER:
+		case quad_oper::GREATER:
 
-		case GREATER_EQUAL:
+		case quad_oper::GREATER_EQUAL:
 
-		case EQUAL:
+		case quad_oper::EQUAL:
 
-		case DISTINCT:
+		case quad_oper::DISTINCT:
 
-		case AND:
+		case quad_oper::AND:
 
-		case OR:
+		case quad_oper::OR:*/
 	}
 }
 
 void code_generator::translate_unary_op(const quad_pointer& instruction){
 
-	switch(instruction->oper){
-		case NEGATIVE:
+	switch(instruction->op){
+		case quad_oper::NEGATIVE:{
 			// UNARY_ASSIGN x = -y
 			// 		negw y (y = −y)
 			// 		mov[b|w|l|q] y,x
 			operand_pointer new_register; // TODO: cómo lo defino?
 			operand_pointer x = get_address(instruction->result);
 			operand_pointer y = get_address(instruction->arg1);
-			data_type ops_type; // TODO: cómo determino el tipo de los operandos?
+			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 			// We use a new register to ensure that the second operand can be
 			// the destination of the product.
 			// TODO: en la generación de código intermedio, no nos aseguramos de
@@ -135,15 +187,17 @@ void code_generator::translate_unary_op(const quad_pointer& instruction){
 			translation->push_back(new_mov_instruction(y, new_register, ops_type));
 			translation->push_back(new_neg_instruction(new_register, ops_type));
 			translation->push_back(new_mov_instruction(new_register, x, ops_type));
+			break;
+		}
 
-		case NEGATION:
+		case quad_oper::NEGATION:{
 			// UNARY_ASSIGN x = not y
 			// notw y (y =∼ y (bitwise complement))
 			// mov[b|w|l|q] y,x
 			operand_pointer new_register; // TODO: cómo lo defino?
 			operand_pointer x = get_address(instruction->result);
 			operand_pointer y = get_address(instruction->arg1);
-			data_type ops_type; // TODO: cómo determino el tipo de los operandos?
+			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 			// We use a new register to ensure that the second operand can be
 			// the destination of the product.
 			// TODO: en la generación de código intermedio, no nos aseguramos de
@@ -151,6 +205,8 @@ void code_generator::translate_unary_op(const quad_pointer& instruction){
 			translation->push_back(new_mov_instruction(y, new_register, ops_type));
 			translation->push_back(new_neg_instruction(new_register, ops_type));
 			translation->push_back(new_mov_instruction(new_register, x, ops_type));
+			break;
+		}
 	}
 }
 
@@ -158,6 +214,8 @@ void code_generator::translate_copy(const quad_pointer& instruction){
 	// COPY x = y:
 	// 		mov[b|w|l|q] y,x (move s to d; tendremos que ver el tipo de los operandos
 	// 		para determinar el tipo de instrucción?)
+	// TODO: por ahora no hacemos arreglos
+	/*
 	operand_pointer x = get_address(instruction->result);
 	operand_pointer y = get_address(instruction->arg1);
 	data_type ops_type; // TODO: cómo determino el tipo de los operandos?
@@ -165,7 +223,7 @@ void code_generator::translate_copy(const quad_pointer& instruction){
 	// the destination of the product.
 	// TODO: en la generación de código intermedio, no nos aseguramos de
 	// esto?
-	translation->push_back(new_mov_instruction(y, x, ops_type));
+	translation->push_back(new_mov_instruction(y, x, ops_type));*/
 }
 
 void code_generator::translate_indexed_copy_to(const quad_pointer& instruction){
@@ -174,6 +232,8 @@ void code_generator::translate_indexed_copy_to(const quad_pointer& instruction){
 	//		tenemos que recordar la notación offset(base,index,scale) que representa
 	//		la dirección (base + index × scale + offset) TODO: ver qué significa cada
 	//		componente)
+	// TODO: por ahora no hacemos arreglos
+	/*
 	// TODO: de donde saco offset, base, etc?
 	operand_pointer x = new_memory_operand(offset, base, index, scale);
 	operand_pointer y = get_address(instruction->arg2);
@@ -182,12 +242,14 @@ void code_generator::translate_indexed_copy_to(const quad_pointer& instruction){
 	// the destination of the product.
 	// TODO: en la generación de código intermedio, no nos aseguramos de
 	// esto?
-	translation->push_back(new_mov_instruction(y, x, ops_type));
+	translation->push_back(new_mov_instruction(y, x, ops_type));*/
 }
 
 void code_generator::translate_indexed_copy_from(const quad_pointer& instruction){
 	// INDEXED_COPY_FROM,	// x = y[i]
 	// 		mov[b|w|l|q] y[i], x (idem caso anterior)
+	// TODO: por ahora no hacemos arreglos
+	/*
 	// TODO: de donde saco offset, base, etc?
 	operand_pointer y = new_memory_operand(offset, base, index, scale);
 	operand_pointer x = get_address(instruction->result);
@@ -196,7 +258,7 @@ void code_generator::translate_indexed_copy_from(const quad_pointer& instruction
 	// the destination of the product.
 	// TODO: en la generación de código intermedio, no nos aseguramos de
 	// esto?
-	translation->push_back(new_mov_instruction(y, x, ops_type));
+	translation->push_back(new_mov_instruction(y, x, ops_type));*/
 }
 
 void code_generator::translate_unconditional_jump(const quad_pointer& instruction){
@@ -218,7 +280,7 @@ void code_generator::translate_conditional_jump(const quad_pointer& instruction)
 	// TODO: fijarse si estamos extrayendo correctamente las distintas componentes
 	// de instruction
 	operand_pointer x = get_address(instruction->arg1);
-	data_type ops_type; // TODO: cómo determino el tipo de los operandos?
+	data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 	// TODO: en la generación de código intermedio, no nos aseguramos de
 	// esto?
 	translation->push_back(new_mov_instruction(new_immediate_int_operand(1),
@@ -242,13 +304,13 @@ void code_generator::translate_conditional_jump(const quad_pointer& instruction)
 void code_generator::translate_relational_jump(const quad_pointer& instruction){
 	operand_pointer x = get_address(instruction->arg1);
 	operand_pointer y = get_address(instruction->arg2);
-	data_type ops_type; // TODO: cómo determino el tipo de los operandos?
+	data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 	// TODO: en la generación de código intermedio, no nos aseguramos de
 	// esto?
 	translation->push_back(new_cmp_instruction(x, y, ops_type));
 
 	switch(instruction->op){
-		case operation::LESS:
+		case quad_oper::LESS:
 			// RELATIONAL_JUMP: if x < y goto L
 			//		cmp[b|w|l|q] x , y (set flags based on y − x)
 			//		jl L 				(salta si la comparación resultó less (signed <))
@@ -257,7 +319,7 @@ void code_generator::translate_relational_jump(const quad_pointer& instruction){
 			translation->push_back(new_jl_instruction(*instruction->result->value.label));
 			break;
 
-		case operation::LESS_EQUAL:
+		case quad_oper::LESS_EQUAL:
 			// RELATIONAL_JUMP,	// if x <= y goto L
 			//		cmp[b|w|l|q] x , y (set flags based on y − x)
 			//		jle L 				(salta si la comparación resultó less or
@@ -265,28 +327,28 @@ void code_generator::translate_relational_jump(const quad_pointer& instruction){
 			translation->push_back(new_jle_instruction(*instruction->result->value.label));
 			break;
 
-		case operation::GREATER:
+		case quad_oper::GREATER:
 			// RELATIONAL_JUMP,	// if x > y goto L
 			// 		cmp[b|w|l|q] x , y (set flags based on y − x)
 			//		jg L
 			translation->push_back(new_jg_instruction(*instruction->result->value.label));
 			break;
 
-		case operation::GREATER_EQUAL:
+		case quad_oper::GREATER_EQUAL:
 			// RELATIONAL_JUMP,	// if x >= y goto L
 			// 		cmp[b|w|l|q] x , y (set flags based on y − x)
 			//		jge L 				(salta si la comparación resultó greater or equal (signed >=)
 			translation->push_back(new_jge_instruction(*instruction->result->value.label));
 			break;
 
-		case operation::EQUAL:
+		case quad_oper::EQUAL:
 			// RELATIONAL_JUMP,	// if x == y goto L
 			// 		cmp[b|w|l|q] x , y (set flags based on y − x)
 			//		je L 				(salta si la comparación resultó equal to zero)
 			translation->push_back(new_je_instruction(*instruction->result->value.label));
 			break;
 
-		case operation::DISTINCT:
+		case quad_oper::DISTINCT:
 			// RELATIONAL_JUMP,	// if x != y goto L
 			// 		cmp[b|w|l|q] x , y (set flags based on y − x)
 			//		jne L 				(salta si la comparación resultó not equal to zero)
@@ -312,7 +374,7 @@ void code_generator::translate_parameter(const quad_pointer& instruction){
 	// 		Observación: Any arguments passed on the stack are pushed in reverse
 	// 		(right-to-left) order.
 	// TODO: hago el caso de los enteros...
-	data_type ops_type; // TODO: cómo determino el tipo de los operandos?
+	data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 	operand_pointer reg; // TODO: cómo lo defino?
 	operand_pointer x = get_address(instruction->arg1);
 	translation->push_back(new_mov_instruction(x, reg, ops_type));
@@ -344,6 +406,7 @@ void code_generator::translate_return(const quad_pointer& instruction){
 	// 			ret					(ret pops the top of stack into %rip, thus resuming
 	// 								execution in the calling routine)
 	// TODO: por ahora, solo resuelvo el caso para enteros
+	data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 	operand_pointer rax = new_register_operand(register_id::RAX);
 	operand_pointer x = get_address(instruction->arg1);
 	translation->push_back(new_mov_instruction(x, rax, ops_type));
@@ -357,10 +420,10 @@ void code_generator::translate_label(const quad_pointer& instruction){
 	translation->push_back(new_label_instruction(*instruction->result->value.label));
 }
 
-void code_generator::translate_begin_procedure(const quad_pointer& instruction){
+void code_generator::translate_enter_procedure(const quad_pointer& instruction){
 	// BEGIN_PROCEDURE n
 	//		enter n
-	translation->push_back(new_enter_instruction(*instruction->result->value.constant.ival));
+	translation->push_back(new_enter_instruction(instruction->result->value.constant.val.ival));
 }
 
 void code_generator::translate_ir(void){
@@ -371,61 +434,61 @@ void code_generator::translate_ir(void){
 	it != ir->end(); ++it){
 
 		switch((*it)->type){
-			case BINARY_ASSIGN:
+			case quad_type::BINARY_ASSIGN:
 				translate_binary_op(*it);
 				break;
 
-			case UNARY_ASSIGN:
+			case quad_type::UNARY_ASSIGN:
 				translate_unary_op(*it);
 				break;
 
-			case COPY:
+			case quad_type::COPY:
 				translate_copy(*it);
 				break;
 
 
-			case INDEXED_COPY_TO:
+			case quad_type::INDEXED_COPY_TO:
 				translate_indexed_copy_to(*it);
 				break;
 
-			case INDEXED_COPY_FROM:
+			case quad_type::INDEXED_COPY_FROM:
 				translate_indexed_copy_from(*it);
 				break;
 
-			case UNCONDITIONAL_JUMP:
+			case quad_type::UNCONDITIONAL_JUMP:
 				translate_unconditional_jump(*it);
 				break;
 
-			case CONDITIONAL_JUMP:
+			case quad_type::CONDITIONAL_JUMP:
 				translate_conditional_jump(*it);
 				break;
 
-			case RELATIONAL_JUMP:
+			case quad_type::RELATIONAL_JUMP:
 				translate_relational_jump(*it);
 				break;
 
-			case PARAMETER:
+			case quad_type::PARAMETER:
 				translate_parameter(*it);
 				break;
 
-			case PROCEDURE_CALL:
+			case quad_type::PROCEDURE_CALL:
 				translate_procedure_call(*it);
 				break;
 
-			case FUNCTION_CALL:
+			case quad_type::FUNCTION_CALL:
 				translate_function_call(*it);
 				break;
 
-			case RETURN:
+			case quad_type::RETURN:
 				translate_return(*it);
 				break;
 
-			case LABEL:
+			case quad_type::LABEL:
 				translate_label(*it);
 				break;
 
-			case BEGIN_PROCEDURE:
-				translate_begin_procedure(*it);
+			case quad_type::ENTER_PROCEDURE:
+				translate_enter_procedure(*it);
 		}
 
 	}

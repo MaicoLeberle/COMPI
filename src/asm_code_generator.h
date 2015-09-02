@@ -2,6 +2,7 @@
 #define CODE_GENERATOR_H
 
 #include "inter_code_gen_visitor.h"
+#include "asm_instruction.h"
 
 
 /* BINARY_ASSIGN x = y + z:
@@ -116,13 +117,16 @@
 
 class code_generator {
 public:
-	code_generator(instructions_list*);
+	code_generator(instructions_list*, ids_info*);
 
 	void translate_ir(void);
 
 private:
 	instructions_list *ir;
-	asm_instructions_list translation;
+	asm_instructions_list *translation;
+	ids_info *s_table;
+
+	operand_pointer get_address(address_pointer address);
 	void translate_binary_op(const quad_pointer&);
 	void translate_unary_op(const quad_pointer&);
 	void translate_copy(const quad_pointer&);
@@ -136,7 +140,7 @@ private:
 	void translate_function_call(const quad_pointer&);
 	void translate_return(const quad_pointer&);
 	void translate_label(const quad_pointer&);
-	void translate_begin_procedure(const quad_pointer&);
-}
+	void translate_enter_procedure(const quad_pointer&);
+};
 
 #endif
