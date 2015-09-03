@@ -3,6 +3,7 @@
 #include "node.h"
 #include "semantic_analysis.h"
 #include "./tests/test_inter_code_gen_visitor.h"
+#include "./tests/test_asm_code_generator.h"
 
 extern program_pointer ast;
 typedef struct yy_buffer_state * YY_BUFFER_STATE;
@@ -1011,6 +1012,7 @@ int main(int argc, const char* argv[]) {
 	test_parser();
 	test_semantic_analysis();
 	test_inter_code_gen_visitor();
+	test_asm_code_generator();
 
     return 0;
 }

@@ -115,9 +115,9 @@
  *		enter n
  * */
 
-class code_generator {
+class asm_code_generator {
 public:
-	code_generator(instructions_list*, ids_info*);
+	asm_code_generator(instructions_list*, ids_info*);
 
 	void translate_ir(void);
 

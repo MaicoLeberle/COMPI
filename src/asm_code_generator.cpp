@@ -1,16 +1,16 @@
-#include "code_generator.h"
+#include "asm_code_generator.h"
 
-code_generator::code_generator(instructions_list *_ir, ids_info *_s_table) :
+asm_code_generator::asm_code_generator(instructions_list *_ir, ids_info *_s_table) :
 ir(_ir), s_table(_s_table) {
 
 	translation = new asm_instructions_list();
 }
 
-/*void code_generator::print_intel_syntax(){
+/*void asm_code_generator::print_intel_syntax(){
 	for(asm_instruction_list::iterator it = translation.size())
 }*/
 
-operand_pointer code_generator::get_address(address_pointer address){
+operand_pointer asm_code_generator::get_address(address_pointer address){
 	// TODO: cómo discriminamos los demás casos de operand?
 	operand_pointer ret = operand_pointer(new operand);
 
@@ -46,7 +46,7 @@ operand_pointer code_generator::get_address(address_pointer address){
 
 }
 
-void code_generator::translate_binary_op(const quad_pointer& instruction){
+void asm_code_generator::translate_binary_op(const quad_pointer& instruction){
 
 	switch(instruction->op){
 		case quad_oper::TIMES:{
@@ -169,7 +169,7 @@ void code_generator::translate_binary_op(const quad_pointer& instruction){
 	}
 }
 
-void code_generator::translate_unary_op(const quad_pointer& instruction){
+void asm_code_generator::translate_unary_op(const quad_pointer& instruction){
 
 	switch(instruction->op){
 		case quad_oper::NEGATIVE:{
@@ -210,7 +210,7 @@ void code_generator::translate_unary_op(const quad_pointer& instruction){
 	}
 }
 
-void code_generator::translate_copy(const quad_pointer& instruction){
+void asm_code_generator::translate_copy(const quad_pointer& instruction){
 	// COPY x = y:
 	// 		mov[b|w|l|q] y,x (move s to d; tendremos que ver el tipo de los operandos
 	// 		para determinar el tipo de instrucción?)
@@ -226,7 +226,7 @@ void code_generator::translate_copy(const quad_pointer& instruction){
 	translation->push_back(new_mov_instruction(y, x, ops_type));*/
 }
 
-void code_generator::translate_indexed_copy_to(const quad_pointer& instruction){
+void asm_code_generator::translate_indexed_copy_to(const quad_pointer& instruction){
 	// INDEXED_COPY_TO,	// x[i] = y
 	//		mov[b|w|l|q] y,x[i] (igual al anterior, solo que para representar x[i]
 	//		tenemos que recordar la notación offset(base,index,scale) que representa
@@ -245,7 +245,7 @@ void code_generator::translate_indexed_copy_to(const quad_pointer& instruction){
 	translation->push_back(new_mov_instruction(y, x, ops_type));*/
 }
 
-void code_generator::translate_indexed_copy_from(const quad_pointer& instruction){
+void asm_code_generator::translate_indexed_copy_from(const quad_pointer& instruction){
 	// INDEXED_COPY_FROM,	// x = y[i]
 	// 		mov[b|w|l|q] y[i], x (idem caso anterior)
 	// TODO: por ahora no hacemos arreglos
@@ -261,14 +261,14 @@ void code_generator::translate_indexed_copy_from(const quad_pointer& instruction
 	translation->push_back(new_mov_instruction(y, x, ops_type));*/
 }
 
-void code_generator::translate_unconditional_jump(const quad_pointer& instruction){
+void asm_code_generator::translate_unconditional_jump(const quad_pointer& instruction){
 	// UNCONDITIONAL_JUMP,	// goto L
 	// jmp L
 	// TODO: está en arg1 la etiqueta?
 	translation->push_back(new_jmp_instruction(*instruction->arg1->value.label));
 }
 
-void code_generator::translate_conditional_jump(const quad_pointer& instruction){
+void asm_code_generator::translate_conditional_jump(const quad_pointer& instruction){
 	// CONDITIONAL_JUMP,	// if x goto L
 	// 		TODO: primero debemos transformar el testeo de x en la comparación
 	// 		con el valor 0 o signo del mismo. Usaremos estas instrucciones
@@ -301,7 +301,7 @@ void code_generator::translate_conditional_jump(const quad_pointer& instruction)
 	}
 }
 
-void code_generator::translate_relational_jump(const quad_pointer& instruction){
+void asm_code_generator::translate_relational_jump(const quad_pointer& instruction){
 	operand_pointer x = get_address(instruction->arg1);
 	operand_pointer y = get_address(instruction->arg2);
 	data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
@@ -362,7 +362,7 @@ void code_generator::translate_relational_jump(const quad_pointer& instruction){
 
 }
 
-void code_generator::translate_parameter(const quad_pointer& instruction){
+void asm_code_generator::translate_parameter(const quad_pointer& instruction){
 	// PARAMETER: param x
 	// 		Integer arguments (up to the first six) are passed in registers,
 	// 		namely: %rdi, %rsi, %rdx, %rcx, %r8, %r9. Así es que la traducción
@@ -380,7 +380,7 @@ void code_generator::translate_parameter(const quad_pointer& instruction){
 	translation->push_back(new_mov_instruction(x, reg, ops_type));
 }
 
-void code_generator::translate_procedure_call(const quad_pointer& instruction){
+void asm_code_generator::translate_procedure_call(const quad_pointer& instruction){
 	// PROCEDURE_CALL: call p, n
 	// 		call p				(n no hace falta?)
 	// 		TODO: qué deberíamos hacer con esto:
@@ -390,11 +390,11 @@ void code_generator::translate_procedure_call(const quad_pointer& instruction){
 	translation->push_back(new_call_instruction(*instruction->result->value.label));
 }
 
-void code_generator::translate_function_call(const quad_pointer& instruction){
+void asm_code_generator::translate_function_call(const quad_pointer& instruction){
 
 }
 
-void code_generator::translate_return(const quad_pointer& instruction){
+void asm_code_generator::translate_return(const quad_pointer& instruction){
 	// Observación: An integer-valued function returns its result in %rax. En
 	// 		ese caso, la traducción de return debería ser:
 	// 			mov y, %rax
@@ -414,19 +414,19 @@ void code_generator::translate_return(const quad_pointer& instruction){
 	translation->push_back(new_ret_instruction());
 }
 
-void code_generator::translate_label(const quad_pointer& instruction){
+void asm_code_generator::translate_label(const quad_pointer& instruction){
 	// LABEL: L :
 	//		L:
 	translation->push_back(new_label_instruction(*instruction->result->value.label));
 }
 
-void code_generator::translate_enter_procedure(const quad_pointer& instruction){
+void asm_code_generator::translate_enter_procedure(const quad_pointer& instruction){
 	// BEGIN_PROCEDURE n
 	//		enter n
 	translation->push_back(new_enter_instruction(instruction->result->value.constant.val.ival));
 }
 
-void code_generator::translate_ir(void){
+void asm_code_generator::translate_ir(void){
 	// TODO: esta es la forma de iterar una instructions_list?
 
 	// Translator with window size of 1

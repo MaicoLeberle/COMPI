@@ -1,6 +1,12 @@
 #ifndef ASM_INSTRUCTION_H
 #define ASM_INSTRUCTION_H
 
+#include <memory> // std::shared_ptr
+#include <string> // std::string
+#include <vector> // std::vector
+#include <cassert> // assert
+#include <iostream> // cout
+
 enum class register_id {
 	// 64-bits registers
 	RAX,
@@ -24,7 +30,7 @@ enum class register_id {
 	EBX,
 	ECX,
 	EDX
-}
+};
 
 enum class operand_addressing {
 	IMMEDIATE, // Immediate value
@@ -65,13 +71,17 @@ struct operand {
 			// TODO: coloco sólo estos campos, ya que son los únicos tipos
 			// de constantes que tenemos en nuestro lenguaje,pero no tienen relación
 			// directa con el contenido de type...
+			// TODO: en este campo imm no tengo información sobre el tipo del
+			// operando. Por otro lado, el enum data_type no distingue entre
+			// enteros y booleanos. Será que la representación de los mismos
+			// no varía?
 			int ival;
 			float fval;
 			bool bval;
 		} imm;
 
 		// Label representation
-		std::string label;
+		std::string *label;
 	} value;
 };
 
@@ -133,25 +143,27 @@ operand_pointer new_immediate_int_operand(int);
 operand_pointer new_memory_operand(int offset, int base, int index, int scale);
 
 // Constructors of instructions.
-asm_instruction_pointer new_mov_instruction(address_pointer source,
-											address_pointer destination,
+asm_instruction_pointer new_mov_instruction(operand_pointer source,
+											operand_pointer destination,
 											data_type ops_type);
-asm_instruction_pointer new_shr_instruction(address_pointer imm,
-											address_pointer destination,
+asm_instruction_pointer new_shr_instruction(operand_pointer imm,
+											operand_pointer destination,
 											data_type ops_type);
-asm_instruction new_div_instruction(address_pointer, data_type);
-asm_instruction new_mul_instruction(address_pointer source,
-								address_pointer destination,
+asm_instruction_pointer new_div_instruction(operand_pointer, data_type);
+
+asm_instruction_pointer new_mul_instruction(operand_pointer source,
+								operand_pointer destination,
 								data_type ops_type);
-asm_instruction_pointer new_add_instruction(address_pointer source,
-								address_pointer destination,
+
+asm_instruction_pointer new_add_instruction(operand_pointer source,
+								operand_pointer destination,
 								data_type ops_type);
-asm_instruction_pointer new_sub_instruction(address_pointer source,
-								address_pointer destination,
+asm_instruction_pointer new_sub_instruction(operand_pointer source,
+								operand_pointer destination,
 								data_type ops_type);
-asm_instruction_pointer new_neg_instruction(address_pointer destination,
+asm_instruction_pointer new_neg_instruction(operand_pointer destination,
 											data_type ops_type);
-asm_instruction_pointer new_cmp_instruction(address_pointer, address_pointer,
+asm_instruction_pointer new_cmp_instruction(operand_pointer, operand_pointer,
 											data_type);
 asm_instruction_pointer new_jmp_instruction(std::string);
 asm_instruction_pointer new_je_instruction(std::string);

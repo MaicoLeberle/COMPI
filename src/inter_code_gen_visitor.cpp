@@ -13,8 +13,12 @@ instructions_list* inter_code_gen_visitor::get_inst_list() {
 	return inst_list;
 }
 
-intermediate_symtable* inter_code_gen_visitor::get_symtable(void){
+intermediate_symtable* inter_code_gen_visitor::get_symtable(){
 	return &s_table;
+}
+
+ids_info* inter_code_gen_visitor::get_ids_info(){
+	return s_table.get_ids_info();
 }
 
 // TODO: este método está repetido en semantic_analysis
@@ -446,6 +450,8 @@ void inter_code_gen_visitor::visit(node_id& node) {
 void inter_code_gen_visitor::visit(node_method_decl& node){
 	// TODO: aquí debería agregar la variable "this" a la tabla de símbolos?
 	// donde debería utilizar this en la traducción?
+	// TODO: tengo que agregar como parámetros en las llamadas, a los
+	// atributos del objeto para el cual se llama el método.
 	#ifdef __DEBUG
 		std::cout << "Translating method " << node.id << std::endl;
 	#endif

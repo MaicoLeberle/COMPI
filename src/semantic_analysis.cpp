@@ -8,6 +8,11 @@ semantic_analysis::semantic_analysis () {
 	well_formed = false;
 }
 
+// TODO: actualmente no podemos tener definiciones de funciones mutuamente
+// recursivas.
+// TODO: tenemos que hacer las "librerías estandar" de COMPI, en donde
+// definimos los métodos print_bool y print_int
+
 void semantic_analysis::register_error(std::string error, error_id error_encountered){
 	std::cerr << "\n" << error << std::endl;
 	// The process is not interrupted. We just count the error.

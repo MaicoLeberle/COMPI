@@ -35,19 +35,19 @@ operand_pointer new_label_operand(std::string label){
 
 	operand_pointer op = operand_pointer(new operand);
 	op->op_addr = operand_addressing::NONE;
-	op->value.label = label;
+	op->value.label = new std::string(label); // TODO: liberar!
 
 	return op;
 }
 
 // Constructors of instructions.
-asm_instruction_pointer new_mov_instruction(address_pointer source,
-								address_pointer destination,
+asm_instruction_pointer new_mov_instruction(operand_pointer source,
+								operand_pointer destination,
 								data_type ops_type){
 
 	#ifdef __DEBUG
-		assert(_destination->op_addr == operand_addressing::REGISTER ||
-			   _destination->op_addr == operand_addressing::MEMORY);
+		assert(destination->op_addr == operand_addressing::REGISTER ||
+			   destination->op_addr == operand_addressing::MEMORY);
 	#endif
 
 	// TODO: precondición: source y destination se refieren a valores del
@@ -63,9 +63,9 @@ asm_instruction_pointer new_mov_instruction(address_pointer source,
 
 }
 
-asm_instruction_pointer new_mul_instruction(address_pointer source,
-								address_pointer destination,
-								data_type ops_type){
+asm_instruction_pointer new_mul_instruction(operand_pointer source,
+											operand_pointer destination,
+											data_type ops_type){
 
 	#ifdef __DEBUG
 		assert(destination->op_addr == operand_addressing::REGISTER ||
@@ -84,13 +84,14 @@ asm_instruction_pointer new_mul_instruction(address_pointer source,
 	return inst;
 }
 
-asm_instruction_pointer new_add_instruction(address_pointer source,
-								address_pointer destination,
+asm_instruction_pointer new_add_instruction(operand_pointer source,
+								operand_pointer destination,
 								data_type ops_type){
 
 	#ifdef __DEBUG
-		assert(destination->op_addr == operand_addressing::REGISTER ||
-			   destination->op_addr == operand_addressing::MEMORY);
+		std::cout << "New add instruction." << std::endl;
+		//assert(destination->op_addr == operand_addressing::REGISTER ||
+		//	   destination->op_addr == operand_addressing::MEMORY);
 	#endif
 
 	// TODO: precondición: source y destination se refieren a valores del
@@ -105,8 +106,8 @@ asm_instruction_pointer new_add_instruction(address_pointer source,
 	return inst;
 }
 
-asm_instruction_pointer new_sub_instruction(address_pointer source,
-								address_pointer destination,
+asm_instruction_pointer new_sub_instruction(operand_pointer source,
+								operand_pointer destination,
 								data_type ops_type){
 
 	#ifdef __DEBUG
@@ -126,7 +127,7 @@ asm_instruction_pointer new_sub_instruction(address_pointer source,
 	return inst;
 }
 
-asm_instruction_pointer new_div_instruction(address_pointer dividend,
+asm_instruction_pointer new_div_instruction(operand_pointer dividend,
 								data_type ops_type){
 
 	asm_instruction_pointer inst = asm_instruction_pointer(new asm_instruction);
@@ -137,8 +138,8 @@ asm_instruction_pointer new_div_instruction(address_pointer dividend,
 	return inst;
 }
 
-asm_instruction_pointer new_shr_instruction(address_pointer imm,
-											address_pointer destination,
+asm_instruction_pointer new_shr_instruction(operand_pointer imm,
+											operand_pointer destination,
 											data_type ops_type){
 
 	#ifdef __DEBUG
@@ -157,7 +158,7 @@ asm_instruction_pointer new_shr_instruction(address_pointer imm,
 	return inst;
 }
 
-asm_instruction_pointer new_neg_instruction(address_pointer destination,
+asm_instruction_pointer new_neg_instruction(operand_pointer destination,
 											data_type ops_type){
 
 	#ifdef __DEBUG
@@ -278,8 +279,8 @@ asm_instruction_pointer new_call_instruction(std::string label){
 	return inst;
 }
 
-asm_instruction_pointer new_cmp_instruction(address_pointer op_1,
-											address_pointer op_2,
+asm_instruction_pointer new_cmp_instruction(operand_pointer op_1,
+											operand_pointer op_2,
 											data_type ops_type){
 
 	asm_instruction_pointer inst = asm_instruction_pointer(new asm_instruction);

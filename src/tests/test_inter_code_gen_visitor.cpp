@@ -7,7 +7,7 @@ extern YY_BUFFER_STATE yy_scan_string(const char * str);
 extern void yy_switch_to_buffer(YY_BUFFER_STATE buffer);
 extern void yy_delete_buffer(YY_BUFFER_STATE buffer);
 
-instructions_list& translate(inter_code_gen_visitor& v, std::string program){
+void translate(inter_code_gen_visitor& v, std::string program){
 	YY_BUFFER_STATE program_buffer = yy_scan_string(program.c_str());
 	yy_switch_to_buffer(program_buffer);
 

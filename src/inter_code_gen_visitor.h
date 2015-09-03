@@ -14,7 +14,11 @@ public:
 
 	instructions_list* get_inst_list();
 
+	// TODO: hace falta este método?
 	intermediate_symtable* get_symtable(void);
+
+	ids_info* get_ids_info(void);
+
 	// Inherited interface, to allow the definition outside this
 	// class declaration.
 	// Program
