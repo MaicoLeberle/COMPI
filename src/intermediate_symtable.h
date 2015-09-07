@@ -86,11 +86,18 @@ public:
     /*  Precondition: the id has been registered, and it is of kind K_CLASS.
         Returns: the list of all the attributes in the class, ordered as they
         were in the class's definition.                                      */
-    std::list<std::string> get_list_attributes(std::string);
+    std::list<std::string>& get_list_attributes(std::string);
+
+    /*  Precondition: the id has been registered, and it is of kind K_METHOD.
+        Returns: the list of all parameters of the function, ordered as they
+        were in the method's definition.                                     */
+    std::list<std::string>& get_list_params(std::string);
 
     /*  Updates the number of local variables (this includes the temporary 
         ones).
-        Precondition: the id has been registered, and it is of kind K_METHOD.*/
+        Precondition: the id has been registered, and it is of kind K_METHOD.
+        The number of variables passed as parameter should be greater than
+        the size of the  list of parameters already put in the method's list.*/
     void set_number_vars(std::string, unsigned int);
 
 private:
@@ -117,6 +124,9 @@ private:
 
         /*  For classes.                                                     */
         std::list<std::string>* l_atts = NULL;
+
+        /*  For methods.                                                     */
+        std::list<std::string>* l_params = NULL;
 
     };
     
@@ -387,6 +397,10 @@ private:
     ids_info* information;
 
     symtables_stack scopes;
+
+    std::string* class_name = NULL;
+
+    std::string* func_name = NULL;
 
     unsigned int number_label = 0;
 };

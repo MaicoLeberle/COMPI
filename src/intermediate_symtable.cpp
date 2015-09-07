@@ -1,3 +1,4 @@
+#include <iostream>
 #include "intermediate_symtable.h"
 
 
@@ -67,6 +68,7 @@ std::string ids_info::register_method(std::string key, unsigned int locals, std:
     information.entry_kind = ids_info::K_METHOD;
     information.local_vars = new unsigned int(locals);
     information.owner = new std::string(owner);
+    information.l_params = new std::list<std::string>;
 
     std::string internal_key = key + "::" + owner;
     information.rep = internal_key;
@@ -99,7 +101,7 @@ void ids_info::unregister(std::string key) {
 }
 
 bool ids_info::id_exists(std::string key) {
-    return ((this->internal).find(key) != (this->internal).end());
+    return ((this->info_map).find(key) != (this->info_map).end());
 }
 
 std::string ids_info::get_id_rep(std::string key) {
@@ -140,10 +142,19 @@ std::string ids_info::get_owner_class(std::string key) {
     return *((((this->info_map).find(key))->second).owner);
 }
 
-std::list<std::string> ids_info::get_list_attributes(std::string key) {
+std::list<std::string>& ids_info::get_list_attributes(std::string key) {
     assert((((this->info_map).find(key))->second).entry_kind == ids_info::K_CLASS);
 
     return *((((this->info_map).find(key))->second).l_atts);
+}
+
+std::list<std::string>& ids_info::get_list_params(std::string key) {
+    assert(this->id_exists(key));
+    assert((this->info_map).find(key) != (this->info_map).end());
+    assert((((this->info_map).find(key))->second).entry_kind == ids_info::K_METHOD);
+    assert((((this->info_map).find(key))->second).l_params);
+
+    return(*((((this->info_map).find(key))->second).l_params));
 }
 
 void ids_info::set_number_vars(std::string key, unsigned int number) {
@@ -245,6 +256,7 @@ std::pair<intermediate_symtable::put_func_results, std::string*>
         if (res == symtables_stack::FUNC_ERROR)
             return(std::pair<intermediate_symtable::put_func_results, std::string*>(intermediate_symtable::FUNC_ERROR, NULL));
 
+        this->func_name = new std::string(key);
         std::string* rep = new std::string((this->information)->register_method(key, local_vars, class_name));
 
         return(std::pair<intermediate_symtable::put_func_results, std::string*>(intermediate_symtable::FUNC_PUT, rep));
@@ -262,6 +274,9 @@ std::pair<intermediate_symtable::put_param_results, std::string*>
         if(res == symtables_stack::PARAM_TYPE_ERROR)
             return(std::pair<intermediate_symtable::put_param_results, std::string*>(intermediate_symtable::PARAM_TYPE_ERROR, NULL));
 
+        assert(this->func_name);
+        assert((this->information)->id_exists(*(this->func_name)));
+        ((this->information)->get_list_params(*(this->func_name))).push_back(key);
         std::string* rep = new std::string((this->information)->register_var(key, offset));
 
         return(std::pair<intermediate_symtable::put_param_results, std::string*>(intermediate_symtable::PARAM_PUT, rep));
@@ -280,17 +295,24 @@ std::pair<intermediate_symtable::put_param_results, std::string*>
         if(res == symtables_stack::PARAM_TYPE_ERROR)
             return(std::pair<intermediate_symtable::put_param_results, std::string*>(intermediate_symtable::PARAM_TYPE_ERROR, NULL));
 
+        assert(this->func_name);
+        assert((this->information)->id_exists(*(this->func_name)));
+        ((this->information)->get_list_params(*(this->func_name))).push_back(key);
         std::string* rep = new std::string((this->information)->register_obj(key, offset, owner, address));
 
         return(std::pair<intermediate_symtable::put_param_results, std::string*>(intermediate_symtable::PARAM_PUT, rep));
 }
 
 void intermediate_symtable::set_number_vars(std::string key, unsigned int number) {
+    assert((this->information)->id_exists(key));
+    assert((this->information)->get_local_vars(key) <= number);
     (this->information)->set_number_vars(key, number);
 }
 
 void intermediate_symtable::finish_func_analysis() {
     (this->scopes).finish_func_analysis();
+    delete (this->func_name);
+    this->func_name = NULL;
 }
 
 std::pair<intermediate_symtable::put_class_results, std::string*> 
@@ -306,6 +328,7 @@ std::pair<intermediate_symtable::put_class_results, std::string*>
         if(res == symtables_stack::CLASS_ERROR)
             return(std::pair<intermediate_symtable::put_class_results, std::string*> (intermediate_symtable::CLASS_ERROR, NULL));
 
+        this->class_name = new std::string(key);
         std::string* rep = new std::string((this->information)->register_class(key, l_atts));
 
         return(std::pair<intermediate_symtable::put_class_results, std::string*> (intermediate_symtable::CLASS_PUT, rep));
@@ -321,6 +344,9 @@ std::pair<intermediate_symtable::put_field_results, std::string*>
         if(res == symtables_stack::NO_PREV_CLASS)
             return(std::pair<intermediate_symtable::put_field_results, std::string*> (intermediate_symtable::NO_PREV_CLASS, NULL));
 
+        assert(this->class_name);
+        assert((this->information)->id_exists(*(this->class_name)));
+        ((this->information)->get_list_attributes(*(this->class_name))).push_back(key);
         std::string* rep = new std::string((this->information)->register_var(key, offset));
 
         return(std::pair<intermediate_symtable::put_field_results, std::string*> (intermediate_symtable::FIELD_PUT, rep));
@@ -336,6 +362,9 @@ std::pair<intermediate_symtable::put_field_results, std::string*>
         if(res == symtables_stack::NO_PREV_CLASS)
             return(std::pair<intermediate_symtable::put_field_results, std::string*> (intermediate_symtable::NO_PREV_CLASS, NULL));
 
+        assert(this->class_name);
+        assert((this->information)->id_exists(*(this->class_name)));
+        ((this->information)->get_list_attributes(*(this->class_name))).push_back(key);
         std::string* rep = new std::string((this->information)->register_obj(key, offset, class_name, address));
 
         return(std::pair<intermediate_symtable::put_field_results, std::string*> (intermediate_symtable::FIELD_PUT, rep));
@@ -351,6 +380,9 @@ std::pair<intermediate_symtable::put_field_results, std::string*>
         if(res == symtables_stack::NO_PREV_CLASS)
             return(std::pair<intermediate_symtable::put_field_results, std::string*> (intermediate_symtable::NO_PREV_CLASS, NULL));
 
+        assert(this->class_name);
+        assert((this->information)->id_exists(*(this->class_name)));
+        ((this->information)->get_list_attributes(*(this->class_name))).push_back(key); 
         std::string* rep = new std::string((this->information)->register_method(key, local_vars, class_name));
 
         return(std::pair<intermediate_symtable::put_field_results, std::string*> (intermediate_symtable::FIELD_PUT, rep));
@@ -358,6 +390,8 @@ std::pair<intermediate_symtable::put_field_results, std::string*>
 
 void intermediate_symtable::finish_class_analysis() {
     (this->scopes).finish_class_analysis();
+    delete (this->class_name);
+    this->class_name = NULL;
 }
 
 std::string intermediate_symtable::new_label() {

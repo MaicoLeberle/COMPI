@@ -12,6 +12,7 @@ void test_register_method();
 void test_register_class();
 void test_ids_info_id_exists();
 void test_get_next_internal();
+void test_new_temp();
 void test_unregister();
 void test_ids_info_get_id_rep();
 void test_get_kind();
@@ -30,6 +31,8 @@ void test_intermediate_symtable_get_id_rep();
 void test_intermediate_symtable_push_symtable();
 void test_intermediate_symtable_pop_symtable();
 void test_intermediate_symtable_put_var_and_get();
+void test_intermediate_new_temp();
+void test_intermediate_new_temp();
 void test_intermediate_symtable_put_obj();
 void test_intermediate_symtable_put_func();
 void test_intermediate_symtable_put_var_param();
@@ -40,7 +43,7 @@ void test_intermediate_symtable_put_var_field();
 void test_intermediate_symtable_put_obj_field();
 void test_intermediate_symtable_put_func_field();
 void test_intermediate_symtable_finish_class_analysis();
-
+void test_intermediate_new_label();
 
 
 
@@ -64,28 +67,31 @@ void test_ids_info() {
     cout << "\t6) get_next_internal: ";
     test_get_next_internal();
 
-    cout << "\t7) unregister: ";
+    cout << "\t7) new_temp: ";
+    test_new_temp();
+
+    cout << "\t8) unregister: ";
     test_unregister();
 
-    cout << "\t8) get_id_rep: ";
+    cout << "\t9) get_id_rep: ";
     test_ids_info_get_id_rep();
 
-    cout << "\t9) get_kind: ";
+    cout << "\t10) get_kind: ";
     test_get_kind();
 
-    cout << "\t10) get_offset: ";
+    cout << "\t11) get_offset: ";
     test_get_offset();
 
-    cout << "\t11) set_number_vars: ";
+    cout << "\t12) set_number_vars: ";
     test_set_number_vars();
 
-    cout << "\t12) get_local_vars: ";
+    cout << "\t13) get_local_vars: ";
     test_get_local_vars();
 
-    cout << "\t13) get_owner_class: ";
+    cout << "\t14) get_owner_class: ";
     test_get_owner_class();
 
-    cout << "\t14) get_list_attributes: ";
+    cout << "\t15) get_list_attributes: ";
     test_get_list_attributes();
 }
 
@@ -168,6 +174,25 @@ void test_get_next_internal() {
     assert((information.get_next_internal(string("variable"))).compare(string("variable-2")) == 0);
 
     cout << "OK." << endl;
+}
+
+void test_new_temp() {
+    ids_info information;
+    std::string* n = information.new_temp(89);
+    std::string* m = information.new_temp(0);
+    std::string* o = information.new_temp(89);
+    
+    assert(n);
+    assert((*n).compare(std::string("t-0")) == 0);
+    assert(m);
+    assert((*m).compare(std::string("t-1")) == 0);
+    assert(o);
+    assert((*o).compare(std::string("t-2")) == 0);
+    assert((*n).compare(std::string("t-0")) == 0);
+
+    delete(n);
+    delete(m);
+    delete(o);
 }
 
 void test_unregister() {
@@ -300,35 +325,41 @@ void test_intermediate_symtable() {
     cout << "\t5) put_var and get: ";
     test_intermediate_symtable_put_var_and_get();
 
-    cout << "\t6) put_obj: ";
+    cout << "\t6) new_temp: ";
+    test_intermediate_new_temp();
+
+    cout << "\t7) put_obj: ";
     test_intermediate_symtable_put_obj();
 
-    cout << "\t7) put_func: ";
+    cout << "\t8) put_func: ";
     test_intermediate_symtable_put_func();
 
-    cout << "\t8) put_var_param: ";
+    cout << "\t9) put_var_param: ";
     test_intermediate_symtable_put_var_param();
 
-    cout << "\t9) put_obj_param: ";
+    cout << "\t10) put_obj_param: ";
     test_intermediate_symtable_put_obj_param();
     
-    cout << "\t10) finish_func_analysis: ";
+    cout << "\t11) finish_func_analysis: ";
     test_intermediate_symtable_finish_func_analysis();
 
-    cout << "\t11) put_class: ";
+    cout << "\t12) put_class: ";
     test_intermediate_symtable_put_class();
 
-    cout << "\t12) put_var_field: ";
+    cout << "\t13) put_var_field: ";
     test_intermediate_symtable_put_var_field();
 
-    cout << "\t13) put_obj_field: ";
+    cout << "\t14) put_obj_field: ";
     test_intermediate_symtable_put_obj_field();
 
-    cout << "\t14) put_func_field: ";
+    cout << "\t15) put_func_field: ";
     test_intermediate_symtable_put_func_field();
 
-    cout << "\t15) finish_class_analysis: ";
+    cout << "\t16) finish_class_analysis: ";
     test_intermediate_symtable_finish_class_analysis();
+
+    cout << "\t17) new_label: ";
+    test_intermediate_new_label();
 }
 
 void test_intermediate_symtable_get_ids_info() {
@@ -421,6 +452,29 @@ void test_intermediate_symtable_put_var_and_get() {
     cout << "OK." << endl;
 }
 
+void test_intermediate_new_temp() {
+    intermediate_symtable stack;
+    std::pair<intermediate_symtable::put_results, std::string*> res1 = stack.new_temp(17);
+    std::pair<intermediate_symtable::put_results, std::string*> res2 = stack.new_temp(0);
+    std::pair<intermediate_symtable::put_results, std::string*> res3 = stack.new_temp(17);
+    
+    assert(res1.first == intermediate_symtable::ID_PUT);
+    assert(res1.second != NULL);
+    assert((*res1.second).compare(std::string("t-0")) == 0);
+    assert(res2.first == intermediate_symtable::ID_PUT);
+    assert(res2.second != NULL);
+    assert((*res2.second).compare(std::string("t-1")) == 0);
+    assert(res3.first == intermediate_symtable::ID_PUT);
+    assert(res3.second != NULL);
+    assert((*res3.second).compare(std::string("t-2")) == 0);
+
+    delete(res1.second);
+    delete(res2.second);
+    delete(res3.second);
+
+    cout << "OK." << endl;
+}
+
 void test_intermediate_symtable_put_obj() {
     intermediate_symtable stack;
     stack.push_symtable();
@@ -458,6 +512,7 @@ void test_intermediate_symtable_put_var_param() {
     list<symtable_element>* l = new list<symtable_element>();
     symtable_element method(string("method"), symtable_element::VOID, l);
     stack.put_func(method, method.get_key(), 52, string("classE"));
+
 
     symtable_element var(string("variable"), symtable_element::BOOLEAN);
     pair<intermediate_symtable::put_param_results, string*> res = stack.put_var_param(var, var.get_key(), 8);
@@ -598,6 +653,18 @@ void test_intermediate_symtable_finish_class_analysis() {
     cout << "OK." << endl;
 }
 
+void test_intermediate_new_label() {
+    intermediate_symtable stack;
+    std::string res1 = stack.new_label();
+    std::string res2 = stack.new_label();
+    std::string res3 = stack.new_label();
+
+    assert(res1.compare(std::string("L0")) == 0);
+    assert(res2.compare(std::string("L1")) == 0);
+    assert(res3.compare(std::string("L2")) == 0);
+
+    cout << "OK." << endl;
+}
 
 int main() {
     cout << endl << "INTERMEDIATE_SYMTABLE TESTS" << endl << endl;
