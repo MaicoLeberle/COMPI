@@ -1,0 +1,24 @@
+class Program {
+	
+	int x;
+
+	void set_x(int z) {
+		x = z;
+	}
+
+	int return_x() {
+		return x;
+	}
+
+	int read_int () extern;
+
+	void print_string(string s) extern;
+
+	void main() {
+		if (!(-8 == (4 * (1+1))) || false) 
+			print_string("true\n");
+		else
+			print_stirng("false\n");
+		return;
+	}
+}
