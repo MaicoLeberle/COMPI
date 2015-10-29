@@ -19,26 +19,27 @@ void translate(inter_code_gen_visitor& v, std::string program){
 }
 
 void test_three_address_code(){
-	std::cout << "1) Three-address-code representation related procedures: ";
+	std::cout << "1) Three-address code's representation-related procedures: ";
 
 	address_pointer add1 = new_boolean_constant(boolean_initial_value);
 	address_pointer add2 = new_boolean_constant(boolean_initial_value);
 
 	/* TODO : borrar add1 y add2 */
-	assert(are_equal_pointers(add1, add2));
+	assert(are_equal_address_pointers(add1, add2));
 
 	add1 = new_integer_constant(integer_initial_value);
 	add2 = new_integer_constant(integer_initial_value);
 
-	assert(are_equal_pointers(add1, add2));
+	assert(are_equal_address_pointers(add1, add2));
 
 	add1 = new_float_constant(float_initial_value);
 	add2 = new_float_constant(float_initial_value);
 
-	assert(are_equal_pointers(add1, add2));
+	assert(are_equal_address_pointers(add1, add2));
 
 	std::cout << "OK. " << std::endl;
 }
+
 void test_class_decl(){
 	std::cout << "2) Translation of a class declaration: ";
 
@@ -56,7 +57,15 @@ void test_class_decl(){
 	// Only the main method's translation.
 	assert(translation->size() == 2);
 
-	// Just data about the classes...
+	// main method's label.
+	instructions_list::iterator it = translation->begin();
+	assert(is_label(*it, std::string("main.main")));
+
+	// enter instruction.
+	it++;
+	assert(is_enter_procedure(*it, 0));
+
+	// In the intermediate_symtable, just data about the classes.
 	intermediate_symtable *symtable = v1.get_symtable();
 
 	assert(symtable->get(std::string("Program"))->get_class() ==
@@ -262,7 +271,9 @@ void test_method_decl(){
 
 	// Enter instruction
 	it++;
-	assert(is_enter_procedure(*it, integer_width+float_width));
+	// The enter instruction will save space in the stack for 2 integers and
+	// 1 float.
+	assert(is_enter_procedure(*it, integer_width + integer_width + float_width));
 
 	// Test data collected.
 	intermediate_symtable *symtable = v1.get_symtable();
