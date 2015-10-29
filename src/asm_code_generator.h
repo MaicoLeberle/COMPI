@@ -120,6 +120,8 @@ public:
 	asm_code_generator(instructions_list*, ids_info*);
 
 	void translate_ir(void);
+	void print_translation_intel_syntax();
+	asm_instructions_list* get_translation();
 
 private:
 	instructions_list *ir;
