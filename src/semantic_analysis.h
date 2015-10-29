@@ -43,6 +43,8 @@ public:
 
     int get_errors();
 
+    bool is_analysis_successful();
+
     // Inherited interface, to allow the definition outside this
     // class declaration.
 
@@ -92,6 +94,7 @@ private:
     // Attributes to check context-dependent rules.
     bool into_for_or_while; // Are we into a for or while loop?
     bool into_method;
+    bool analysis_successful;
     symtable_element *actual_method;
     symtable_element *actual_class;
 

@@ -6,6 +6,7 @@ semantic_analysis::semantic_analysis () {
 	into_method = false;
 	actual_method = nullptr;
 	well_formed = false;
+	analysis_successful = false;
 }
 
 // TODO: actualmente no podemos tener definiciones de funciones mutuamente
@@ -17,6 +18,8 @@ void semantic_analysis::register_error(std::string error, error_id error_encount
 	std::cerr << "\n" << error << std::endl;
 	// The process is not interrupted. We just count the error.
 	error += 1;
+	// TODO: en el lexer definimos una variable line_num. Se puede utilizar
+	// aca?
 	last_error = error_encountered;
 }
 
@@ -26,6 +29,10 @@ semantic_analysis::error_id semantic_analysis::get_last_error(){
 
 int semantic_analysis::get_errors(){
 	return errors;
+}
+
+bool semantic_analysis::is_analysis_successful(){
+	return analysis_successful;
 }
 
 symtable_element::id_type semantic_analysis::get_wider_type(
@@ -232,6 +239,15 @@ void semantic_analysis::visit(node_program& node) {
 	if(node.classes.size() == 0 ||
 	s_table.get(std::string("main"))->get_class() == symtable_element::NOT_FOUND){
 		register_error(std::string("No \"main\" class declared."), ERROR_3);
+	}
+
+	if(errors == 0){
+		// Analysis was successful.
+		analysis_successful = true;
+	}
+	else{
+		// {errors > 0}
+		analysis_successful = false;
 	}
 }
 

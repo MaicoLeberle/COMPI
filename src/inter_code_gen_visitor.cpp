@@ -114,21 +114,20 @@ unsigned int inter_code_gen_visitor::calculate_size(symtable_element::id_type ty
 	return ret;
 }
 
-/*	Translate a variable declaration, register its information into the
- * 	table of symbols, and updates the offset.
+/*	Translates a variable declaration, registers its information into the
+ * 	table of symbols and updates the offset.
+ * 	PRE : {the actual value of offset indicates where, the new variable,
+ * 			is stored}
  * */
 
 void inter_code_gen_visitor::translate_var_decl(symtable_element::id_type type,
 std::string id, std::string class_name, unsigned int array_size){
 
-	// TODO: generar nuevo identificador, colocarlo en
-	// la tabla, con offset = offset+integer_width
-	// _ TODO: std::pair<symtables_stack::put_results, std::string*> put_var(symtable_element, std::string, unsigned int);
-	// * me devuelve ahora un par: std::string es el id
-	// TODO: al comenzar aquí, el valor de offset, antes de ser actualizado
-	// es el valor del comienzo de la ubicación de esta variable?
-	address_pointer dest, constant = nullptr;
+	// TODO: guardar el offset después de haberlo alterado: si x ocupa 4 bytes,
+	// y es la primer variable, entonces comienza en -4 y llega hasta 0. Deberiamos
+	// entonces restarle al offset,  en vez de sumarle?
 
+	address_pointer dest, constant = nullptr;
 
 	if(type == symtable_element::ID){
 		// TODO: por qué class_name tiene que pasarse por puntero?
@@ -149,18 +148,6 @@ std::string id, std::string class_name, unsigned int array_size){
 		if (array_size > 0){
 			// Array
 			// TODO: cómo inicializamos un arreglo?
-			/*if(type == symtable_element::INTEGER){
-				constant = new_integer_constant(integer_initial_value);
-			}
-			else if(type == symtable_element::FLOAT){
-				constant = new_float_constant(float_initial_value);
-			}
-			else{
-				#ifdef __DEBUG
-					assert(type == symtable_element::BOOLEAN);
-				#endif
-				constant = new_boolean_constant(boolean_initial_value);
-			}*/
 
 			symtable_element variable(id, type, array_size);
 			std::pair<intermediate_symtable::put_results, std::string*> pair = s_table.put_var(variable,
@@ -198,21 +185,21 @@ std::string id, std::string class_name, unsigned int array_size){
 			#ifdef __DEBUG
 				assert(std::get<0>(pair) == intermediate_symtable::ID_PUT);
 			#endif
-			// TODO: voy descubriendo la semántica de este procedimiento: debería
-			// especificar que se trata de uno que ayuda a traducir las declaraciones
-			// de variables que están en el código original
+
 			dest = new_name_address(id);
 			inst_list->push_back(new_copy(dest, constant));
 		}
 	}
 }
 
-void inter_code_gen_visitor::instance_initialization(std::string id_class,
-	std::string id_instance){
+std::string inter_code_gen_visitor::instance_initialization(std::string id_class,
+std::string id_instance){
 	// Translate instance declaration into a sequence of code to
 	// initialize each attribute.
 	symtable_element *class_object = s_table.get(id_class);
 	std::list<symtable_element> *fields = class_object->get_class_fields();
+	std::string first_field;
+
 	// TODO: así es como recuperamos los atributos de instancia:
 	// classA obj1;
 	/*[4:06:52 PM] Maico Leberle: classB {
@@ -223,36 +210,33 @@ void inter_code_gen_visitor::instance_initialization(std::string id_class,
 	[4:09:11 PM] Maico Leberle: get_id_rep(obj1);
 	[4:09:27 PM] Maico Leberle: get_list_attributes(get_owner_class(get_id_rep(obj1)))
 */
-	// TODO: para declarar una nueva instancia:
-	// std::pair<symtables_stack::put_results, std::string*> put_obj(symtable_element& , std::string, unsigned int, std::string);
-	for(std::list<symtable_element>::iterator it = fields->begin();
-	it != fields->end(); ++it){
+	// Extract the beginning
+	std::list<symtable_element>::iterator it = fields->begin();
+	first_field = id_instance + "." + (*it).get_key();
+	if((*it).get_class() == symtable_element::T_VAR){
+		// TODO: por ahora, no trabajamos con arreglos
+		translate_var_decl((*it).get_type(), first_field, id_class, 0);
+		it++;
+	}
+
+	for(; it != fields->end(); ++it){
 		if((*it).get_class() == symtable_element::T_VAR){
 			// TODO: actualmente estamos deinifiendo como addresses a cosas de la forma
 			// id_instance "." nombre de atributo
+			// TODO: por ahora, no trabajamos con arreglos
 			translate_var_decl((*it).get_type(), id_instance + "." + (*it).get_key(),
 			id_class, 0);
 		}
 	}
+
+	return first_field;
 }
 
-/* _ Las temporales van siempre a registros, y yo, en el visitor, invento
- * los nombres de las temporales, pero al analizar cada expresión, manejo un
- * contador de temporales que lo inicio a 0.
- * _ Los métodos y clases tendran etiquetas únicas. Cuando registro un método
- * tengo que pasarle la cantidad de variables locales, que es información
- * almacenada en el ast.
- * _ La traducción de la declaración de una instancia, la podríamos traducir
- * a instrucciones que inicializan atributos (ya que no tenemos heap, si se
- * tradujera a un constructor, no tendríamos forma de recuperar la información
- * del mismo).
- * _ Al calcular el offset de las variables locales, siempre tengo que recordar
+/* _ Al calcular el offset de las variables locales, siempre tengo que recordar
  * que this esta al comienzo, para sumarle su offset.
  * _ TODO: cunado termino: ids_info* get_ids_info(void);
  * _ TODO: con este método std::string get_id_rep(std::string); recupero el id
  * unico para una variable, de acuerdo al scope.
- * _ TODO: std::pair<symtables_stack::put_results, std::string*> put_var(symtable_element, std::string, unsigned int);
- * me devuelve ahora un par: std::string es el id
  * _ Para traducir métodos, recordar la utilización de la referencia this
  * _ Recordar que la semántica de los operadores booleanos es short-circuit
  * (ver página 400 del dragon book)
@@ -273,7 +257,9 @@ void inter_code_gen_visitor::visit(node_class_decl& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating class " << node.id << std::endl;
 	#endif
+
 	// Translate the fields of the class.
+	// We do this to allow mixed declarations of fields and methods.
 	std::list<class_block_pointer> fields;
 	std::list<class_block_pointer> methods;
 	for(auto cb : node.class_block) {
@@ -285,31 +271,38 @@ void inter_code_gen_visitor::visit(node_class_decl& node) {
 			methods.push_back(cb);
 		}
 	}
+
 	// Saving information of fields..
 	symtable_element new_class(new std::string(node.id),
-			new std::list<symtable_element>());
+							   new std::list<symtable_element>());
 	actual_class = &new_class;
 
 	// Define a new scope
+	s_table.push_symtable();
 	#ifdef __DEBUG
+		// TODO: cambiar cuando tenga los typedef
 		std::pair<intermediate_symtable::put_class_results, std::string*> ret = s_table.put_class(new_class,
 																	new_class.get_key(),
 																	std::list<std::string>());
 		assert(std::get<0>(ret) == intermediate_symtable::CLASS_PUT);
 	#else
-		s_table.put_class(new_class.get_key(), new_class, std::list<std::string>());
+		s_table.put_class(new_class,
+						  new_class.get_key(),
+						  std::list<std::string>());
 	#endif
 
-	// Relative addresses with respect to the beginning of this
-	// class definition.
+	// Gather information about fields. Set relative addresses with respect to the
+	// beginning of this class definition.
 	// TODO: también al traducir la definición de los métodos?
 	int prev_offset = offset;
 	offset = 0;
 	into_method = false;
+
 	for(std::list<class_block_pointer>::iterator it = fields.begin();
-	it != fields.end(); ++it){
-		node_field_decl& aux = static_cast<node_field_decl&> (*(*it));
-		aux.accept(*this);
+		it != fields.end();
+		++it){
+			node_field_decl& aux = static_cast<node_field_decl&> (*(*it));
+			aux.accept(*this);
 	}
 	// End of class declaration -> in offset we have the size of an instance.
 	// TODO: tengo que guardar ese valor en algún lugar en la tabla, para poder
@@ -318,14 +311,14 @@ void inter_code_gen_visitor::visit(node_class_decl& node) {
 
 	// Translation of methods.
 	for(std::list<class_block_pointer>::iterator it = methods.begin();
-	it != methods.end(); ++it){
-		node_method_decl& aux = static_cast<node_method_decl&> (*(*it));
-		aux.accept(*this);
+		it != methods.end();++it){
+			node_method_decl& aux = static_cast<node_method_decl&> (*(*it));
+			aux.accept(*this);
 	}
-
 	// Restore offset value.
 	offset = prev_offset;
 	s_table.finish_class_analysis();
+	//s_table.pop_symtable();
 }
 
 void inter_code_gen_visitor::visit(node_field_decl& node) {
@@ -338,24 +331,26 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 		#ifdef __DEBUG
 			std::cout << "Translating field " << f->id << std::endl;
 		#endif
+
 		// Translate each identifier. Add the identifier to the symbol table.
 		if (node.type.type == Type::ID){
 			// Declaration of instances.
 			// TODO: sería cómodo un typedef para este tipo de par
 			//std::pair<symtables_stack::put_field_results, std::string*> pair =
-			//		put_obj_field(symtable_element&, std::string, unsigned int, std::string);
+			//		put_obj_field(symtable_element&, std::string,
+			//		unsigned int, std::string);
 			// TODO: por qué el segundo argumento tiene que ser un puntero?
 			std::string *class_name = new std::string(node.type.id);
 			symtable_element id(f->id, class_name);
 
 			if(into_method){
 				// TODO: cambiar esto cuando se haga el typedef
+				// TODO: el último argumento a put_obj sería el id del primer
+				// parámetro del objeto, pero no tengo claro cómo definirlo, de
+				// forma tal que pueda reemplazar a futuro toda ocurrencia del
+				// id de este objeto, por el id de su primer atributo.
 				std::pair<intermediate_symtable::put_results, std::string*> pair =
 						s_table.put_obj(id, f->id, offset, node.type.id, std::string(""));
-				// TODO: el último argumento sería el id del primer parámetro del objeto,
-				// pero no tengo claro cómo definirlo, de forma tal que pueda reemplazar
-				// a futuro toda ocurrencia del id de este objeto, por el id de su primer
-				// atributo.
 				// TODO: al intentar recuperar el id del primer atributo, recordar
 				// que parecieran estar guardándose estos en el orden inverso
 				// a como uno los guarda en la tabla de símbolos.
@@ -363,13 +358,15 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 					assert(std::get<0>(pair) == intermediate_symtable::ID_PUT);
 				#endif
 
-				// Insert code that initialices the attributes of the object.
-				instance_initialization(node.type.id, f->id);
+				// Insert code that initializes the attributes of the object.
+				std::string first_field = instance_initialization(node.type.id, f->id);
+				// TODO: cómo hago para guardar en s_table el dato first_field,
+				// ahora que ya he puesto la variable en la tabla?
 			}
 			else{
 				// {not into_method}
-				// Is an attribute declaration. We just save the corresponding
-				// data, for future use.
+				// It is an attribute declaration. We just save the corresponding
+				// data, for future uses.
 				// TODO: cambiar esto cuando se haga el typedef
 				std::pair<intermediate_symtable::put_field_results, std::string*> pair =
 						s_table.put_obj_field(id, f->id, offset, node.type.id, std::string(""));
@@ -414,16 +411,13 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 				// {f->array_size <= 0}
 				// Basic type
 				if(into_method){
-					std::cout << "translate_var_decl." << std::endl;
 					// TODO: este tercer argumento es medio fulero...
 					translate_var_decl(determine_type(node.type.type), f->id,
 										std::string(""), 0);
 				}
 				else{
 					// {not into_method}
-
 					symtable_element id(f->id, determine_type(node.type.type));
-
 
 					#ifdef __DEBUG
 						// TODO: cambiar esto cuando se haga el typedef
@@ -448,10 +442,33 @@ void inter_code_gen_visitor::visit(node_id& node) {
 }
 
 void inter_code_gen_visitor::visit(node_method_decl& node){
-	// TODO: aquí debería agregar la variable "this" a la tabla de símbolos?
+	// TODO: el manejo de la referencia this, todavía no está definido cómo
+	// hacerlo. Aquí hay posibles soluciones planteadas:
+	//	* en la generación de código asm, los parámetros de las funciones
+	// los pasamos a la memoria (al ingresar a la función). Por lo tanto,
+	// mantenemos el offset de las variables.
+	// 	* aquí debería agregar la variable "this" a la tabla de símbolos?
 	// donde debería utilizar this en la traducción?
-	// TODO: tengo que agregar como parámetros en las llamadas, a los
+	//  * tengo que agregar como parámetros en las llamadas, a los
 	// atributos del objeto para el cual se llama el método.
+	// TODO: porcion de la secuencia de llamada que le corresponde al proceso
+	// llamado:
+	//		_ Guardar valores de registros y otros datos de estado, referentes
+	//		al proceso llamador (entre ellos, el frame base pointer del proceso
+	//		llamador).
+	//		_ Definir la posicion de comienzo de su registro de activacion
+	//		el cual sera el valor actual del stack pointer.
+	//		Reservar espacio en la pila para sus variables locales y temporales
+	//		(si es que vamos a guardar todas en la pila, y no en registros).
+	// Todo esto lo realiza la instrucción ENTER.
+	// TODO: porción de la secuencia de retorno que le corresponde al método
+	//		llamado:
+	//		_ Colocar el valor de retorno en la posición de su registro de
+	//		activación adecuada para ello.
+	//		_ De la información de status almacenada en su registro de activación,
+	//		reestablecer el valor de tope de pila, y otros registros. Luego
+	//		retornar a la dirección de memoria de retorno que el proceso llamador
+	//		guardó en el registro de activación del proceso llamado.
 	#ifdef __DEBUG
 		std::cout << "Translating method " << node.id << std::endl;
 	#endif
@@ -459,21 +476,20 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 	symtable_element method(node.id, determine_type(node.type.type),
 							new std::list<symtable_element>());
 	#ifdef __DEBUG
-		// TODO: a esta altura del partido, no se cuantas variables locales
-		// tiene el método. Sin embargo, necesito ya mismo agregarlo a la
-		// tabla. Debería poder agregar esta inf. faltante al final
-		std::pair<intermediate_symtable::put_field_results, std::string*> pair = s_table.put_func_field(method,
-																		node.id,
-																		0,
-																		actual_class->get_key());
-		assert(std::get<0>(pair) == intermediate_symtable::FIELD_PUT);
+	    std::pair<intermediate_symtable::put_func_results, std::string*> pair =
+	    		s_table.put_func(method,
+						node.id,
+						0,
+						actual_class->get_key());
+	    assert(std::get<0>(pair) == intermediate_symtable::FUNC_PUT);
 	#else
-		s_table.put_func_field(method, node.id, 0, actual_class->get_key());
-	#endif
+		//s_table.put_func_field(method, method.get_key(), 0, actual_class->get_key());
+		s_table.put_func(method, method.get_key(), 0, actual_class->get_key());
+    #endif
 	// Generate code for the method declaration.
 	inst_list->push_back(new_label(actual_class->get_key()+"."+node.id));
+
 	// Initialize offset.
-	// TODO: hace falta esto?
 	unsigned int offset_prev = offset;
 	offset = 0;
 	for(auto p : node.parameters) {
@@ -483,13 +499,11 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 	into_method = true;
 	// Save inst_list
 	instructions_list *aux = inst_list;
-	inst_list = new instructions_list(); // TODO: eliminar!
+	inst_list = new instructions_list();
 	node.body->accept(*this);
-	// Into offset we have the size of the sum of the local an temporal variables.
+	// Into offset we have the size of the sum of the local and temporal variables.
 	// We add the corresponding enter instruction at the beginning of the procedure.
 	aux->push_back(new_enter_procedure(offset));
-	// TODO: agregar a aux todas las instrucciones en inst_list y hacer que
-	// inst_list apunte a aux
 	for (instructions_list::iterator it = inst_list->begin();
 	it != inst_list->end(); ++it){
 			aux->push_back(*it);
@@ -498,6 +512,20 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 	inst_list = aux;
 	offset = offset_prev;
 	s_table.finish_func_analysis();
+	#ifdef __DEBUG
+		// TODO: esta era la forma adecuada de utilizar put_func_field,
+		// aparentemente: primero put_func, agregamos los parametros de la misma
+		// y recorremos el cuerpo de la misa. Cuando esta todo listo,
+		// agregamos el metodo a la clase, con put_func_field
+
+		std::pair<intermediate_symtable::put_field_results, std::string*> pair2 = s_table.put_func_field(method,
+																		method.get_key(),
+																		0,
+																		actual_class->get_key());
+		assert(std::get<0>(pair2) == intermediate_symtable::FIELD_PUT);
+	#else
+		s_table.put_func_field(method, method.get_key(), 0, actual_class->get_key());
+    #endif
 }
 
 void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
@@ -507,12 +535,9 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 	#endif
 
 	switch(node.type.type){
-		case Type::ID:
-			{
+		case Type::ID:{
 				std::string *class_name = new std::string(node.type.id);
 				// TODO: la tabla de símbolos hace una copia de obj_param?
-				// TODO: cual es el offset de este parámetro, en el método? siendo
-				// que se guarda en registros...
 				// TODO: el último parámetro debería ser un string de la forma
 				// node.id "." nombre del primer atributo de la clase
 				symtable_element obj_param(node.id, class_name);
@@ -521,12 +546,12 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 					std::pair<intermediate_symtable::put_param_results, std::string*> pair1 = s_table.put_obj_param(
 																				 obj_param,
 																				 node.id,
-																				 0,
+																				 offset,
 																				 node.type.id,
 																				 std::string(""));
 					assert(std::get<0>(pair1) == intermediate_symtable::PARAM_PUT);
 				#else
-					s_table.put_obj_param(obj_param, node.id, 0, node.type.id,
+					s_table.put_obj_param(obj_param, node.id, offset, node.type.id,
 										 std::string(""));
 				#endif
 			}
@@ -539,11 +564,11 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 				#ifdef __DEBUG
 					std::pair<intermediate_symtable::put_param_results, std::string*> pair2 = s_table.put_var_param(
 																				 var_param,
-																				 node.id,
-																				 0);
+																				 var_param.get_key(),
+																				 offset);
 					assert(std::get<0>(pair2) == intermediate_symtable::PARAM_PUT);
 				#else
-					s_table.put_var_param(obj_param, node.id, 0);
+					s_table.put_var_param(var_param, var_param.get_key(), offset);
 				#endif
 			}
 	}
@@ -552,9 +577,10 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 	// sets up the stack frame" (de "x86-64-architecture-guide"). Pero es quien
 	// lo llama quien coloca los parametros en los registros. Debemos contabilizar
 	// el tamaño de los parámetros?
-	// TODO: si los parámetros van siempre a registros, no debería estar alterando
-	// el offset, cierto?
-	//offset += calculate_size(determine_type(node.type.type));
+
+	// Update the offset so, outside this method, this data is used to
+	// calculate how much data is reserved into the stack.
+	offset += calculate_size(determine_type(node.type.type));
 }
 
 void inter_code_gen_visitor::visit(node_body& node) {
@@ -635,6 +661,10 @@ void inter_code_gen_visitor::visit(node_location& node) {
 	// código intermedio?: vamos generando las direcciones
 	// TODO: por ahora, convertimos la location en un address. Es correcto
 	// usar este nombre para la address?
+	// TODO: preguntar si estamos dentro de un método. En tal caso, averiguar
+	// si location se trata de un parámetro del metodo. Si no fuera así, se trata
+	// de un atributo del objeto actual. Entonces tengo que tener en cuenta el
+	// puntero this.
 	std::string name = node.ids.printable_field_id();
 	temp = new_name_address(name);
 }
@@ -669,7 +699,7 @@ void inter_code_gen_visitor::visit(node_float_literal& node) {
 		std::cout << "Translating FLOAT literal with value " << node.value << std::endl;
 	#endif
 
-	temp = new_boolean_constant(node.value);
+	temp = new_float_constant(node.value);
 }
 
 void inter_code_gen_visitor::visit(node_string_literal& node) {
@@ -681,6 +711,16 @@ void inter_code_gen_visitor::visit(node_string_literal& node) {
 	//temp = std::string("$"+node.value);
 }
 
+// TODO: aqui o en el generador de codigo asm es que modelo nuestro registro
+// de activacion?. Qué componentes va a tener?. También, donde comenzamos a
+// definir la secuencia de llamada?
+// TODO: porcion de la secuencia de llamadas, que le corresponde al proceso
+// llamador:
+//		_ Calcular los parámetros a pasar. Guardarlos en la pila o en registros.
+//		_ Guardar una dirección de retorno y el valor del puntero de tope de
+//			pila.
+//		_ Actualizar el puntero de tope de pila para que apunte hasta donde
+//		comienzan las temporales y variables locales del procedimiento llamado.
 void inter_code_gen_visitor::visit(node_method_call_expr& node) {
 	#ifdef __DEBUG
 			std::cout << "Translating method call statement" << std::endl;
@@ -693,7 +733,6 @@ void inter_code_gen_visitor::visit(node_method_call_expr& node) {
 		// Then, this = objn.
 		std::string object_name = node.method_call_data->ids[node.method_call_data->ids.size()-2];
 		this_param = new_name_address(object_name);
-
 	}
 	else{
 		// {node.method_call_data->ids.size() < 2}
@@ -703,6 +742,7 @@ void inter_code_gen_visitor::visit(node_method_call_expr& node) {
 		this_param = new_name_address(std::string("this"));
 	}
 
+	// TODO: no estoy utilizando la variable this_param
 	for(auto r : node.method_call_data->parameters){
 		expr_call_appropriate_accept(r);
 		inst_list->push_back(new_parameter_inst(temp));

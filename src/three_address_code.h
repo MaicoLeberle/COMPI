@@ -105,6 +105,12 @@ class instructions_list : public std::vector<quad_pointer> {};
 // con recibir sólo un std::string)
 quad_pointer new_label(const std::string&);
 quad_pointer new_copy(const address_pointer dest, const address_pointer orig);
+quad_pointer new_indexed_copy_to(const address_pointer dest,
+								  const address_pointer index,
+								  const address_pointer orig);
+quad_pointer new_indexed_copy_from(const address_pointer dest,
+								  const address_pointer orig,
+								  const address_pointer index);
 quad_pointer new_enter_procedure(const unsigned int);
 quad_pointer new_binary_assign(const address_pointer dest,
 							   const address_pointer arg1,
@@ -204,6 +210,12 @@ bool is_negation_oper(const quad_pointer& instruction, const std::string& x,
 bool is_copy(const quad_pointer& instruction, const address_pointer& dest,
 		const address_pointer& orig);
 
+// x[i] = y
+bool is_indexed_copy_to(const quad_pointer& instruction,
+						const address_pointer& dest,
+						const address_pointer& index,
+						const address_pointer& orig);
+
 // x = y op z
 bool is_binary_assignment(const quad_pointer& instruction,
 						 const address_pointer& dest,
@@ -217,8 +229,16 @@ bool is_unary_assignment(const quad_pointer& instruction,
 						 quad_oper op);
 
 // x[i] = y
-bool is_indexed_copy_to(const quad_pointer& instruction, const std::string& x,
-		const std::string& i, const std::string& y);
+bool is_indexed_copy_to(const quad_pointer& instruction,
+						const address_pointer& dest,
+						const address_pointer& index,
+						const address_pointer& orig);
+
+// x = y[i]
+bool is_indexed_copy_from(const quad_pointer& instruction,
+						const address_pointer& dest,
+						const address_pointer& orig,
+						const address_pointer& index);
 
 bool is_enter_procedure(const quad_pointer& instruction, unsigned int bytes);
 
@@ -229,7 +249,7 @@ bool is_procedure_call(const quad_pointer& instruction,
 bool is_function_call(const quad_pointer& instruction,
 						const address_pointer dest,
 						const address_pointer func_label,
-						int param_quantity);
+						const address_pointer param_quantity);
 
 bool is_parameter_inst(const quad_pointer& instruction,
 						const address_pointer param);
@@ -242,10 +262,15 @@ bool is_conditional_jump_inst(const quad_pointer& instruction,
 bool is_unconditional_jump_inst(const quad_pointer& instruction,
 								std::string label);
 
+bool is_return_inst(const quad_pointer& instruction,
+					const address_pointer& ret_value);
+
 bool is_relational_jump_inst(const quad_pointer& instruction,
 		const address_pointer x, const address_pointer y,
 		quad_oper relop, std::string label);
 
-bool are_equal_pointers(const address_pointer&, const address_pointer&);
+bool are_equal_address_pointers(const address_pointer&, const address_pointer&);
+
+bool are_equal_quad_pointers(const quad_pointer&, const quad_pointer&);
 
 #endif // THREE_ADDRESS_CODE_H_

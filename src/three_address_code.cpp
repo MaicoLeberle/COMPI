@@ -53,6 +53,30 @@ quad_pointer new_label(const std::string& label){
 	return instruction;
 }
 
+quad_pointer new_indexed_copy_to(const address_pointer dest,
+								const address_pointer index,
+								const address_pointer orig){
+	quad_pointer instruction = quad_pointer(new quad);
+	instruction->type = quad_type::INDEXED_COPY_TO;
+	instruction->result = dest;
+	instruction->arg1 = index;
+	instruction->arg2 = orig;
+
+	return instruction;
+}
+
+quad_pointer new_indexed_copy_from(const address_pointer dest,
+								const address_pointer orig,
+								const address_pointer index){
+	quad_pointer instruction = quad_pointer(new quad);
+	instruction->type = quad_type::INDEXED_COPY_FROM;
+	instruction->result = dest;
+	instruction->arg1 = orig;
+	instruction->arg2 = index;
+
+	return instruction;
+}
+
 quad_pointer new_copy(const address_pointer dest, const address_pointer orig){
 	quad_pointer instruction = quad_pointer(new quad);
 	instruction->type = quad_type::COPY;
@@ -200,8 +224,8 @@ bool is_procedure_call(const quad_pointer& instruction,
 
 	return instruction->type == quad_type::PROCEDURE_CALL &&
 		   instruction->op == quad_oper::NONE &&
-		   are_equal_pointers(instruction->arg1, proc_label) &&
-		   are_equal_pointers(instruction->arg2, new_integer_constant(param_quantity));
+		   are_equal_address_pointers(instruction->arg1, proc_label) &&
+		   are_equal_address_pointers(instruction->arg2, new_integer_constant(param_quantity));
 }
 
 bool is_function_call(const quad_pointer& instruction,
@@ -209,11 +233,44 @@ bool is_function_call(const quad_pointer& instruction,
 						const address_pointer proc_label,
 						const address_pointer param_quantity){
 
-	return instruction->type == quad_type::PROCEDURE_CALL &&
+	return instruction->type == quad_type::FUNCTION_CALL &&
 				   instruction->op == quad_oper::NONE &&
-				   are_equal_pointers(instruction->arg1, proc_label) &&
-				   are_equal_pointers(instruction->arg2, param_quantity) &&
-				   are_equal_pointers(instruction->result, dest);
+				   are_equal_address_pointers(instruction->arg1, proc_label) &&
+				   are_equal_address_pointers(instruction->arg2, param_quantity) &&
+				   are_equal_address_pointers(instruction->result, dest);
+}
+
+bool is_return_inst(const quad_pointer& instruction,
+					const address_pointer& ret_value){
+	return instruction->type == quad_type::RETURN &&
+		   instruction->op == quad_oper::NONE &&
+		   are_equal_address_pointers(instruction->arg1, ret_value);
+}
+
+bool is_indexed_copy_to(const quad_pointer& instruction,
+						const address_pointer& dest,
+						const address_pointer& index,
+						const address_pointer& orig){
+	// TODO: se puede mantener el orden result-arg1-arg2 al guardar inf. en
+	// la instruccion?
+	return instruction->type == quad_type::INDEXED_COPY_TO &&
+		   instruction->op == quad_oper::NONE &&
+		   are_equal_address_pointers(instruction->result, dest) &&
+		   are_equal_address_pointers(instruction->arg1, index) &&
+		   are_equal_address_pointers(instruction->arg2, orig);
+}
+
+bool is_indexed_copy_from(const quad_pointer& instruction,
+						const address_pointer& dest,
+						const address_pointer& orig,
+						const address_pointer& index){
+	// TODO: se puede mantener el orden result-arg1-arg2 al guardar inf. en
+	// la instruccion?
+	return instruction->type == quad_type::INDEXED_COPY_FROM &&
+		   instruction->op == quad_oper::NONE &&
+		   are_equal_address_pointers(instruction->result, dest) &&
+		   are_equal_address_pointers(instruction->arg1, orig) &&
+		   are_equal_address_pointers(instruction->arg2, index);
 }
 
 bool is_copy(const quad_pointer& instruction, const address_pointer& dest,
@@ -224,8 +281,8 @@ bool is_copy(const quad_pointer& instruction, const address_pointer& dest,
 	// debería recibir un par de address
 	return instruction->type == quad_type::COPY &&
 		   instruction->op == quad_oper::NONE &&
-		   are_equal_pointers(instruction->arg1, orig) &&
-		   are_equal_pointers(instruction->result, dest);
+		   are_equal_address_pointers(instruction->arg1, orig) &&
+		   are_equal_address_pointers(instruction->result, dest);
 }
 
 bool is_binary_assignment(const quad_pointer& instruction,
@@ -236,9 +293,9 @@ bool is_binary_assignment(const quad_pointer& instruction,
 
 	return instruction->type == quad_type::BINARY_ASSIGN &&
 		   instruction->op == op &&
-		   are_equal_pointers(instruction->arg1, arg1) &&
-		   are_equal_pointers(instruction->arg2, arg2) &&
-		   are_equal_pointers(instruction->result, dest);
+		   are_equal_address_pointers(instruction->arg1, arg1) &&
+		   are_equal_address_pointers(instruction->arg2, arg2) &&
+		   are_equal_address_pointers(instruction->result, dest);
 }
 
 bool is_unary_assignment(const quad_pointer& instruction,
@@ -248,8 +305,8 @@ bool is_unary_assignment(const quad_pointer& instruction,
 
 	return instruction->type == quad_type::UNARY_ASSIGN &&
 		   instruction->op == op &&
-		   are_equal_pointers(instruction->arg1, arg) &&
-		   are_equal_pointers(instruction->result, dest);
+		   are_equal_address_pointers(instruction->arg1, arg) &&
+		   are_equal_address_pointers(instruction->result, dest);
 }
 
 bool is_parameter_inst(const quad_pointer& instruction,
@@ -259,7 +316,7 @@ bool is_parameter_inst(const quad_pointer& instruction,
 	// correspondientes constructores, instruction->op sí o sí es NONE...
 	return instruction->type == quad_type::PARAMETER &&
 		   instruction->op == quad_oper::NONE &&
-		   are_equal_pointers(instruction->arg1, param);
+		   are_equal_address_pointers(instruction->arg1, param);
 }
 
 bool is_conditional_jump_inst(const quad_pointer& instruction,
@@ -271,7 +328,7 @@ bool is_conditional_jump_inst(const quad_pointer& instruction,
 	// correspondientes constructores, instruction->arg2 sí o sí es un label
 	return instruction->type == quad_type::CONDITIONAL_JUMP &&
 			instruction->op == op &&
-			are_equal_pointers(instruction->arg1, guard) &&
+			are_equal_address_pointers(instruction->arg1, guard) &&
 			*instruction->arg2->value.label == label;
 }
 
@@ -290,49 +347,100 @@ bool is_relational_jump_inst(const quad_pointer& instruction,
 
 	return instruction->type == quad_type::RELATIONAL_JUMP &&
 				instruction->op == relop &&
-				are_equal_pointers(instruction->arg1, x) &&
-				are_equal_pointers(instruction->arg2, y) &&
+				are_equal_address_pointers(instruction->arg1, x) &&
+				are_equal_address_pointers(instruction->arg2, y) &&
 				*instruction->result->value.label == label;
 }
 
-// TODO: cambiar por are_equal_addresses
-bool are_equal_pointers(const address_pointer& x, const address_pointer& y){
+bool are_equal_address_pointers(const address_pointer& x, const address_pointer& y){
 	bool ret = false;
 
-	switch(x->type){
-		case address_type::ADDRESS_NAME:
-			ret = y->type == address_type::ADDRESS_NAME &&
-				*(x->value.name) == *(y->value.name);
-			break;
+	if(x != nullptr){
+		switch(x->type){
+			case address_type::ADDRESS_NAME:
+				ret = y->type == address_type::ADDRESS_NAME &&
+					*(x->value.name) == *(y->value.name);
+				break;
 
-		case address_type::ADDRESS_CONSTANT:
-			if (y->type == address_type::ADDRESS_CONSTANT){
-				switch(x->value.constant.type){
-					case value_type::BOOLEAN:
-						ret = y->value.constant.type == value_type::BOOLEAN &&
-						y->value.constant.val.bval == x->value.constant.val.bval;
-						break;
+			case address_type::ADDRESS_CONSTANT:
+				if (y->type == address_type::ADDRESS_CONSTANT){
+					switch(x->value.constant.type){
+						case value_type::BOOLEAN:
+							ret = y->value.constant.type == value_type::BOOLEAN &&
+							y->value.constant.val.bval == x->value.constant.val.bval;
+							break;
 
-					case value_type::INTEGER:
-						ret = y->value.constant.type == value_type::INTEGER &&
-						y->value.constant.val.ival == x->value.constant.val.ival;
-						break;
+						case value_type::INTEGER:
+							ret = y->value.constant.type == value_type::INTEGER &&
+							y->value.constant.val.ival == x->value.constant.val.ival;
+							break;
 
-					case value_type::FLOAT:
-						ret = y->value.constant.type == value_type::FLOAT &&
-						y->value.constant.val.fval == x->value.constant.val.fval;
+						case value_type::FLOAT:
+							ret = y->value.constant.type == value_type::FLOAT &&
+							y->value.constant.val.fval == x->value.constant.val.fval;
+					}
 				}
+				break;
+
+			case address_type::ADDRESS_TEMP:
+				ret = y->type == address_type::ADDRESS_TEMP &&
+					x->value.temp == y->value.temp;
+				break;
+
+			case address_type::ADDRESS_LABEL:
+				ret = y->type == address_type::ADDRESS_LABEL &&
+					*(x->value.label) == *(y->value.label);
+		}
+	}
+	else{
+		// {x == nullptr}
+		ret = x == y;
+	}
+
+	return ret;
+}
+
+bool are_equal_quad_pointers(const quad_pointer& x, const quad_pointer& y){
+	bool ret = false;
+
+	if(x != nullptr){
+		ret = x->type == y->type &&
+			x->op == y->op &&
+			are_equal_address_pointers(x->arg1, y->arg1) &&
+			are_equal_address_pointers(x->arg2, y->arg2) &&
+			are_equal_address_pointers(x->result, y->result);
+	}
+	else{
+		// {x == nullptr}
+		ret = x == y;
+	}
+
+	return ret;
+}
+
+bool are_equal_instructions_list(instructions_list& x,
+								instructions_list& y){
+	bool ret = true;
+
+	if(x.size() == y.size()){
+		instructions_list::iterator it_x = x.begin();
+		instructions_list::iterator it_y = y.begin();
+
+		while(it_x != x.end()){
+			ret = are_equal_quad_pointers(*it_x, *it_y);
+			if(!ret){
+				break;
 			}
-			break;
-
-		case address_type::ADDRESS_TEMP:
-			ret = y->type == address_type::ADDRESS_TEMP &&
-				x->value.temp == y->value.temp;
-			break;
-
-		case address_type::ADDRESS_LABEL:
-			ret = y->type == address_type::ADDRESS_LABEL &&
-				*(x->value.label) == *(y->value.label);
+			else{
+				// { ret }
+				it_x++;
+				it_y++;
+			}
+		}
+	}
+	else{
+		// {x.size() != y.size()}
+		ret = false;
 	}
 
 	return ret;
