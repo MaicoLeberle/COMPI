@@ -4,6 +4,9 @@
 #include "semantic_analysis.h"
 #include "./tests/test_inter_code_gen_visitor.h"
 #include "./tests/test_asm_code_generator.h"
+#include "./tests/test_asm_instruction.h"
+#include "./tests/test_ir_parser.h"
+#include "./tests/test_asm_parser.h"
 
 extern program_pointer ast;
 typedef struct yy_buffer_state * YY_BUFFER_STATE;
@@ -1013,6 +1016,9 @@ int main(int argc, const char* argv[]) {
 	test_semantic_analysis();
 	test_inter_code_gen_visitor();
 	test_asm_code_generator();
+	test_asm_instruction();
+	test_ir_parser();
+	test_asm_parser();
 
     return 0;
 }
