@@ -7,7 +7,13 @@
 #include <cassert> // assert
 #include <iostream> // cout
 
+/******************************************************************
+ * Types to represent ASM instructions' operands..
+ ******************************************************************/
+
 enum class register_id {
+	// Special value to denote the absence of a register.
+	NONE,
 	// 64-bits registers
 	RAX,
 	RBX,
@@ -29,7 +35,24 @@ enum class register_id {
 	EAX,
 	EBX,
 	ECX,
-	EDX
+	EDX,
+	R8D,
+	R9D,
+	R10D,
+	R11D,
+	R12D,
+	R13D,
+	R14D,
+	R15D,
+	// 8-bits registers
+	R8B,
+	R9B,
+	R10B,
+	R11B,
+	R12B,
+	R13B,
+	R14B,
+	R15B,
 };
 
 enum class operand_addressing {
@@ -37,6 +60,13 @@ enum class operand_addressing {
 	REGISTER, // Register
 	MEMORY,   // Memory value
 	NONE	  // For labels or other kind of data
+};
+
+// To indicate which field of the union imm is actually valid.
+enum class immediate_op_type {
+	INTEGER,
+	FLOAT,
+	BOOLEAN
 };
 
 // Data types
@@ -56,10 +86,11 @@ struct operand {
 	union {
 		// Memory address representation. The effective address is
 		// base + index × scale + offset.
+		// TODO: ver página 16 del Vol. 1 del manual de prog. de x86_64
 		struct {
 			unsigned int offset;
-			unsigned int base;
-			unsigned int index;
+			register_id base;
+			register_id index;
 			unsigned int scale;
 		} mem;
 
@@ -67,18 +98,21 @@ struct operand {
 		register_id reg;
 
 		// Immediate value representation.
-		union {
-			// TODO: coloco sólo estos campos, ya que son los únicos tipos
-			// de constantes que tenemos en nuestro lenguaje,pero no tienen relación
-			// directa con el contenido de type...
-			// TODO: en este campo imm no tengo información sobre el tipo del
-			// operando. Por otro lado, el enum data_type no distingue entre
-			// enteros y booleanos. Será que la representación de los mismos
-			// no varía?
-			int ival;
-			float fval;
-			bool bval;
-		} imm;
+		struct{
+			immediate_op_type imm_op_type;
+			union {
+				// TODO: coloco sólo estos campos, ya que son los únicos tipos
+				// de constantes que tenemos en nuestro lenguaje,pero no tienen relación
+				// directa con el contenido de type...
+				// TODO: en este campo imm no tengo información sobre el tipo del
+				// operando. Por otro lado, el enum data_type no distingue entre
+				// enteros y booleanos. Será que la representación de los mismos
+				// no varía?
+				int ival;
+				float fval;
+				bool bval;
+			} val;
+		}imm;
 
 		// Label representation
 		std::string *label;
@@ -87,13 +121,22 @@ struct operand {
 
 typedef std::shared_ptr<operand> operand_pointer;
 
+/******************************************************************
+ * Types to represent ASM instructions.
+ ******************************************************************/
+
 enum class operation {
 	// Arithmetic
 	ADD,
+	// TODO: sólo utilizamos la versión con signo de los operadores?
+	IMUL,
 	MUL,
+	// TODO: sólo utilizamos la versión con signo de los operadores?
+	IDIV,
 	DIV,
 	SUB,
 	NEG,
+	// TODO: para que usamos esta instruccion?
 	SAR, // sar[b|w|l|q] imm,d -> d = d>>imm (arithmetic right shift: the
 		 // spaces are filled in such a way to preserve the sign of the number
 		 // being slid)
@@ -131,50 +174,197 @@ struct asm_instruction {
 	data_type ops_type;
 	operand_pointer source = nullptr;
 	operand_pointer destination = nullptr;
+	bool is_signed = false;
 };
 
 typedef std::shared_ptr<asm_instruction> asm_instruction_pointer;
 
 class asm_instructions_list : public std::vector<asm_instruction_pointer> {};
 
-// Constructors of special kinds of operands.
+/******************************************************************
+ * Constructors of special kinds of operands.
+ ******************************************************************/
 operand_pointer new_register_operand(register_id);
-operand_pointer new_immediate_int_operand(int);
-operand_pointer new_memory_operand(int offset, int base, int index, int scale);
 
-// Constructors of instructions.
-asm_instruction_pointer new_mov_instruction(operand_pointer source,
-											operand_pointer destination,
-											data_type ops_type);
-asm_instruction_pointer new_shr_instruction(operand_pointer imm,
-											operand_pointer destination,
-											data_type ops_type);
-asm_instruction_pointer new_div_instruction(operand_pointer, data_type);
+operand_pointer new_immediate_integer_operand(int);
+operand_pointer new_immediate_float_operand(float);
+// TODO: donde usamos esto?
+operand_pointer new_immediate_boolean_operand(bool);
 
-asm_instruction_pointer new_mul_instruction(operand_pointer source,
-								operand_pointer destination,
-								data_type ops_type);
+operand_pointer new_memory_operand(unsigned int offset,
+								   register_id base,
+								   register_id index,
+								   unsigned int scale);
 
-asm_instruction_pointer new_add_instruction(operand_pointer source,
-								operand_pointer destination,
-								data_type ops_type);
-asm_instruction_pointer new_sub_instruction(operand_pointer source,
-								operand_pointer destination,
-								data_type ops_type);
-asm_instruction_pointer new_neg_instruction(operand_pointer destination,
+operand_pointer new_label_operand(std::string label);
+
+/******************************************************************
+ * Constructors of instructions.
+ ******************************************************************/
+asm_instruction_pointer new_mov_instruction(const operand_pointer& source,
+											const operand_pointer& destination,
 											data_type ops_type);
-asm_instruction_pointer new_cmp_instruction(operand_pointer, operand_pointer,
+
+asm_instruction_pointer new_shr_instruction(const operand_pointer& imm,
+											const operand_pointer& destination,
+											data_type ops_type);
+
+asm_instruction_pointer new_div_instruction(const operand_pointer&, data_type, bool);
+
+asm_instruction_pointer new_mul_instruction(const operand_pointer& source,
+											const operand_pointer& destination,
+											data_type ops_type,
+											bool is_signed);
+
+asm_instruction_pointer new_add_instruction(const operand_pointer& source,
+											const operand_pointer& destination,
+											data_type ops_type);
+
+asm_instruction_pointer new_sub_instruction(const operand_pointer& source,
+											const operand_pointer& destination,
+											data_type ops_type);
+
+asm_instruction_pointer new_neg_instruction(const operand_pointer& destination,
+											data_type ops_type);
+
+asm_instruction_pointer new_not_instruction(const operand_pointer& destination,
+											data_type ops_type);
+
+asm_instruction_pointer new_cmp_instruction(const operand_pointer&,
+											const operand_pointer&,
 											data_type);
+
+// TODO: del documento x86-64-arqu.guide.pdf: Jump unconditionally to target,
+// which is specified as a memory location (for example, a label).
+// Aqui solo consideramos una etiqueta.
+// TODO: los operandos y las instrucciones se construyen con los constructores
+// que definimos, y estos devuelven punteros, entonces es razonable pedir que
+// tales valores se pasen por referencia, en los procedimientos que estamos
+// definiendo aca (ya que no hay riesgos de que alguien nos pase un valor
+// que esté almacenado en la pila del procedimiento, en lugar de el heap). Pero
+// en el caso de los strings, si pidieramos recibirlos por referencia, esto podria
+// entenderse como que el usuario del procedimiento debiera tener la responsabilidad
+// de almacenar en el heap el parámetro, porque nosotros no vamos a realizar una
+// copia del mismo, si no que vamos a guardar la referencia al string.
 asm_instruction_pointer new_jmp_instruction(std::string);
+
 asm_instruction_pointer new_je_instruction(std::string);
+
 asm_instruction_pointer new_jne_instruction(std::string);
+
 asm_instruction_pointer new_jl_instruction(std::string);
+
 asm_instruction_pointer new_jle_instruction(std::string);
+
 asm_instruction_pointer new_jg_instruction(std::string);
+
 asm_instruction_pointer new_jge_instruction(std::string);
+
 asm_instruction_pointer new_call_instruction(std::string);
+
 asm_instruction_pointer new_leave_instruction();
+
 asm_instruction_pointer new_ret_instruction();
+
 asm_instruction_pointer new_label_instruction(std::string);
-asm_instruction_pointer new_enter_instruction(int);
+
+asm_instruction_pointer new_enter_instruction(const operand_pointer& stack_space,
+										const operand_pointer& nesting_level);
+
+/******************************************************************
+ * Printing
+ ******************************************************************/
+std::string print_operand_intel_syntax(const operand_pointer&);
+
+std::string print_binary_op_intel_syntax(const asm_instruction_pointer&);
+
+std::string print_unary_op_intel_syntax(const asm_instruction_pointer&);
+
+std::string print_intel_syntax(const asm_instruction_pointer&);
+
+std::string print_asm_instructions_list_intel_syntax(const
+												asm_instructions_list& code);
+/******************************************************************
+ * Debugging procedures.
+ ******************************************************************/
+bool is_mov_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination,
+						data_type ops_type);
+
+bool is_add_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination,
+						data_type ops_type);
+
+bool is_mul_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination,
+						data_type ops_type,
+						bool is_signed);
+
+bool is_div_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						data_type ops_type,
+						bool is_signed);
+
+bool is_neg_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& destination,
+						data_type ops_type);
+
+bool is_shr_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination,
+						data_type ops_type);
+
+bool is_not_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& destination,
+						data_type ops_type);
+
+// TODO: acá sí puede tener sentido el pasar por referencia los strings.
+bool is_jmp_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
+
+bool is_je_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
+
+bool is_jne_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
+
+bool is_jl_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
+
+bool is_jle_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
+
+bool is_jg_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
+
+bool is_jge_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
+
+bool is_call_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
+
+bool is_leave_instruction(const asm_instruction_pointer& inst);
+
+bool is_ret_instruction(const asm_instruction_pointer& inst);
+
+bool is_cmp_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination,
+						data_type ops_type);
+
+bool is_enter_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination);
+
+bool is_label_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
+
+bool are_equal_instructions(const asm_instruction_pointer&,
+							const asm_instruction_pointer&);
+
+bool are_equal_instructions_list(const asm_instructions_list&,
+								const asm_instructions_list&);
 #endif

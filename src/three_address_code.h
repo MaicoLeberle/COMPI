@@ -5,6 +5,11 @@
 #include <string>
 #include <vector>
 
+// Macro to convert booleans into strings (because std::to_string does it
+// wrong...). Taken from
+// http://stackoverflow.com/questions/29383/converting-bool-to-text-in-c
+#define BOOL_STR(b) ((b)?"true":"false")
+
 enum class address_type {
 	ADDRESS_NAME,
 	ADDRESS_CONSTANT,
@@ -104,105 +109,167 @@ class instructions_list : public std::vector<quad_pointer> {};
 // recibe algo que necesariamente va a ser un label (y, por lo tanto, bastaría
 // con recibir sólo un std::string)
 quad_pointer new_label(const std::string&);
-quad_pointer new_copy(const address_pointer dest, const address_pointer orig);
-quad_pointer new_enter_procedure(const unsigned int);
-quad_pointer new_binary_assign(const address_pointer dest,
-							   const address_pointer arg1,
-							   const address_pointer arg2,
+
+quad_pointer new_copy(const address_pointer& dest,
+						const address_pointer& orig);
+
+quad_pointer new_indexed_copy_to(const address_pointer& dest,
+								  const address_pointer& index,
+								  const address_pointer& orig);
+
+quad_pointer new_indexed_copy_from(const address_pointer& dest,
+								  const address_pointer& orig,
+								  const address_pointer& index);
+
+quad_pointer new_enter_procedure(unsigned int);
+
+quad_pointer new_binary_assign(const address_pointer& dest,
+							   const address_pointer& arg1,
+							   const address_pointer& arg2,
 							   quad_oper op);
-quad_pointer new_unary_assign(const address_pointer dest,
-							   const address_pointer arg,
+
+quad_pointer new_unary_assign(const address_pointer& dest,
+							   const address_pointer& arg,
 							   quad_oper op);
-quad_pointer new_parameter_inst(const address_pointer param);
-quad_pointer new_function_call_inst(const address_pointer dest,
-									const address_pointer func_label,
-									const address_pointer param_quantity);
-quad_pointer new_procedure_call_inst(const address_pointer proc_label,
-									const address_pointer param_quantity);
-quad_pointer new_conditional_jump_inst(const address_pointer guard,
-									std::string label,
+
+quad_pointer new_parameter_inst(const address_pointer& param);
+
+quad_pointer new_function_call_inst(const address_pointer& dest,
+									const address_pointer& func_label,
+									const address_pointer& param_quantity);
+
+quad_pointer new_procedure_call_inst(const address_pointer& proc_label,
+									const address_pointer& param_quantity);
+
+quad_pointer new_conditional_jump_inst(const address_pointer& guard,
+									const std::string& label,
 									quad_oper op);
-quad_pointer new_unconditional_jump_inst(std::string label);
-quad_pointer new_return_inst(address_pointer);
+
+quad_pointer new_unconditional_jump_inst(const std::string& label);
+
+quad_pointer new_return_inst(const address_pointer&);
 
 // if x relop y goto label
-quad_pointer new_relational_jump_inst(const address_pointer x, const address_pointer y,
-								quad_oper relop, std::string label);
+quad_pointer new_relational_jump_inst(const address_pointer& x,
+									const address_pointer& y,
+									quad_oper relop,
+									const std::string& label);
+
 // Constructors of specific type of addresses
 // TODO: cambiarles el nombre, para que quede claro que construyen addresses
 address_pointer new_integer_constant(int value);
+
 address_pointer new_float_constant(float value);
+
 address_pointer new_boolean_constant(bool value);
-address_pointer new_name_address(std::string name);
-address_pointer new_label_address(std::string label);
+
+address_pointer new_name_address(const std::string& name);
+
+address_pointer new_label_address(const std::string& label);
 
 // Procedures for debugging.
 // TODO: quizás debería recibir un address_pointer
-bool is_label(const quad_pointer& instruction, const std::string& label);
+bool is_label(const quad_pointer& instruction,
+				const std::string& label);
 
 // TODO: no hace falta todas estas is_plus_oper, etc: basta con is_binary_assignment
 // x = y + z
-bool is_plus_oper(const quad_pointer& instruction, const std::string& x,
-					const std::string& y, const std::string& z);
+bool is_plus_oper(const quad_pointer& instruction,
+					const std::string& x,
+					const std::string& y,
+					const std::string& z);
 
 // x = y * z
-bool is_times_oper(const quad_pointer& instruction, const std::string& x,
-					const std::string& y, const std::string& z);
+bool is_times_oper(const quad_pointer& instruction,
+					const std::string& x,
+					const std::string& y,
+					const std::string& z);
 
 // x = y / z
-bool is_divide_oper(const quad_pointer& instruction, const std::string& x,
-					const std::string& y, const std::string& z);
+bool is_divide_oper(const quad_pointer& instruction,
+					const std::string& x,
+					const std::string& y,
+					const std::string& z);
 
 // x = y % z
-bool is_mod_oper(const quad_pointer& instruction, const std::string& x,
-					const std::string& y, const std::string& z);
+bool is_mod_oper(const quad_pointer& instruction,
+				const std::string& x,
+				const std::string& y,
+				const std::string& z);
 
 // x = y - z
-bool is_minus_oper(const quad_pointer& instruction, const std::string& x,
-					const std::string& y, const std::string& z);
+bool is_minus_oper(const quad_pointer& instruction,
+					const std::string& x,
+					const std::string& y,
+					const std::string& z);
 
 // x = y < z
-bool is_less_oper(const quad_pointer& instruction, const std::string& x,
-					const std::string& y, const std::string& z);
+bool is_less_oper(const quad_pointer& instruction,
+					const std::string& x,
+					const std::string& y,
+					const std::string& z);
 
 // x = y <= z
-bool is_less_equal_oper(const quad_pointer& instruction, const std::string& x,
-					const std::string& y, const std::string& z);
+bool is_less_equal_oper(const quad_pointer& instruction,
+					const std::string& x,
+					const std::string& y,
+					const std::string& z);
 
 // x = y > z
-bool is_greater_oper(const quad_pointer& instruction, const std::string& x,
-					const std::string& y, const std::string& z);
+bool is_greater_oper(const quad_pointer& instruction,
+					const std::string& x,
+					const std::string& y,
+					const std::string& z);
 
 // x = y >= z
-bool is_greater_equal_oper(const quad_pointer& instruction, const std::string& x,
-					const std::string& y, const std::string& z);
+bool is_greater_equal_oper(const quad_pointer& instruction,
+							const std::string& x,
+							const std::string& y,
+							const std::string& z);
 // x = y == z
-bool is_equal_oper(const quad_pointer& instruction, const std::string& x,
-					const std::string& y, const std::string& z);
+bool is_equal_oper(const quad_pointer& instruction,
+					const std::string& x,
+					const std::string& y,
+					const std::string& z);
 
 // x = y != z
-bool is_distinct_oper(const quad_pointer& instruction, const std::string& x,
-					const std::string& y, const std::string& z);
+bool is_distinct_oper(const quad_pointer& instruction,
+					const std::string& x,
+					const std::string& y,
+					const std::string& z);
 
 // x = y and z
-bool is_and_oper(const quad_pointer& instruction, const std::string& x,
-					const std::string& y, const std::string& z);
+bool is_and_oper(const quad_pointer& instruction,
+					const std::string& x,
+					const std::string& y,
+					const std::string& z);
 
 // x = y or z
-bool is_or_oper(const quad_pointer& instruction, const std::string& x,
-					const std::string& y, const std::string& z);
+bool is_or_oper(const quad_pointer& instruction,
+					const std::string& x,
+					const std::string& y,
+					const std::string& z);
 
 // x = - y
-bool is_negative_oper(const quad_pointer& instruction, const std::string& x,
+bool is_negative_oper(const quad_pointer& instruction,
+					const std::string& x,
 					const std::string& y);
 
 // x = not y
-bool is_negation_oper(const quad_pointer& instruction, const std::string& x,
+bool is_negation_oper(const quad_pointer& instruction,
+					const std::string& x,
 					const std::string& y);
 
 // x = y
-bool is_copy(const quad_pointer& instruction, const address_pointer& dest,
-		const address_pointer& orig);
+bool is_copy(const quad_pointer& instruction,
+			const address_pointer& dest,
+			const address_pointer& orig);
+
+// x[i] = y
+bool is_indexed_copy_to(const quad_pointer& instruction,
+						const address_pointer& dest,
+						const address_pointer& index,
+						const address_pointer& orig);
 
 // x = y op z
 bool is_binary_assignment(const quad_pointer& instruction,
@@ -217,35 +284,55 @@ bool is_unary_assignment(const quad_pointer& instruction,
 						 quad_oper op);
 
 // x[i] = y
-bool is_indexed_copy_to(const quad_pointer& instruction, const std::string& x,
-		const std::string& i, const std::string& y);
+bool is_indexed_copy_to(const quad_pointer& instruction,
+						const address_pointer& dest,
+						const address_pointer& index,
+						const address_pointer& orig);
+
+// x = y[i]
+bool is_indexed_copy_from(const quad_pointer& instruction,
+						const address_pointer& dest,
+						const address_pointer& orig,
+						const address_pointer& index);
 
 bool is_enter_procedure(const quad_pointer& instruction, unsigned int bytes);
 
 bool is_procedure_call(const quad_pointer& instruction,
-						const address_pointer proc_label,
+						const address_pointer& proc_label,
 						int param_quantity);
 
 bool is_function_call(const quad_pointer& instruction,
-						const address_pointer dest,
-						const address_pointer func_label,
-						int param_quantity);
+						const address_pointer& dest,
+						const address_pointer& func_label,
+						const address_pointer& param_quantity);
 
 bool is_parameter_inst(const quad_pointer& instruction,
-						const address_pointer param);
+						const address_pointer& param);
 
 bool is_conditional_jump_inst(const quad_pointer& instruction,
-								const address_pointer guard,
-								std::string label,
+								const address_pointer& guard,
+								const std::string& label,
 								quad_oper op);
 
 bool is_unconditional_jump_inst(const quad_pointer& instruction,
-								std::string label);
+								const std::string& label);
+
+bool is_return_inst(const quad_pointer& instruction,
+					const address_pointer& ret_value);
 
 bool is_relational_jump_inst(const quad_pointer& instruction,
-		const address_pointer x, const address_pointer y,
-		quad_oper relop, std::string label);
+							const address_pointer& x,
+							const address_pointer& y,
+							quad_oper relop,
+							const std::string& label);
 
-bool are_equal_pointers(const address_pointer&, const address_pointer&);
+bool are_equal_address_pointers(const address_pointer&, const address_pointer&);
+
+bool are_equal_quad_pointers(const quad_pointer&, const quad_pointer&);
+
+bool are_equal_instructions_list(const instructions_list& x,
+								const instructions_list& y);
+
+std::string instructions_list_to_string(const instructions_list& x);
 
 #endif // THREE_ADDRESS_CODE_H_

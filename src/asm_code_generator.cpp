@@ -6,43 +6,61 @@ ir(_ir), s_table(_s_table) {
 	translation = new asm_instructions_list();
 }
 
-/*void asm_code_generator::print_intel_syntax(){
-	for(asm_instruction_list::iterator it = translation.size())
-}*/
+void asm_code_generator::print_translation_intel_syntax(){
+	for(asm_instructions_list::iterator it = translation->begin();
+		it != translation->end();
+		++it){
+
+		std::cout << print_intel_syntax(*it) << std::endl;
+	}
+}
+
+asm_instructions_list* asm_code_generator::get_translation(){
+	return translation;
+}
 
 operand_pointer asm_code_generator::get_address(address_pointer address){
 	// TODO: cómo discriminamos los demás casos de operand?
-	operand_pointer ret = operand_pointer(new operand);
+	// TODO: esto no debería estar en asm_instruction?
+	operand_pointer ret = nullptr;
 
 	switch(address->type){
-		case address_type::ADDRESS_NAME:
-			ret->op_addr = operand_addressing::MEMORY;
-			ret->value.mem.offset = -s_table->get_offset(*address->value.name);
-			// TODO: no utilizamos base, scale, index.
+		case address_type::ADDRESS_NAME:{
+			// TODO: cómo determinamos scale, base e index?
+			ret = new_memory_operand(s_table->get_offset(*address->value.name),
+									register_id::RSP,
+									register_id::NONE,
+									1);
+			/*ret->op_addr = operand_addressing::MEMORY;
+			ret->value.mem.offset = s_table->get_offset(*address->value.name);
+
 			ret->value.mem.base = 0;
 			ret->value.mem.scale = 0;
 			ret->value.mem.index = 0;
+			break;*/
 			break;
+		}
 
-		case address_type::ADDRESS_CONSTANT:
-			ret->op_addr = operand_addressing::IMMEDIATE;
-
+		case address_type::ADDRESS_CONSTANT:{
 			switch(address->value.constant.type){
 				case value_type::BOOLEAN:
-					ret->value.imm.bval = address->value.constant.val.bval;
+					ret = new_immediate_boolean_operand(address->value.constant.val.bval);
 					break;
 
 				case value_type::INTEGER:
-					ret->value.imm.ival = address->value.constant.val.ival;
+					ret = new_immediate_integer_operand(address->value.constant.val.ival);
 					break;
 
 				case value_type::FLOAT:
-					ret->value.imm.fval = address->value.constant.val.fval;
+					ret = new_immediate_float_operand(address->value.constant.val.fval);
 					break;
 			}
 
 			break;
+		}
 	}
+
+	return ret;
 
 }
 
@@ -54,7 +72,7 @@ void asm_code_generator::translate_binary_op(const quad_pointer& instruction){
 			//		mov[b|w|l|q] z,register
 			// 		imulw y,z (z = z ∗ y, z debe ser un registro)
 			// 		mov[b|w|l|q] z,x (x = z)
-			operand_pointer new_register; // TODO: cómo lo defino?
+			operand_pointer new_register = new_register_operand(register_id::R8D);
 			operand_pointer x = get_address(instruction->result);
 			operand_pointer y = get_address(instruction->arg1);
 			operand_pointer z = get_address(instruction->arg2);
@@ -64,7 +82,8 @@ void asm_code_generator::translate_binary_op(const quad_pointer& instruction){
 			// esto?
 			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 			translation->push_back(new_mov_instruction(z, new_register, data_type::L));
-			translation->push_back(new_mul_instruction(y, new_register, data_type::L));
+			// TODO: signed?
+			translation->push_back(new_mul_instruction(y, new_register, data_type::L, true));
 			translation->push_back(new_mov_instruction(new_register, x, data_type::L));
 			break;
 		}
@@ -75,7 +94,9 @@ void asm_code_generator::translate_binary_op(const quad_pointer& instruction){
 			// 		idivl z (signed divide of %edx::%eax by z; quotient in %eax, remainder in %edx)
 			// 		mov[b|w|l|q] %eax,x
 			operand_pointer edx_reg = new_register_operand(register_id::EDX);
+			operand_pointer aux_edx_reg = new_register_operand(register_id::R8D);
 			operand_pointer eax_reg = new_register_operand(register_id::EAX);
+			operand_pointer aux_eax_reg = new_register_operand(register_id::R9D);
 			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 			operand_pointer x = get_address(instruction->result);
 			operand_pointer y = get_address(instruction->arg1);
@@ -86,10 +107,20 @@ void asm_code_generator::translate_binary_op(const quad_pointer& instruction){
 			// de 32 posiciones hacia la derecha (para quedarnos con los 32 bits
 			// de mayor peso), y guardar el resultado en EDX
 			// TODO: definir aux_reg
-			operand_pointer zero = new_immediate_int_operand(0);
+			operand_pointer zero = new_immediate_integer_operand(0);
+			// TODO: como pasamos parámetros a través de los registros edx y eax
+			// guardamos primero el contenido de los mismos, por las dudas,
+			// en nuevos registros, para después recuperar el contenido de los
+			// mismos.
+			translation->push_back(new_mov_instruction(edx_reg, aux_edx_reg, ops_type));
+			translation->push_back(new_mov_instruction(eax_reg, aux_eax_reg, ops_type));
+			translation->push_back(new_mov_instruction(y, eax_reg, ops_type));
 			translation->push_back(new_mov_instruction(zero, edx_reg, ops_type));
-			translation->push_back(new_div_instruction(z, ops_type));
+			// TODO: signed?
+			translation->push_back(new_div_instruction(z, ops_type, true));
 			translation->push_back(new_mov_instruction(eax_reg, x, ops_type));
+			translation->push_back(new_mov_instruction(aux_edx_reg, edx_reg, ops_type));
+			translation->push_back(new_mov_instruction(aux_eax_reg, eax_reg, ops_type));
 			break;
 		}
 
@@ -101,7 +132,9 @@ void asm_code_generator::translate_binary_op(const quad_pointer& instruction){
 			//
 			// 		mov[b|w|l|q] %edx,x
 			operand_pointer edx_reg = new_register_operand(register_id::EDX);
+			operand_pointer aux_edx_reg = new_register_operand(register_id::R8D);
 			operand_pointer eax_reg = new_register_operand(register_id::EAX);
+			operand_pointer aux_eax_reg = new_register_operand(register_id::R9D);
 			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 			operand_pointer x = get_address(instruction->result);
 			operand_pointer y = get_address(instruction->arg1);
@@ -112,10 +145,15 @@ void asm_code_generator::translate_binary_op(const quad_pointer& instruction){
 			// de 32 posiciones hacia la derecha (para quedarnos con los 32 bits
 			// de mayor peso), y guardar el resultado en EDX
 			// TODO: definir aux_reg
-			operand_pointer zero = new_immediate_int_operand(0);
+			operand_pointer zero = new_immediate_integer_operand(0);
+			translation->push_back(new_mov_instruction(edx_reg, aux_edx_reg, ops_type));
+			translation->push_back(new_mov_instruction(eax_reg, aux_eax_reg, ops_type));
 			translation->push_back(new_mov_instruction(zero, edx_reg, ops_type));
-			translation->push_back(new_div_instruction(z, ops_type));
+			// TODO: signed?
+			translation->push_back(new_div_instruction(z, ops_type, true));
 			translation->push_back(new_mov_instruction(edx_reg, x, ops_type));
+			translation->push_back(new_mov_instruction(aux_edx_reg, edx_reg, ops_type));
+			translation->push_back(new_mov_instruction(aux_eax_reg, eax_reg, ops_type));
 			break;
 		}
 
@@ -124,13 +162,14 @@ void asm_code_generator::translate_binary_op(const quad_pointer& instruction){
 			//		addw y,z (z = y+z) Los operandos son de tipo word
 			// 		mov[b|w|l|q] z,x (tendremos que ver el tipo de los operandos
 			//		para determinar el tipo de instrucción?)
-			operand_pointer new_register; // TODO: cómo lo defino?
+			// TODO: cómo lo defino?
+			operand_pointer new_register = new_register_operand(register_id::R8D);
 			operand_pointer x = get_address(instruction->result);
 			operand_pointer y = get_address(instruction->arg1);
 			operand_pointer z = get_address(instruction->arg2);
 			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
-			translation->push_back(new_mov_instruction(z, new_register, ops_type));
-			translation->push_back(new_add_instruction(y, new_register, ops_type));
+			translation->push_back(new_mov_instruction(y, new_register, ops_type));
+			translation->push_back(new_add_instruction(z, new_register, ops_type));
 			translation->push_back(new_mov_instruction(new_register, x, ops_type));
 			break;
 		}
@@ -139,13 +178,14 @@ void asm_code_generator::translate_binary_op(const quad_pointer& instruction){
 			// BINARY_ASSIGN x = y - z:
 			//		subw y,z (z = z − y)
 			//		mov[b|w|l|q] z,x
-			operand_pointer new_register; // TODO: cómo lo defino?
+			// TODO: cómo lo defino?
+			operand_pointer new_register = new_register_operand(register_id::R8D);
 			operand_pointer x = get_address(instruction->result);
 			operand_pointer y = get_address(instruction->arg1);
 			operand_pointer z = get_address(instruction->arg2);
 			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
-			translation->push_back(new_mov_instruction(z, new_register, ops_type));
-			translation->push_back(new_sub_instruction(y, new_register, ops_type));
+			translation->push_back(new_mov_instruction(y, new_register, ops_type));
+			translation->push_back(new_sub_instruction(z, new_register, ops_type));
 			translation->push_back(new_mov_instruction(new_register, x, ops_type));
 			break;
 		}
@@ -176,7 +216,8 @@ void asm_code_generator::translate_unary_op(const quad_pointer& instruction){
 			// UNARY_ASSIGN x = -y
 			// 		negw y (y = −y)
 			// 		mov[b|w|l|q] y,x
-			operand_pointer new_register; // TODO: cómo lo defino?
+			// TODO: cómo lo defino?
+			operand_pointer new_register = new_register_operand(register_id::R8D);
 			operand_pointer x = get_address(instruction->result);
 			operand_pointer y = get_address(instruction->arg1);
 			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
@@ -194,7 +235,8 @@ void asm_code_generator::translate_unary_op(const quad_pointer& instruction){
 			// UNARY_ASSIGN x = not y
 			// notw y (y =∼ y (bitwise complement))
 			// mov[b|w|l|q] y,x
-			operand_pointer new_register; // TODO: cómo lo defino?
+			// TODO: cómo lo defino?
+			operand_pointer new_register = new_register_operand(register_id::R8B);
 			operand_pointer x = get_address(instruction->result);
 			operand_pointer y = get_address(instruction->arg1);
 			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
@@ -203,7 +245,7 @@ void asm_code_generator::translate_unary_op(const quad_pointer& instruction){
 			// TODO: en la generación de código intermedio, no nos aseguramos de
 			// esto?
 			translation->push_back(new_mov_instruction(y, new_register, ops_type));
-			translation->push_back(new_neg_instruction(new_register, ops_type));
+			translation->push_back(new_not_instruction(new_register, ops_type));
 			translation->push_back(new_mov_instruction(new_register, x, ops_type));
 			break;
 		}
@@ -215,7 +257,7 @@ void asm_code_generator::translate_copy(const quad_pointer& instruction){
 	// 		mov[b|w|l|q] y,x (move s to d; tendremos que ver el tipo de los operandos
 	// 		para determinar el tipo de instrucción?)
 	// TODO: por ahora no hacemos arreglos
-	/*
+
 	operand_pointer x = get_address(instruction->result);
 	operand_pointer y = get_address(instruction->arg1);
 	data_type ops_type; // TODO: cómo determino el tipo de los operandos?
@@ -223,7 +265,7 @@ void asm_code_generator::translate_copy(const quad_pointer& instruction){
 	// the destination of the product.
 	// TODO: en la generación de código intermedio, no nos aseguramos de
 	// esto?
-	translation->push_back(new_mov_instruction(y, x, ops_type));*/
+	translation->push_back(new_mov_instruction(y, x, ops_type));
 }
 
 void asm_code_generator::translate_indexed_copy_to(const quad_pointer& instruction){
@@ -283,8 +325,10 @@ void asm_code_generator::translate_conditional_jump(const quad_pointer& instruct
 	data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 	// TODO: en la generación de código intermedio, no nos aseguramos de
 	// esto?
-	translation->push_back(new_mov_instruction(new_immediate_int_operand(1),
-												aux_reg, ops_type));
+	operand_pointer aux = new_immediate_integer_operand(1);
+	translation->push_back(new_mov_instruction(aux,
+												aux_reg,
+												ops_type));
 	translation->push_back(new_cmp_instruction(x, aux_reg, ops_type));
 
 	switch(instruction->op){
@@ -423,7 +467,12 @@ void asm_code_generator::translate_label(const quad_pointer& instruction){
 void asm_code_generator::translate_enter_procedure(const quad_pointer& instruction){
 	// BEGIN_PROCEDURE n
 	//		enter n
-	translation->push_back(new_enter_instruction(instruction->result->value.constant.val.ival));
+	operand_pointer stack_space = new_immediate_integer_operand(
+									instruction->arg1->value.constant.val.ival
+								);
+	// TODO: cómo determino nesting?
+	operand_pointer nesting = new_immediate_integer_operand(0);
+	translation->push_back(new_enter_instruction(stack_space, nesting));
 }
 
 void asm_code_generator::translate_ir(void){
@@ -493,4 +542,3 @@ void asm_code_generator::translate_ir(void){
 
 	}
 }
-

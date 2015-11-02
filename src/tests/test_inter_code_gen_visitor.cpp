@@ -1,5 +1,6 @@
 #include "test_inter_code_gen_visitor.h"
 
+// COMPI's parser's interface and global variables.
 extern program_pointer ast;
 typedef struct yy_buffer_state * YY_BUFFER_STATE;
 extern int yyparse();
@@ -18,27 +19,32 @@ void translate(inter_code_gen_visitor& v, std::string program){
 	yy_delete_buffer(program_buffer);
 }
 
+// COMPI's parser's interface and global variables.
+extern void translate_ir_code(std::string program);
+extern instructions_list *ir_code;
+
 void test_three_address_code(){
-	std::cout << "1) Three-address-code representation related procedures: ";
+	std::cout << "1) Three-address code's representation-related procedures: ";
 
 	address_pointer add1 = new_boolean_constant(boolean_initial_value);
 	address_pointer add2 = new_boolean_constant(boolean_initial_value);
 
 	/* TODO : borrar add1 y add2 */
-	assert(are_equal_pointers(add1, add2));
+	assert(are_equal_address_pointers(add1, add2));
 
 	add1 = new_integer_constant(integer_initial_value);
 	add2 = new_integer_constant(integer_initial_value);
 
-	assert(are_equal_pointers(add1, add2));
+	assert(are_equal_address_pointers(add1, add2));
 
 	add1 = new_float_constant(float_initial_value);
 	add2 = new_float_constant(float_initial_value);
 
-	assert(are_equal_pointers(add1, add2));
+	assert(are_equal_address_pointers(add1, add2));
 
 	std::cout << "OK. " << std::endl;
 }
+
 void test_class_decl(){
 	std::cout << "2) Translation of a class declaration: ";
 
@@ -53,10 +59,26 @@ void test_class_decl(){
 	translate(v1, test_program);
 
 	instructions_list *translation = v1.get_inst_list();
-	// Only the main method's translation.
-	assert(translation->size() == 2);
 
-	// Just data about the classes...
+	std::string ir_program = "main.main:\n"
+							 "enter 0";
+
+	translate_ir_code(ir_program);
+
+	assert(are_equal_instructions_list(*translation, *ir_code));
+
+	// Only the main method's translation.
+	/*assert(translation->size() == 2);
+
+	// main method's label.
+	instructions_list::iterator it = translation->begin();
+	assert(is_label(*it, std::string("main.main")));
+
+	// enter instruction.
+	it++;
+	assert(is_enter_procedure(*it, 0));*/
+
+	// In the intermediate_symtable, just data about the classes.
 	intermediate_symtable *symtable = v1.get_symtable();
 
 	assert(symtable->get(std::string("Program"))->get_class() ==
@@ -85,8 +107,14 @@ void test_field_decl(){
 	translate(v1, test_program);
 
 	instructions_list *translation = v1.get_inst_list();
-	// TODO: chequear esto!
-	//assert(translation->size() == 0);
+
+	// Check ir code.
+	std::string ir_program = "main.main:\n"
+							 "enter 0";
+
+	translate_ir_code(ir_program);
+
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	// Data about the fields...
 	intermediate_symtable *symtable = v1.get_symtable();
@@ -166,67 +194,22 @@ void test_field_decl(){
 	translate(v2, test_program);
 
 	translation = v2.get_inst_list();
-	//assert(translation->size() == 2);
+	ir_program = "class2.method:\n"
+				 "enter "+std::to_string(integer_width*2 + float_width*2 +
+						 	 	 	 	 boolean_width*2)+"\n"
+				 "n = "+std::to_string(integer_initial_value)+"\n"
+				 "x = "+std::to_string(float_initial_value)+"\n"
+				 "b = "+BOOL_STR(boolean_initial_value)+"\n"
+				 "obj.b2 = "+BOOL_STR(boolean_initial_value)+"\n"
+				 "obj.y = "+std::to_string(float_initial_value)+"\n"
+				 "obj.m = "+std::to_string(integer_initial_value)+"\n"
+				 "main.main:\n"
+				 "enter 0";
 
-	// Method's label
-	instructions_list::iterator inst = translation->begin();
 
-	// Enter procedure
-	inst++;
+	translate_ir_code(ir_program);
 
-	// Initialization of the variable n.
-	inst++;
-
-	address_pointer dest = new_name_address(std::string("n"));
-	address_pointer orig = new_integer_constant(integer_initial_value);
-
-	assert(is_copy(*inst, dest, orig));
-	// TODO: borrar dest y orig
-
-	// Initialization of the variable x.
-	inst++;
-
-	dest = new_name_address(std::string("x"));
-	orig = new_float_constant(float_initial_value);
-
-	assert(is_copy(*inst, dest, orig));
-
-	// Initialization of the variable b.
-	inst++;
-
-	dest = new_name_address(std::string("b"));
-	orig = new_boolean_constant(boolean_initial_value);
-
-	assert(is_copy(*inst, dest, orig));
-
-	// Initialization of the variable obj.
-	// First field: b2
-	// TODO: los atributos de la clase se almacenan en orden inverso.
-	// TODO: actualmente estamos deinifiendo como addresses a cosas de la forma
-	// id_instance "." nombre de atributo
-	inst++;
-
-	dest = new_name_address(std::string("obj.b2"));
-	orig = new_boolean_constant(boolean_initial_value);
-
-	assert(is_copy(*inst, dest, orig));
-
-	// Second field: y
-	inst++;
-
-	dest = new_name_address(std::string("obj.y"));
-	orig = new_float_constant(float_initial_value);
-
-	assert(is_copy(*inst, dest, orig));
-
-	// Third field: m
-	inst++;
-
-	dest = new_name_address(std::string("obj.m"));
-	orig = new_integer_constant(integer_initial_value);
-
-	assert(is_copy(*inst, dest, orig));
-
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	std::cout << "OK. " << std::endl;
 }
@@ -252,17 +235,20 @@ void test_method_decl(){
 	translate(v1, test_program);
 
 	instructions_list *translation = v1.get_inst_list();
-	// TODO: testear size
-	//assert(translation->size() == 2);
 
-	// Method's label
-	instructions_list::iterator it = translation->begin();
-	std::string aux("class2.method");
-	assert(is_label(*it, aux));
+	std::string ir_program = "class2.method:\n"
+				"enter " + std::to_string(integer_width +
+									integer_width +
+									float_width) + "\n" +
+				"n = " + std::to_string(integer_initial_value) +
+				"x = " + std::to_string(float_initial_value) +
+				"main.main:\n" +
+				"enter 0";
 
-	// Enter instruction
-	it++;
-	assert(is_enter_procedure(*it, integer_width+float_width));
+
+	translate_ir_code(ir_program);
+
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	// Test data collected.
 	intermediate_symtable *symtable = v1.get_symtable();
@@ -316,36 +302,19 @@ void test_assignment_stm(){
 
 	instructions_list *translation = v1.get_inst_list();
 
-	// Method's label
-	instructions_list::iterator it = translation->begin();
+	std::string ir_program = "class1.method:\n"
+							"enter "+std::to_string(integer_width) + "\n"
+							"n = " + std::to_string(integer_initial_value) + "\n"
+							"n = 1\n"
+							"n = n + 1\n"
+							"n = n - 1"
+							"main.main:"
+							"enter 0";
 
-	// Enter procedure
-	it++;
 
-	// Variable initialization
-	it++;
+	translate_ir_code(ir_program);
 
-	// Assignment statement
-	it++;
-	address_pointer dest = new_name_address(std::string("n"));
-	address_pointer constant = new_integer_constant(1);
-	assert(is_copy(*it, dest, constant));
-
-	// Plus assignment statement
-	it++;
-	assert(is_binary_assignment(*it,
-							 	dest,
-							 	dest,
-							 	constant,
-							 	quad_oper::PLUS));
-
-	// Minus assignment statement
-	it++;
-	assert(is_binary_assignment(*it,
-								dest,
-								dest,
-								constant,
-								quad_oper::MINUS));
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	std::cout << "OK. " << std::endl;
 }
@@ -374,63 +343,26 @@ void test_method_call_statement(){
 	translate(v1, test_program);
 
 	instructions_list *translation = v1.get_inst_list();
-	// Class 1
+	std::string ir_program = "class1.method1:\n"
+							"enter 0\n"
+							"class1.method2:\n"
+							"enter " + std::to_string(2*integer_width) + "\n"
+							"param this\n"
+							"call class1.method1,1\n"
+							"class2.method3:\n"
+							"enter " + std::to_string(2*integer_width) + "\n"
+							"x = "+std::to_string(integer_initial_value) + "\n"
+							"y = "+std::to_string(integer_initial_value) + "\n"
+							"param obj\n"
+							"param x\n"
+							"param y\n"
+							"call class1.method2,3\n"
+							"main.main:\n"
+							"enter 0";
 
-	// Method1's label
-	instructions_list::iterator it = translation->begin();
+	translate_ir_code(ir_program);
 
-	// Enter procedure
-	it++;
-
-	// Method2's label
-	it++;
-
-	// Enter procedure
-	it++;
-
-	// Param this
-	it++;
-	address_pointer this_param = new_name_address(std::string("this")); // TODO: borrar...
-	assert(is_parameter_inst(*it, this_param));
-
-	// Method call
-	it++;
-	address_pointer label = new_label_address(std::string("class1.method1"));
-	assert(is_procedure_call(*it, label, 1));
-
-	// Class 2
-
-	// Method3's label
-	it++;
-
-	// Enter procedure
-	it++;
-
-	// Variable x
-	it++;
-
-	// Variable y
-	it++;
-
-	// Param this
-	it++;
-	this_param = new_name_address(std::string("obj"));
-	assert(is_parameter_inst(*it, this_param));
-
-	// Param x
-	it++;
-	this_param = new_name_address(std::string("x"));
-	assert(is_parameter_inst(*it, this_param));
-
-	// Param y
-	it++;
-	this_param = new_name_address(std::string("y"));
-	assert(is_parameter_inst(*it, this_param));
-
-	// Method call
-	it++;
-	label = new_label_address(std::string("class1.method2"));
-	assert(is_procedure_call(*it, label, 3));
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	std::cout << "OK. " << std::endl;
 }
@@ -453,47 +385,22 @@ void test_if_statement(){
 
 	instructions_list *translation = v1.get_inst_list();
 
-	// Class 1.
+	std::string ir_program = "class1.method1:\n"
+							"enter " +
+								std::to_string(integer_width) + "\n"
+							"x = " + std::to_string(integer_initial_value) + "\n"
+							"ifFalse true goto L1\n"
+							"x = 1\n"
+							"goto L2\n"
+							"L1:\n"
+							"x = 2\n"
+							"L2:\n"
+							"main.main:\n"
+							"enter 0";
 
-	// Method1's label.
-	instructions_list::iterator it = translation->begin();
+	translate_ir_code(ir_program);
 
-	// Enter procedure.
-	it++;
-
-	// Variable x.
-	it++;
-
-
-	// Conditional jump to the else branch.
-	it++;
-	address_pointer guard = new_boolean_constant(true);
-	std::string label_else("L1");
-	assert(is_conditional_jump_inst(*it, guard,label_else,quad_oper::IFFALSE));
-
-	// If-then body.
-	it++;
-	address_pointer x = new_name_address("x");
-	address_pointer constant = new_integer_constant(1);
-	assert(is_copy(*it, x, constant));
-
-	// Unconditional jump to the last part of the translation.
-	it++;
-	std::string label_end("L2");
-	assert(is_unconditional_jump_inst(*it, label_end));
-
-	// Label for the "else" branch.
-	it++;
-	assert(is_label(*it, label_else));
-
-	// "else" body.
-	it++;
-	address_pointer constant2 = new_integer_constant(2);
-	assert(is_copy(*it, x, constant2));
-
-	// Label for the ending.
-	it++;
-	assert(is_label(*it, label_end));
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	std::cout << "OK. " << std::endl;
 }
@@ -501,7 +408,7 @@ void test_if_statement(){
 void test_for_statement(){
 	std::cout << "8) Loop \"for\":";
 
-	std::string test_program = "class class1 { void method1() {"
+	std::string test_program = "class class1 { void method1(int y) {"
 													"y = 1;"
 													"for x = 1 , 2 y += 1;"
 												"}\n"
@@ -516,54 +423,23 @@ void test_for_statement(){
 
 	instructions_list *translation = v1.get_inst_list();
 
-	// Class 1.
+	std::string ir_program = "class1.method1:\n"
+							"enter " +
+							std::to_string(integer_width) + "\n"
+							"y = 1\n"
+							"x = 1\n"
+							"L1:\n"
+							"if 2 < x goto L2\n"
+							"y = y + 1\n"
+							"x = x + 1\n"
+							"goto L1\n"
+							"L2:\n"
+							"main.main:\n"
+							"enter 0";
 
-	// Method1's label.
-	instructions_list::iterator it = translation->begin();
+	translate_ir_code(ir_program);
 
-	// Enter procedure.
-	it++;
-
-	// Variable y.
-	it++;
-
-
-	// Variable x.
-	it++;
-	address_pointer x = new_name_address("x");
-	address_pointer from = new_integer_constant(1);
-	assert(is_copy(*it, x, from));
-
-	// Label
-	it++;
-	std::string label_beginning ("L1");
-	// TODO: el valor concreto de la etiqueta podría llegar a cambiar
-	assert(is_label(*it, label_beginning));
-
-	// Relational jump
-	it++;
-	address_pointer to = new_integer_constant(2);
-	std::string label_ending("L2");
-	assert(is_relational_jump_inst(*it, to, x, quad_oper::LESS, label_ending));
-
-	// Body code
-	it++;
-	address_pointer y = new_name_address("y");
-	address_pointer increment = new_integer_constant(1);
-	assert(is_binary_assignment(*it, y, y, increment, quad_oper::PLUS));
-
-	// Increment of the loop's variable.
-	it++;
-	assert(is_binary_assignment(*it, x, x, increment, quad_oper::PLUS));
-
-	// Return to the beginning
-	it++;
-	assert(is_unconditional_jump_inst(*it, label_beginning));
-
-	// Label
-	it++;
-	// TODO: el valor concreto de la etiqueta podría llegar a cambiar
-	assert(is_label(*it, label_ending));
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	std::cout << "OK. " << std::endl;
 }
@@ -571,7 +447,7 @@ void test_for_statement(){
 void test_while_statement(){
 	std::cout << "9) Loop \"while\":";
 
-	std::string test_program = "class class1 { void method1() {"
+	std::string test_program = "class class1 { void method1(int y) {"
 													"y = 1;"
 													"while true y += 1;"
 												"}\n"
@@ -586,43 +462,21 @@ void test_while_statement(){
 
 	instructions_list *translation = v1.get_inst_list();
 
-	// Class 1.
+	std::string ir_program = "class1.method1:\n"
+							"enter " +
+								std::to_string(integer_width) + "\n"
+							"y = 1\n"
+							"L1:\n"
+							"ifFalse true goto L2\n"
+							"y = y + 1\n"
+							"goto L1\n"
+							"L2:\n"
+							"main.main:\n"
+							"enter 0";
 
-	// Method1's label.
-	instructions_list::iterator it = translation->begin();
+	translate_ir_code(ir_program);
 
-	// Enter procedure.
-	it++;
-
-	// Variable y.
-	it++;
-
-	// Label
-	it++;
-	std::string label_beginning ("L1");
-	// TODO: el valor concreto de la etiqueta podría llegar a cambiar
-	assert(is_label(*it, label_beginning));
-
-	// Conditional jump
-	it++;
-	address_pointer guard = new_boolean_constant(true);
-	std::string label_ending("L2");
-	assert(is_conditional_jump_inst(*it, guard, label_ending, quad_oper::IFFALSE));
-
-	// Body code
-	it++;
-	address_pointer y = new_name_address("y");
-	address_pointer increment = new_integer_constant(1);
-	assert(is_binary_assignment(*it, y, y, increment, quad_oper::PLUS));
-
-	// Return to the beginning
-	it++;
-	assert(is_unconditional_jump_inst(*it, label_beginning));
-
-	// Label
-	it++;
-	// TODO: el valor concreto de la etiqueta podría llegar a cambiar
-	assert(is_label(*it, label_ending));
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	std::cout << "OK. " << std::endl;
 }
@@ -644,24 +498,15 @@ void test_return_statement(){
 
 	instructions_list *translation = v1.get_inst_list();
 
-	// Class 1.
+	std::string ir_program = "class1.method1:\n"
+								"enter 0\n"
+								"return 1\n"
+								"main.main:\n"
+								"enter 0";
 
-	// Method1's label.
-	instructions_list::iterator it = translation->begin();
+	translate_ir_code(ir_program);
 
-	// Enter procedure.
-	it++;
-
-	// Evaluation of the value returned.
-	it++;
-	address_pointer val = new_integer_constant(1);
-	// TODO: cómo evaluo el hecho de que sea una instrucción copy, si no
-	// se cual es el valor de la etiqueta temporal?
-
-	// Return.
-	it++;
-	// TODO: idem al caso anterior. No se cual es el valor de la temporal
-	// en donde se almacena el valor de retorno.
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	std::cout << "OK. " << std::endl;
 }
@@ -683,25 +528,19 @@ void test_break_statement(){
 
 	instructions_list *translation = v1.get_inst_list();
 
-	// Class 1.
+	std::string ir_program = "class1.method1:\n"
+							"enter 0\n"
+							"L1:\n"
+							"ifFalse true goto L2\n"
+							"goto L2\n"
+							"goto L1\n"
+							"L2:\n"
+							"main.main:\n"
+							"enter 0";
 
-	// Method1's label.
-	instructions_list::iterator it = translation->begin();
+	translate_ir_code(ir_program);
 
-	// Enter procedure.
-	it++;
-
-	// Label.
-	it++;
-
-	// Guard.
-	it++;
-
-	// Conditional jump.
-	it++;
-
-	// Body code.
-	assert(is_unconditional_jump_inst(*it, std::string("L2")));
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	std::cout << "OK. " << std::endl;
 }
@@ -723,25 +562,19 @@ void test_continue_statement(){
 
 	instructions_list *translation = v1.get_inst_list();
 
-	// Class 1.
+	std::string ir_program = "class1.method1:\n"
+							"enter 0\n"
+							"L1:\n"
+							"ifFalse true goto L2\n"
+							"goto L1\n"
+							"goto L1\n"
+							"L2:\n"
+							"main.main:\n"
+							"enter 0";
 
-	// Method1's label.
-	instructions_list::iterator it = translation->begin();
+	translate_ir_code(ir_program);
 
-	// Enter procedure.
-	it++;
-
-	// Label.
-	it++;
-
-	// Guard.
-	it++;
-
-	// Conditional jump.
-	it++;
-
-	// Body code.
-	assert(is_unconditional_jump_inst(*it, std::string("L1")));
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	std::cout << "OK. " << std::endl;
 }
@@ -750,7 +583,7 @@ void test_skip_statement(){
 	std::cout << "13) Statement \"skip\":";
 
 	std::string test_program = "class class1 { void method1() {"
-													"while true ; continue;"
+													"while true {; continue;}"
 												"}\n"
 								"}"
 								"class main {\n"
@@ -763,25 +596,19 @@ void test_skip_statement(){
 
 	instructions_list *translation = v1.get_inst_list();
 
-	// Class 1.
+	std::string ir_program = "class1.method1:\n"
+							"enter 0\n"
+							"L1:\n"
+							"ifFalse true goto L2\n"
+							"goto L1\n"
+							"goto L1\n"
+							"L2:\n"
+							"main.main:\n"
+							"enter 0";
 
-	// Method1's label.
-	instructions_list::iterator it = translation->begin();
+	translate_ir_code(ir_program);
 
-	// Enter procedure.
-	it++;
-
-	// Label.
-	it++;
-
-	// Guard.
-	it++;
-
-	// Conditional jump.
-	it++;
-
-	// Body code: just a continue statement.
-	assert(is_unconditional_jump_inst(*it, std::string("L1")));
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	std::cout << "OK. " << std::endl;
 }
@@ -805,8 +632,23 @@ void test_binary_operation_expr(){
 	translate(v1, test_program);
 
 	instructions_list *translation = v1.get_inst_list();
+	// TODO: hay que pedir que el nombre de las temporales sea otro, ya que
+	// t-0 se presta a confusión. Como tenemos que tener un espacio de nombres
+	// privado, quizás podríamos emplear algún símbolo especial para identificarlas
+	// como $?
+	std::string ir_program = "class1.method1:\n"
+							"enter " + std::to_string(integer_width) + "\n"
+							"t-0 = 1 + 2\n"
+							"x = t-0\n"
+							"main.main:\n"
+							"enter 0";
 
-	assert(translation->size() == 6);
+
+	translate_ir_code(ir_program);
+
+	assert(are_equal_instructions_list(*translation, *ir_code));
+
+	/*assert(translation->size() == 6);
 
 	// Class 1.
 
@@ -830,12 +672,12 @@ void test_binary_operation_expr(){
 	// Copy.
 	it++;
 	address_pointer dest = new_name_address(std::string("x"));
-	assert(is_copy(*it, dest, temporal));
+	assert(is_copy(*it, dest, temporal));*/
 
 	/////////////////////////////////
 	// MINUS
 	/////////////////////////////////
-	test_program = "class class1 { void method1(int x) {"
+	/*test_program = "class class1 { void method1(int x) {"
 										"x = 1 - 2;"
 									"}\n"
 					"}"
@@ -1240,7 +1082,7 @@ void test_binary_operation_expr(){
 
 	// Copy.
 	it++;
-	assert(is_copy(*it, dest, temporal));
+	assert(is_copy(*it, dest, temporal));*/
 
 	std::cout << "OK. " << std::endl;
 }
@@ -1397,8 +1239,8 @@ void test_inter_code_gen_visitor(){
 	test_break_statement();
 	test_continue_statement();
 	test_skip_statement();
-	test_binary_operation_expr();
+	/*test_binary_operation_expr();
 	test_negate_expr();
 	test_negative_expr();
-	test_parentheses_expr();
+	test_parentheses_expr();*/
 }

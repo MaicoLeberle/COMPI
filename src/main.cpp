@@ -6,6 +6,8 @@
 #include <cassert>
 #include "node.h"
 #include "semantic_analysis.h"
+#include "inter_code_gen_visitor.h"
+#include "asm_code_generator.h"
 
 extern program_pointer ast;
 extern int yyparse();
@@ -33,7 +35,9 @@ int main(int argc, const char* argv[]) {
         std::cout << "  -debug         Prints debugging information." << std::endl;
         exit(EXIT_SUCCESS);
     }
-
+    semantic_analysis sem_analysis_v;
+    instructions_list *ir_inst_list;
+    ids_info* sym_table;
     FILE* input_file = NULL;
     FILE* output_file = NULL;
     enum target stage;
@@ -54,16 +58,31 @@ int main(int argc, const char* argv[]) {
 
     if(stage >= SEMANTICS) {
         /*  Perform semantic analysis.                                       */
-        semantic_analysis v1;
-        ast->accept(v1);
+        ast->accept(sem_analysis_v);
     } else exit(EXIT_SUCCESS);
 
     if(stage >= INTERCODE) {
-        /*  Generate intermediate code.                                      */
+    	if(sem_analysis_v.is_analysis_successful()){
+			// Proceed with the next step: generation of IR code.
+			inter_code_gen_visitor ir_c_gen_v;
+			ast->accept(ir_c_gen_v);
+
+			ir_inst_list =  ir_c_gen_v.get_inst_list();
+			sym_table = ir_c_gen_v.get_ids_info();
+		}
+    	else{
+			// {not sem_analysis_v.is_analysis_successful()}
+    		exit(EXIT_FAILURE);
+    	}
     } else exit(EXIT_SUCCESS);
 
     if(stage == ASSEMBLY) {
-        /*  Generate assembly code from intermediate representation.         */
+    	// Generation of ASM code.
+		asm_code_generator asm_c_gen(ir_inst_list, sym_table);
+		// TODO: es realmente necesario disponer de un método al que llamar
+		// para realizar la traducción?
+		asm_c_gen.translate_ir();
+		asm_c_gen.print_translation_intel_syntax();
     } else exit(EXIT_SUCCESS);
 
     return 0;

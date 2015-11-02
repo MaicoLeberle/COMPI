@@ -462,6 +462,7 @@ public:
 	}
 
 };
+
 class node_method_call_statement : public node_statement{
 public:
 	method_call *method_call_data; // Object that stores information about

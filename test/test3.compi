@@ -1,0 +1,7 @@
+class Program{
+
+	void print_string(string s) extern;
+	
+	void main() {
+	}
+}

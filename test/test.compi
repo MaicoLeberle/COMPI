@@ -1,20 +1,80 @@
 class Program {
-	int inc(int x) {
-    	return x + 1;
+    int x;
+    
+    int y;
+    
+    bool b;
+    
+    void set_x (int z) {
+        x = z;
+    }
+
+    void set_y (int z) {
+        y = z;
+    }
+
+    void set_b (bool c) {
+        b = c;
+    }
+
+    void plus_x (int z) {
+        return (x + z);
+    }
+
+    void plus_y (int z) {
+        return (y + z);
+    }
+
+    void and_b (bool c) {
+        return (b && c);
+    }
+
+    void or_b (bool c) {
+        return (b || c);
+    }
+
+    void return_x () {
+        return x;
+    }
+
+    void return_y () {
+        return y;
+    }
+
+    void return_b () {
+        return b;
+    }
+
+    void inc_if () {
+        if (b) 
+            x = x + 1;
+        else 
+            y = y + 1;
     }
 
     int read_int() extern;
 
-    void print(string s) extern;
+    void print_string(string s) extern;
+
+    void print_int(int z) extern;
 
     void main() {
-    	int y;
-        y = read_int();
-        y = inc(y);
-
-        if (y == 1)
-          printf("y==1\n");
-        else
-          printf("y!=1\n");
+        set_y(read_int());
+        while (return_y() != 1) {
+            print_string("y != 1\t(y == ")
+            print_int(return_int())
+            print_string(")\n")
+            set_y(read_int());
+        }
+        print_string("y == 1\n");
+        for z = 1 , 15 {
+            if (!(z == 5 && z == 7))
+                continue;
+            if (-z == -10)
+                break;
+            print_string("z == ");
+            print_int(z);
+            print_string("\n");
+        }
     }
 }

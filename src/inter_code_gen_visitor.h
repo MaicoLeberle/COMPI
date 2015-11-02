@@ -81,7 +81,7 @@ private:
 	 * 		  pushed into the end of inst_list, and the corresponding new
 	 * 		  identifiers and offsets are calculated and added to s_table}
 	 * */
-	void instance_initialization(std::string, std::string);
+	std::string instance_initialization(std::string, std::string);
 
 	unsigned int calculate_size(symtable_element::id_type);
 
