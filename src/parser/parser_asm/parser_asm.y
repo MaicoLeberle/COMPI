@@ -181,35 +181,35 @@ immediate
 // TODO: cuando index es omitido, cual es el valor por defecto que debemos
 // colocar?
 memory
-    : L_INT '(' REGISTER ',' REGISTER ',' L_INT ')' {$$ = new operand_pointer(
-                                            new_memory_operand($1, $3, $5, $7));}
+    : L_INT '(' '%' REGISTER ',' '%' REGISTER ',' L_INT ')' {$$ = new operand_pointer(
+                                            new_memory_operand($1, $4, $7, $9));}
                                             
-    | L_INT '(' REGISTER ',' REGISTER ')'           {$$ = new operand_pointer(
-                                            new_memory_operand($1, $3, $5, 1));}
+    | L_INT '(' '%' REGISTER ',' '%' REGISTER ')'           {$$ = new operand_pointer(
+                                            new_memory_operand($1, $4, $7, 1));}
     
-    | L_INT '(' REGISTER ')'                        {$$ = new operand_pointer(
+    | L_INT '(' '%' REGISTER ')'                        {$$ = new operand_pointer(
                                             new_memory_operand($1, 
-                                                                $3, 
-                                                                register_id::RSP, 
+                                                                $4, 
+                                                                register_id::NONE, 
                                                                 1));}
-                                            
+        
     // TODO: asi?
     | L_INT '(' ')'                         {$$ = new operand_pointer(
                                             new_memory_operand($1, 
-                                                                register_id::RSP, 
-                                                                register_id::RSP, 
+                                                                register_id::NONE, 
+                                                                register_id::NONE, 
                                                                 1));}
     
-    | '(' REGISTER ',' REGISTER ',' L_INT ')'     {$$ = new operand_pointer(
-                                            new_memory_operand(0, $2, $4, $6));}
+    | '(' '%' REGISTER ',' '%' REGISTER ',' L_INT ')'     {$$ = new operand_pointer(
+                                            new_memory_operand(0, $3, $6, $8));}
                                            
-    | '(' REGISTER ',' REGISTER ')'               {$$ = new operand_pointer(
-                                            new_memory_operand(0, $2, $4, 1));}
+    | '(' '%' REGISTER ',' '%' REGISTER ')'               {$$ = new operand_pointer(
+                                            new_memory_operand(0, $3, $6, 1));}
     
-    | '(' REGISTER ')'                         {$$ = new operand_pointer(
+    | '(' '%' REGISTER ')'                         {$$ = new operand_pointer(
                                             new_memory_operand(0, 
-                                                                $2, 
-                                                                register_id::RSP, 
+                                                                $3, 
+                                                                register_id::NONE, 
                                                                 1));}
 
 // To allow some static arithmetic expression in the place of an integer 
@@ -226,4 +226,19 @@ void asmerror(const char *s) {
 
     // might as well halt now:
     exit(EXIT_FAILURE);
+}
+
+// TODO: ordenar esto...
+typedef struct yy_buffer_state * YY_BUFFER_STATE;
+extern YY_BUFFER_STATE asm_scan_string(const char * str);
+extern void asm_switch_to_buffer(YY_BUFFER_STATE buffer);
+extern void asm_delete_buffer(YY_BUFFER_STATE buffer);
+
+void translate_asm_code(std::string program){
+    YY_BUFFER_STATE program_buffer = asm_scan_string(program.c_str());
+    asm_switch_to_buffer(program_buffer);
+
+    asmparse();
+
+    asm_delete_buffer(program_buffer);
 }

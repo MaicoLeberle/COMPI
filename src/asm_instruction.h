@@ -201,135 +201,170 @@ operand_pointer new_label_operand(std::string label);
 /******************************************************************
  * Constructors of instructions.
  ******************************************************************/
-asm_instruction_pointer new_mov_instruction(operand_pointer source,
-											operand_pointer destination,
-											data_type ops_type);
-asm_instruction_pointer new_shr_instruction(operand_pointer imm,
-											operand_pointer destination,
-											data_type ops_type);
-asm_instruction_pointer new_div_instruction(operand_pointer, data_type, bool);
-
-asm_instruction_pointer new_mul_instruction(operand_pointer source,
-								operand_pointer destination,
-								data_type ops_type,
-								bool is_signed);
-
-asm_instruction_pointer new_add_instruction(operand_pointer source,
-								operand_pointer destination,
-								data_type ops_type);
-
-asm_instruction_pointer new_sub_instruction(operand_pointer source,
-								operand_pointer destination,
-								data_type ops_type);
-
-asm_instruction_pointer new_neg_instruction(operand_pointer destination,
+asm_instruction_pointer new_mov_instruction(const operand_pointer& source,
+											const operand_pointer& destination,
 											data_type ops_type);
 
-asm_instruction_pointer new_not_instruction(operand_pointer destination,
+asm_instruction_pointer new_shr_instruction(const operand_pointer& imm,
+											const operand_pointer& destination,
 											data_type ops_type);
 
-asm_instruction_pointer new_cmp_instruction(operand_pointer, operand_pointer,
+asm_instruction_pointer new_div_instruction(const operand_pointer&, data_type, bool);
+
+asm_instruction_pointer new_mul_instruction(const operand_pointer& source,
+											const operand_pointer& destination,
+											data_type ops_type,
+											bool is_signed);
+
+asm_instruction_pointer new_add_instruction(const operand_pointer& source,
+											const operand_pointer& destination,
+											data_type ops_type);
+
+asm_instruction_pointer new_sub_instruction(const operand_pointer& source,
+											const operand_pointer& destination,
+											data_type ops_type);
+
+asm_instruction_pointer new_neg_instruction(const operand_pointer& destination,
+											data_type ops_type);
+
+asm_instruction_pointer new_not_instruction(const operand_pointer& destination,
+											data_type ops_type);
+
+asm_instruction_pointer new_cmp_instruction(const operand_pointer&,
+											const operand_pointer&,
 											data_type);
 
 // TODO: del documento x86-64-arqu.guide.pdf: Jump unconditionally to target,
 // which is specified as a memory location (for example, a label).
 // Aqui solo consideramos una etiqueta.
+// TODO: los operandos y las instrucciones se construyen con los constructores
+// que definimos, y estos devuelven punteros, entonces es razonable pedir que
+// tales valores se pasen por referencia, en los procedimientos que estamos
+// definiendo aca (ya que no hay riesgos de que alguien nos pase un valor
+// que esté almacenado en la pila del procedimiento, en lugar de el heap). Pero
+// en el caso de los strings, si pidieramos recibirlos por referencia, esto podria
+// entenderse como que el usuario del procedimiento debiera tener la responsabilidad
+// de almacenar en el heap el parámetro, porque nosotros no vamos a realizar una
+// copia del mismo, si no que vamos a guardar la referencia al string.
 asm_instruction_pointer new_jmp_instruction(std::string);
+
 asm_instruction_pointer new_je_instruction(std::string);
+
 asm_instruction_pointer new_jne_instruction(std::string);
+
 asm_instruction_pointer new_jl_instruction(std::string);
+
 asm_instruction_pointer new_jle_instruction(std::string);
+
 asm_instruction_pointer new_jg_instruction(std::string);
+
 asm_instruction_pointer new_jge_instruction(std::string);
+
 asm_instruction_pointer new_call_instruction(std::string);
+
 asm_instruction_pointer new_leave_instruction();
+
 asm_instruction_pointer new_ret_instruction();
+
 asm_instruction_pointer new_label_instruction(std::string);
-asm_instruction_pointer new_enter_instruction(operand_pointer stack_space,
-												operand_pointer nesting_level);
+
+asm_instruction_pointer new_enter_instruction(const operand_pointer& stack_space,
+										const operand_pointer& nesting_level);
 
 /******************************************************************
  * Printing
  ******************************************************************/
-std::string print_operand_intel_syntax(operand_pointer);
-std::string print_binary_op_intel_syntax(asm_instruction_pointer);
-std::string print_unary_op_intel_syntax(asm_instruction_pointer);
-std::string print_intel_syntax(asm_instruction_pointer);
+std::string print_operand_intel_syntax(const operand_pointer&);
 
+std::string print_binary_op_intel_syntax(const asm_instruction_pointer&);
+
+std::string print_unary_op_intel_syntax(const asm_instruction_pointer&);
+
+std::string print_intel_syntax(const asm_instruction_pointer&);
+
+std::string print_asm_instructions_list_intel_syntax(const
+												asm_instructions_list& code);
 /******************************************************************
  * Debugging procedures.
  ******************************************************************/
-bool is_mov_instruction(asm_instruction_pointer inst,
-						operand_pointer source,
-						operand_pointer destination,
+bool is_mov_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination,
 						data_type ops_type);
 
-bool is_add_instruction(asm_instruction_pointer inst,
-						operand_pointer source,
-						operand_pointer destination,
+bool is_add_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination,
 						data_type ops_type);
 
-bool is_mul_instruction(asm_instruction_pointer inst,
-						operand_pointer source,
-						operand_pointer destination,
+bool is_mul_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination,
 						data_type ops_type,
 						bool is_signed);
 
-bool is_div_instruction(asm_instruction_pointer inst,
-						operand_pointer source,
+bool is_div_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
 						data_type ops_type,
 						bool is_signed);
 
-bool is_neg_instruction(asm_instruction_pointer inst,
-						operand_pointer destination,
+bool is_neg_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& destination,
 						data_type ops_type);
 
-bool is_shr_instruction(asm_instruction_pointer inst,
-						operand_pointer source,
-						operand_pointer destination,
+bool is_shr_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination,
 						data_type ops_type);
 
-bool is_not_instruction(asm_instruction_pointer inst,
-						operand_pointer destination,
+bool is_not_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& destination,
 						data_type ops_type);
 
-bool is_jmp_instruction(asm_instruction_pointer inst,
-						std::string label);
+// TODO: acá sí puede tener sentido el pasar por referencia los strings.
+bool is_jmp_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
 
-bool is_je_instruction(asm_instruction_pointer inst,
-						std::string label);
+bool is_je_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
 
-bool is_jne_instruction(asm_instruction_pointer inst,
-						std::string label);
+bool is_jne_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
 
-bool is_jl_instruction(asm_instruction_pointer inst,
-						std::string label);
+bool is_jl_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
 
-bool is_jle_instruction(asm_instruction_pointer inst,
-						std::string label);
+bool is_jle_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
 
-bool is_jg_instruction(asm_instruction_pointer inst,
-						std::string label);
+bool is_jg_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
 
-bool is_jge_instruction(asm_instruction_pointer inst,
-						std::string label);
+bool is_jge_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
 
-bool is_call_instruction(asm_instruction_pointer inst,
-						std::string label);
+bool is_call_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
 
-bool is_leave_instruction(asm_instruction_pointer inst);
+bool is_leave_instruction(const asm_instruction_pointer& inst);
 
-bool is_ret_instruction(asm_instruction_pointer inst);
+bool is_ret_instruction(const asm_instruction_pointer& inst);
 
-bool is_cmp_instruction(asm_instruction_pointer inst,
-						operand_pointer source,
-						operand_pointer destination,
+bool is_cmp_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination,
 						data_type ops_type);
 
-bool is_enter_instruction(asm_instruction_pointer inst,
-						operand_pointer source,
-						operand_pointer destination);
+bool is_enter_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination);
 
-bool is_label_instruction(asm_instruction_pointer inst,
-						std::string label);
+bool is_label_instruction(const asm_instruction_pointer& inst,
+						const std::string& label);
+
+bool are_equal_instructions(const asm_instruction_pointer&,
+							const asm_instruction_pointer&);
+
+bool are_equal_instructions_list(const asm_instructions_list&,
+								const asm_instructions_list&);
 #endif

@@ -1,6 +1,6 @@
 #include "test_asm_code_generator.h"
 
-extern instructions_list *ir_code;
+/*extern instructions_list *ir_code;
 typedef struct yy_buffer_state * YY_BUFFER_STATE;
 extern int irparse();
 extern YY_BUFFER_STATE ir_scan_string(const char * str);
@@ -14,7 +14,13 @@ void translate(std::string ir_program){
 	irparse();
 
 	ir_delete_buffer(program_buffer);
-}
+}*/
+extern instructions_list *ir_code;
+extern void translate_ir_code(std::string program);
+
+extern asm_instructions_list *asm_code;
+
+extern void translate_asm_code(std::string program);
 
 void test_binary_assign(){
 	std::cout << "1) Translation of binary assign: ";
@@ -30,16 +36,23 @@ void test_binary_assign(){
 										new_integer_constant(2),
 										new_integer_constant(1),
 										quad_oper::PLUS));*/
-	translate(std::string("x = 2 + 1"));
+	translate_ir_code(std::string("x = 2 + 1"));
 	ids_info *s_table = new ids_info();
-	s_table->register_var(var, 4);
+	s_table->register_var(var, 0);
 
 	asm_code_generator g(ir_code, s_table);
 	g.translate_ir();
 
 	asm_instructions_list *translation = g.get_translation();
 
-	assert(translation->size() == 3);
+	std::string asm_program_text = "mov $2, %r8d\n"
+									"add $1, %r8d\n"
+									"mov %r8d, 0(%rsp)\n";
+
+	translate_asm_code(asm_program_text);
+
+	assert(are_equal_instructions_list(*translation, *asm_code));
+	/*assert(translation->size() == 3);
 
 	// mov instruction
 	asm_instructions_list::iterator it = translation->begin();
@@ -118,7 +131,7 @@ void test_binary_assign(){
 	s_table->register_var(var, 4);
 
 	g = asm_code_generator(ir_code, s_table);
-	g.translate_ir();
+	g.translate_ir();*/
 
 	std::cout << "OK. " << std::endl;
 }

@@ -17,7 +17,7 @@ semantic_analysis::semantic_analysis () {
 void semantic_analysis::register_error(std::string error, error_id error_encountered){
 	std::cerr << "\n" << error << std::endl;
 	// The process is not interrupted. We just count the error.
-	error += 1;
+	errors += 1;
 	// TODO: en el lexer definimos una variable line_num. Se puede utilizar
 	// aca?
 	last_error = error_encountered;

@@ -1,20 +1,20 @@
 #include "test_ir_parser.h"
 
 extern instructions_list *ir_code;
-typedef struct yy_buffer_state * YY_BUFFER_STATE;
+/*typedef struct yy_buffer_state * YY_BUFFER_STATE;
 extern int irparse();
 extern YY_BUFFER_STATE ir_scan_string(const char * str);
 extern void ir_switch_to_buffer(YY_BUFFER_STATE buffer);
-extern void ir_delete_buffer(YY_BUFFER_STATE buffer);
-
-void translate_ir_code(std::string program){
+extern void ir_delete_buffer(YY_BUFFER_STATE buffer);*/
+extern void translate_ir_code(std::string program);
+/*void translate_ir_code(std::string program){
 	YY_BUFFER_STATE program_buffer = ir_scan_string(program.c_str());
 	ir_switch_to_buffer(program_buffer);
 
 	irparse();
 
 	ir_delete_buffer(program_buffer);
-}
+}*/
 
 void test_binary_assignment_translation(){
 	std::cout << "1) Translation of binary assignments:";
@@ -215,7 +215,7 @@ void test_jump_translation(){
 	// CONDITIONAL JUMP
 	///////////////////////////////////
 	// iftrue conditional jump
-	translate_ir_code(std::string("iftrue x goto L1"));
+	translate_ir_code(std::string("ifTrue x goto L1"));
 
 	// TODO: borrar todo lo que estoy metiendo en el heap.
 	assert(ir_code->size() == 1);
@@ -226,7 +226,7 @@ void test_jump_translation(){
 							quad_oper::IFTRUE));
 
 	// iffalse unconditional jump
-	translate_ir_code(std::string("iffalse x goto L1"));
+	translate_ir_code(std::string("ifFalse x goto L1"));
 
 	// TODO: borrar todo lo que estoy metiendo en el heap.
 	assert(ir_code->size() == 1);
@@ -386,7 +386,7 @@ void test_label_translation(){
 	std::cout << "10) Translation of label instruction:";
 
 	// Empty return.
-	translate_ir_code(std::string("x :"));
+	translate_ir_code(std::string("x:"));
 
 	// TODO: borrar todo lo que estoy metiendo en el heap.
 	assert(ir_code->size() == 1);

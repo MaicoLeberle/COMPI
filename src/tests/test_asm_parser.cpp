@@ -2,7 +2,7 @@
 
 
 extern asm_instructions_list *asm_code;
-typedef struct yy_buffer_state * YY_BUFFER_STATE;
+/*typedef struct yy_buffer_state * YY_BUFFER_STATE;
 extern int asmparse();
 extern YY_BUFFER_STATE asm_scan_string(const char * str);
 extern void asm_switch_to_buffer(YY_BUFFER_STATE buffer);
@@ -15,7 +15,10 @@ void translate_asm_code(std::string program){
 	asmparse();
 
 	asm_delete_buffer(program_buffer);
-}
+}*/
+void translate_asm_code(std::string program);
+
+extern void translate_asm_code(std::string program);
 
 void test_arithmetic_inst_translation(){
 	std::cout << "1) Translation of arithmetic instructions:";

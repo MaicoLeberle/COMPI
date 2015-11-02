@@ -33,8 +33,8 @@ instructions_list *ir_code; // Pointer to the instructions' list.
 %token <l_str> L_STR
 %token <id> ID
 %token <token> EQUAL DISTINCT LESS LESS_EQUAL GREATER GREATER_EQUAL AND OR NOT
-               IF IFTRUE IFFALSE PLUS_ASSIGN MINUS_ASSIGN GOTO CALL ENTER
-%token <token> PARAM RETURN
+               IF IFTRUE IFFALSE PLUS_ASSIGN MINUS_ASSIGN GOTO CALL ENTER PARAM 
+               RETURN
 
 %type <inst_list> inst_list
 %type <instruction> instruction binary_assign unary_assign copy jump param call
@@ -77,7 +77,8 @@ instruction
 /* TODO: abstraer los operadores en otras producciones, de otro no terminal,
         cuyo tipo sea quad_oper */
 binary_assign
-    : address '=' address '+' address              {$$ = new quad_pointer(new_binary_assign(*$1, *$3, *$5, 
+    : address '=' address '+' address              {$$ = new quad_pointer(
+                                                        new_binary_assign(*$1, *$3, *$5, 
                                                         quad_oper::PLUS));}
     | address '=' address '-' address              {$$ = new quad_pointer(new_binary_assign(*$1, *$3, *$5, 
                                                         quad_oper::MINUS));}
@@ -184,4 +185,19 @@ void irerror(const char *s) {
 
     // might as well halt now:
     exit(EXIT_FAILURE);
+}
+
+// TODO: ordenar esto...
+typedef struct yy_buffer_state * YY_BUFFER_STATE;
+extern YY_BUFFER_STATE ir_scan_string(const char * str);
+extern void ir_switch_to_buffer(YY_BUFFER_STATE buffer);
+extern void ir_delete_buffer(YY_BUFFER_STATE buffer);
+
+void translate_ir_code(std::string program){
+    YY_BUFFER_STATE program_buffer = ir_scan_string(program.c_str());
+    ir_switch_to_buffer(program_buffer);
+
+    irparse();
+
+    ir_delete_buffer(program_buffer);
 }

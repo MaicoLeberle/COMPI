@@ -33,12 +33,12 @@ true                        irlval.l_bool = true; return L_BOOL;
 false                       irlval.l_bool = false; return L_BOOL;
 goto                        return GOTO;
 if                          return IF;
-iftrue                      return IFTRUE;
-iffalse                     return IFFALSE;
+ifTrue                      return IFTRUE;
+ifFalse                     return IFFALSE;
 param                       return PARAM;
 call                        return CALL;
 enter                       return ENTER;
-return                       return RETURN;
+return                      return RETURN;
 =                           return '=';
 \+=                         return PLUS_ASSIGN;
 \-=                         return MINUS_ASSIGN;
@@ -63,7 +63,7 @@ not                         return NOT;
 \)                          return ')';
 \.                          return '.';
 \:                          return ':';
-{alpha}{alpha_num}*         {irlval.id = new std::string(irtext, irleng); 
+{alpha}({alpha_num}|\.)*    {irlval.id = new std::string(irtext, irleng); 
                              return ID;}
 \"(.|\\n)*\"                {irlval.l_str = new std::string(irtext, irleng); 
                              return L_STR;}

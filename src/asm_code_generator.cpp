@@ -29,7 +29,7 @@ operand_pointer asm_code_generator::get_address(address_pointer address){
 			// TODO: cómo determinamos scale, base e index?
 			ret = new_memory_operand(s_table->get_offset(*address->value.name),
 									register_id::RSP,
-									register_id::RSP,
+									register_id::NONE,
 									1);
 			/*ret->op_addr = operand_addressing::MEMORY;
 			ret->value.mem.offset = s_table->get_offset(*address->value.name);
@@ -325,8 +325,10 @@ void asm_code_generator::translate_conditional_jump(const quad_pointer& instruct
 	data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 	// TODO: en la generación de código intermedio, no nos aseguramos de
 	// esto?
-	translation->push_back(new_mov_instruction(new_immediate_integer_operand(1),
-												aux_reg, ops_type));
+	operand_pointer aux = new_immediate_integer_operand(1);
+	translation->push_back(new_mov_instruction(aux,
+												aux_reg,
+												ops_type));
 	translation->push_back(new_cmp_instruction(x, aux_reg, ops_type));
 
 	switch(instruction->op){

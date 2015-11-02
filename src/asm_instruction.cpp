@@ -66,9 +66,9 @@ operand_pointer new_label_operand(std::string label){
 /******************************************************************
  * Constructors of instructions.
  ******************************************************************/
-asm_instruction_pointer new_mov_instruction(operand_pointer source,
-								operand_pointer destination,
-								data_type ops_type){
+asm_instruction_pointer new_mov_instruction(const operand_pointer& source,
+											const operand_pointer& destination,
+											data_type ops_type){
 
 	#ifdef __DEBUG
 		assert(destination->op_addr == operand_addressing::REGISTER ||
@@ -89,8 +89,8 @@ asm_instruction_pointer new_mov_instruction(operand_pointer source,
 
 }
 
-asm_instruction_pointer new_mul_instruction(operand_pointer source,
-											operand_pointer destination,
+asm_instruction_pointer new_mul_instruction(const operand_pointer& source,
+											const operand_pointer& destination,
 											data_type ops_type,
 											bool is_signed){
 
@@ -119,9 +119,9 @@ asm_instruction_pointer new_mul_instruction(operand_pointer source,
 	return inst;
 }
 
-asm_instruction_pointer new_add_instruction(operand_pointer source,
-								operand_pointer destination,
-								data_type ops_type){
+asm_instruction_pointer new_add_instruction(const operand_pointer& source,
+											const operand_pointer& destination,
+											data_type ops_type){
 
 	#ifdef __DEBUG
 		std::cout << "New add instruction." << std::endl;
@@ -142,9 +142,9 @@ asm_instruction_pointer new_add_instruction(operand_pointer source,
 	return inst;
 }
 
-asm_instruction_pointer new_sub_instruction(operand_pointer source,
-								operand_pointer destination,
-								data_type ops_type){
+asm_instruction_pointer new_sub_instruction(const operand_pointer& source,
+											const operand_pointer& destination,
+											data_type ops_type){
 
 	#ifdef __DEBUG
 		assert(destination->op_addr == operand_addressing::REGISTER ||
@@ -164,8 +164,9 @@ asm_instruction_pointer new_sub_instruction(operand_pointer source,
 	return inst;
 }
 
-asm_instruction_pointer new_div_instruction(operand_pointer dividend,
-								data_type ops_type, bool is_signed){
+asm_instruction_pointer new_div_instruction(const operand_pointer& dividend,
+											data_type ops_type,
+											bool is_signed){
 
 	asm_instruction_pointer inst = asm_instruction_pointer(new asm_instruction);
 
@@ -183,8 +184,8 @@ asm_instruction_pointer new_div_instruction(operand_pointer dividend,
 	return inst;
 }
 
-asm_instruction_pointer new_shr_instruction(operand_pointer imm,
-											operand_pointer destination,
+asm_instruction_pointer new_shr_instruction(const operand_pointer& imm,
+											const operand_pointer& destination,
 											data_type ops_type){
 
 	#ifdef __DEBUG
@@ -204,7 +205,7 @@ asm_instruction_pointer new_shr_instruction(operand_pointer imm,
 	return inst;
 }
 
-asm_instruction_pointer new_neg_instruction(operand_pointer destination,
+asm_instruction_pointer new_neg_instruction(const operand_pointer& destination,
 											data_type ops_type){
 
 	#ifdef __DEBUG
@@ -222,7 +223,7 @@ asm_instruction_pointer new_neg_instruction(operand_pointer destination,
 	return inst;
 }
 
-asm_instruction_pointer new_not_instruction(operand_pointer destination,
+asm_instruction_pointer new_not_instruction(const operand_pointer& destination,
 											data_type ops_type){
 
 	#ifdef __DEBUG
@@ -311,7 +312,7 @@ asm_instruction_pointer new_jle_instruction(std::string label){
 }
 
 asm_instruction_pointer new_jg_instruction(std::string label){
-	asm_instruction_pointer inst = asm_instruction_pointer(new asm_instruction);
+	asm_instruction_pointer  inst = asm_instruction_pointer(new asm_instruction);
 	inst->op = operation::JG;
 	// TODO: cómo determino el tipo de información de source?
 	inst->ops_type = data_type::NONE;
@@ -325,7 +326,7 @@ asm_instruction_pointer new_jg_instruction(std::string label){
 }
 
 asm_instruction_pointer new_jge_instruction(std::string label){
-	asm_instruction_pointer inst = asm_instruction_pointer(new asm_instruction);
+	asm_instruction_pointer  inst = asm_instruction_pointer(new asm_instruction);
 	inst->op = operation::JGE;
 	// TODO: cómo determino el tipo de información de source?
 	inst->ops_type = data_type::NONE;
@@ -352,8 +353,8 @@ asm_instruction_pointer new_call_instruction(std::string label){
 	return inst;
 }
 
-asm_instruction_pointer new_cmp_instruction(operand_pointer op_1,
-											operand_pointer op_2,
+asm_instruction_pointer new_cmp_instruction(const operand_pointer& op_1,
+											const operand_pointer& op_2,
 											data_type ops_type){
 
 	asm_instruction_pointer inst = asm_instruction_pointer(new asm_instruction);
@@ -404,8 +405,8 @@ asm_instruction_pointer new_label_instruction(std::string label){
 }
 
 // TODO: nesting_level? ver vol. 1 del manual de prog. de x86_64.
-asm_instruction_pointer new_enter_instruction(operand_pointer stack_space,
-											operand_pointer nesting_level){
+asm_instruction_pointer new_enter_instruction(const operand_pointer& stack_space,
+											const operand_pointer& nesting_level){
 	asm_instruction_pointer inst = asm_instruction_pointer(new asm_instruction);
 	inst->op = operation::ENTER;
 	// TODO: cómo determino el tipo de información de source?
@@ -582,7 +583,7 @@ std::string print_register(register_id reg){
 }
 // TODO: hay diferencie entre la sintaxis de intel y de las demás, en el caso
 // de los operandos?
-std::string print_operand_intel_syntax(operand_pointer operand){
+std::string print_operand_intel_syntax(const operand_pointer& operand){
 
 	#ifdef __DEBUG
 		std::cout << "print_operand_intel_syntax: ";
@@ -683,7 +684,7 @@ std::string obtain_data_type(data_type d_type){
 
 // TODO: parte de la semántica de este procedimiento consiste en no lidiar
 // con cuestiones de indentación, cosa que sí va a hacer print_intel_syntax
-std::string print_binary_op_intel_syntax(asm_instruction_pointer instruction){
+std::string print_binary_op_intel_syntax(const asm_instruction_pointer& instruction){
 	std::string ret, prefix;
 
 	#ifdef __DEBUG
@@ -727,7 +728,7 @@ std::string print_binary_op_intel_syntax(asm_instruction_pointer instruction){
 	return ret;
 }
 
-std::string print_unary_op_intel_syntax(asm_instruction_pointer instruction){
+std::string print_unary_op_intel_syntax(const asm_instruction_pointer& instruction){
 	std::string ret, prefix;
 
 	#ifdef __DEBUG
@@ -800,7 +801,7 @@ std::string print_unary_op_intel_syntax(asm_instruction_pointer instruction){
 	return ret;
 }
 
-std::string print_intel_syntax(asm_instruction_pointer instruction){
+std::string print_intel_syntax(const asm_instruction_pointer& instruction){
 	std::string ret("");
 
 	switch(instruction->op){
@@ -897,60 +898,120 @@ std::string print_intel_syntax(asm_instruction_pointer instruction){
 	return ret;
 }
 
+std::string print_asm_instructions_list_intel_syntax(const
+												asm_instructions_list& code){
+	for(asm_instructions_list::const_iterator it = code.begin();
+		it != code.end();
+		++it){
+
+		std::cout << print_intel_syntax(*it) << std::endl;
+	}
+}
 
 /******************************************************************
  * Debugging procedures.
  ******************************************************************/
-bool are_equal_operands(operand_pointer op1, operand_pointer op2){
+bool are_equal_operands(const operand_pointer& op1,
+						const operand_pointer& op2){
 	bool ret = false;
 
-	if (op1->op_addr == op2->op_addr){
-		switch(op1->op_addr){
-			case operand_addressing::IMMEDIATE:{
-				switch(op1->value.imm.imm_op_type){
-					case immediate_op_type::INTEGER:
-						ret = op2->value.imm.imm_op_type == immediate_op_type::INTEGER &&
-							op1->value.imm.val.ival == op2->value.imm.val.ival;
-						break;
+	if(op1 != nullptr){
+		if (op1->op_addr == op2->op_addr){
+			switch(op1->op_addr){
+				case operand_addressing::IMMEDIATE:{
+					switch(op1->value.imm.imm_op_type){
+						case immediate_op_type::INTEGER:
+							ret = op2->value.imm.imm_op_type == immediate_op_type::INTEGER &&
+								op1->value.imm.val.ival == op2->value.imm.val.ival;
+							break;
 
-					case immediate_op_type::FLOAT:
-						ret = op2->value.imm.imm_op_type == immediate_op_type::FLOAT &&
-							op1->value.imm.val.fval == op2->value.imm.val.fval;
-						break;
+						case immediate_op_type::FLOAT:
+							ret = op2->value.imm.imm_op_type == immediate_op_type::FLOAT &&
+								op1->value.imm.val.fval == op2->value.imm.val.fval;
+							break;
 
-					case immediate_op_type::BOOLEAN:
-						ret = op2->value.imm.imm_op_type == immediate_op_type::BOOLEAN &&
-							op1->value.imm.val.bval == op2->value.imm.val.bval;
-						break;
+						case immediate_op_type::BOOLEAN:
+							ret = op2->value.imm.imm_op_type == immediate_op_type::BOOLEAN &&
+								op1->value.imm.val.bval == op2->value.imm.val.bval;
+							break;
+					}
+					break;
 				}
-				break;
-			}
 
-			case operand_addressing::REGISTER:{
-				ret = op1->value.reg == op2->value.reg;
-				break;
-			}
+				case operand_addressing::REGISTER:{
+					ret = op1->value.reg == op2->value.reg;
+					break;
+				}
 
-			case operand_addressing::MEMORY:{
-				ret = op1->value.mem.offset == op2->value.mem.offset &&
-					op1->value.mem.base == op2->value.mem.base &&
-					op1->value.mem.scale == op2->value.mem.scale &&
-					op1->value.mem.index == op2->value.mem.index;
-				break;
-			}
+				case operand_addressing::MEMORY:{
+					ret = op1->value.mem.offset == op2->value.mem.offset &&
+						op1->value.mem.base == op2->value.mem.base &&
+						op1->value.mem.scale == op2->value.mem.scale &&
+						op1->value.mem.index == op2->value.mem.index;
+					break;
+				}
 
-			default:
-				// {op1->op_addr == operand_addressing::NONE}
-				// TODO: estos sí o sí implica que es una etiqueta?
-				ret = *op1->value.label == *op2->value.label;
+				default:
+					// {op1->op_addr == operand_addressing::NONE}
+					// TODO: estos sí o sí implica que es una etiqueta?
+					ret = *op1->value.label == *op2->value.label;
+			}
+		}
+	}
+	else{
+		// {op1 == nullptr}
+		if(op2 == nullptr){
+			ret = true;
 		}
 	}
 
 	return ret;
 }
 
-bool is_mov_instruction(asm_instruction_pointer inst, operand_pointer source,
-						operand_pointer destination, data_type ops_type){
+bool are_equal_instructions(const asm_instruction_pointer& inst_1,
+							const asm_instruction_pointer& inst_2){
+
+	return inst_1->op == inst_2->op &&
+			inst_1->ops_type == inst_2->ops_type &&
+			inst_1->is_signed == inst_2->is_signed &&
+			are_equal_operands(inst_1->source, inst_2->source) &&
+			are_equal_operands(inst_1->destination, inst_2->destination);
+}
+
+bool are_equal_instructions_list(const asm_instructions_list& inst_list_1,
+								const asm_instructions_list& inst_list_2){
+
+	bool ret;
+
+	if(inst_list_1.size() == inst_list_2.size()){
+		asm_instructions_list::const_iterator it_1 = inst_list_1.begin();
+		asm_instructions_list::const_iterator it_2 = inst_list_2.begin();
+		asm_instructions_list::const_iterator ins_list_1_end = inst_list_1.end();
+
+		while(it_1 != ins_list_1_end){
+			ret = are_equal_instructions(*it_1, *it_2);
+			if(!ret){
+				break;
+			}
+			else{
+				// {ret}
+				it_1++;
+				it_2++;
+			}
+		}
+	}
+	else{
+		// {inst_list_1.size() == inst_list_2.size()}
+		ret = false;
+	}
+
+	return ret;
+}
+
+bool is_mov_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination,
+						data_type ops_type){
 
 	return	inst->op == operation::MOV &&
 			inst->ops_type == ops_type &&
@@ -958,8 +1019,10 @@ bool is_mov_instruction(asm_instruction_pointer inst, operand_pointer source,
 			are_equal_operands(inst->destination, destination);
 }
 
-bool is_add_instruction(asm_instruction_pointer inst, operand_pointer source,
-						operand_pointer destination, data_type ops_type){
+bool is_add_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination,
+						data_type ops_type){
 
 	return	inst->op == operation::ADD &&
 			inst->ops_type == ops_type &&
@@ -967,8 +1030,10 @@ bool is_add_instruction(asm_instruction_pointer inst, operand_pointer source,
 			are_equal_operands(inst->destination, destination);
 }
 
-bool is_mul_instruction(asm_instruction_pointer inst, operand_pointer source,
-						operand_pointer destination, data_type ops_type,
+bool is_mul_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination,
+						data_type ops_type,
 						bool is_signed){
 	bool cmp_sign;
 
@@ -986,8 +1051,8 @@ bool is_mul_instruction(asm_instruction_pointer inst, operand_pointer source,
 			are_equal_operands(inst->destination, destination);
 }
 
-bool is_div_instruction(asm_instruction_pointer inst,
-						operand_pointer source,
+bool is_div_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
 						data_type ops_type,
 						bool is_signed){
 	bool cmp_sign;
@@ -1005,25 +1070,25 @@ bool is_div_instruction(asm_instruction_pointer inst,
 			are_equal_operands(inst->destination, source);
 }
 
-bool is_neg_instruction(asm_instruction_pointer inst,
-						operand_pointer destination,
+bool is_neg_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& destination,
 						data_type ops_type){
 	return	inst->op == operation::NEG &&
 			inst->ops_type == ops_type &&
 			are_equal_operands(inst->destination, destination);
 }
 
-bool is_not_instruction(asm_instruction_pointer inst,
-						operand_pointer destination,
+bool is_not_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& destination,
 						data_type ops_type){
 	return	inst->op == operation::NOT &&
 			inst->ops_type == ops_type &&
 			are_equal_operands(inst->destination, destination);
 }
 
-bool is_shr_instruction(asm_instruction_pointer inst,
-						operand_pointer source,
-						operand_pointer destination,
+bool is_shr_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination,
 						data_type ops_type){
 	return	inst->op == operation::SHR &&
 			inst->ops_type == ops_type &&
@@ -1031,8 +1096,8 @@ bool is_shr_instruction(asm_instruction_pointer inst,
 			are_equal_operands(inst->destination, destination);
 }
 
-bool is_jmp_instruction(asm_instruction_pointer inst,
-						std::string label){
+bool is_jmp_instruction(const asm_instruction_pointer& inst,
+						const std::string& label){
 	operand_pointer aux = new_label_operand(label);
 	bool ret = inst->op == operation::JMP &&
 			are_equal_operands(inst->destination, aux);
@@ -1040,8 +1105,8 @@ bool is_jmp_instruction(asm_instruction_pointer inst,
 	return	ret;
 }
 
-bool is_je_instruction(asm_instruction_pointer inst,
-						std::string label){
+bool is_je_instruction(const asm_instruction_pointer& inst,
+						const std::string& label){
 	operand_pointer aux = new_label_operand(label);
 	bool ret = inst->op == operation::JE &&
 			are_equal_operands(inst->destination, aux);
@@ -1049,8 +1114,8 @@ bool is_je_instruction(asm_instruction_pointer inst,
 	return	ret;
 }
 
-bool is_jne_instruction(asm_instruction_pointer inst,
-						std::string label){
+bool is_jne_instruction(const asm_instruction_pointer& inst,
+						const std::string& label){
 	operand_pointer aux = new_label_operand(label);
 	bool ret = inst->op == operation::JNE &&
 			are_equal_operands(inst->destination, aux);
@@ -1058,8 +1123,8 @@ bool is_jne_instruction(asm_instruction_pointer inst,
 	return	ret;
 }
 
-bool is_jl_instruction(asm_instruction_pointer inst,
-						std::string label){
+bool is_jl_instruction(const asm_instruction_pointer& inst,
+						const std::string& label){
 	operand_pointer aux = new_label_operand(label);
 	bool ret = inst->op == operation::JL &&
 			are_equal_operands(inst->destination, aux);
@@ -1067,8 +1132,8 @@ bool is_jl_instruction(asm_instruction_pointer inst,
 	return	ret;
 }
 
-bool is_jle_instruction(asm_instruction_pointer inst,
-						std::string label){
+bool is_jle_instruction(const asm_instruction_pointer& inst,
+						const std::string& label){
 	operand_pointer aux = new_label_operand(label);
 	bool ret = inst->op == operation::JLE &&
 			are_equal_operands(inst->destination, aux);
@@ -1076,8 +1141,8 @@ bool is_jle_instruction(asm_instruction_pointer inst,
 	return	ret;
 }
 
-bool is_jg_instruction(asm_instruction_pointer inst,
-						std::string label){
+bool is_jg_instruction(const asm_instruction_pointer& inst,
+						const std::string& label){
 	operand_pointer aux = new_label_operand(label);
 	bool ret = inst->op == operation::JG &&
 			are_equal_operands(inst->destination, aux);
@@ -1085,8 +1150,8 @@ bool is_jg_instruction(asm_instruction_pointer inst,
 	return	ret;
 }
 
-bool is_jge_instruction(asm_instruction_pointer inst,
-						std::string label){
+bool is_jge_instruction(const asm_instruction_pointer& inst,
+						const std::string& label){
 	operand_pointer aux = new_label_operand(label);
 	bool ret = inst->op == operation::JGE &&
 			are_equal_operands(inst->destination, aux);
@@ -1094,8 +1159,8 @@ bool is_jge_instruction(asm_instruction_pointer inst,
 	return	ret;
 }
 
-bool is_call_instruction(asm_instruction_pointer inst,
-						std::string label){
+bool is_call_instruction(const asm_instruction_pointer& inst,
+						const std::string& label){
 	operand_pointer aux = new_label_operand(label);
 	bool ret = inst->op == operation::CALL &&
 			are_equal_operands(inst->destination, aux);
@@ -1103,17 +1168,17 @@ bool is_call_instruction(asm_instruction_pointer inst,
 	return	ret;
 }
 
-bool is_leave_instruction(asm_instruction_pointer inst){
+bool is_leave_instruction(const asm_instruction_pointer& inst){
 	return	inst->op == operation::LEAVE;
 }
 
-bool is_ret_instruction(asm_instruction_pointer inst){
+bool is_ret_instruction(const asm_instruction_pointer& inst){
 	return	inst->op == operation::RET;
 }
 
-bool is_cmp_instruction(asm_instruction_pointer inst,
-						operand_pointer source,
-						operand_pointer destination,
+bool is_cmp_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination,
 						data_type ops_type){
 
 	return	inst->op == operation::CMP &&
@@ -1122,17 +1187,17 @@ bool is_cmp_instruction(asm_instruction_pointer inst,
 			are_equal_operands(inst->destination, destination);
 }
 
-bool is_enter_instruction(asm_instruction_pointer inst,
-						operand_pointer source,
-						operand_pointer destination){
+bool is_enter_instruction(const asm_instruction_pointer& inst,
+						const operand_pointer& source,
+						const operand_pointer& destination){
 
 	return	inst->op == operation::ENTER &&
 			are_equal_operands(inst->source, source) &&
 			are_equal_operands(inst->destination, destination);
 }
 
-bool is_label_instruction(asm_instruction_pointer inst,
-						std::string label){
+bool is_label_instruction(const asm_instruction_pointer& inst,
+						const std::string& label){
 
 	operand_pointer aux = new_label_operand(label);
 	bool ret = inst->op == operation::LABEL &&
