@@ -7,6 +7,19 @@
 #include <map>
 #include <utility>
 
+enum id_type { T_STRING
+             , T_INT
+             , T_FLOAT
+             , T_BOOL
+             , T_CHAR
+             , T_UNDEFINED };
+
+enum id_kind { K_TEMP
+             , K_VAR
+             , K_OBJECT
+             , K_CLASS
+             , K_METHOD };
+
 class ids_info {
 public:
     /*  At the end of the name, a '-' character followed by a number is 
@@ -14,6 +27,10 @@ public:
         been used before and will not be asigned to any other identifier in 
         the rest of the source code.                                         */ 
     std::string get_next_internal(std::string);
+
+    /*  Parameters: offset inside the method
+                  , type of the new temporary variable.                      */
+    std::string* new_temp(unsigned int, id_type);
 
     /*  The following register_* methods register the id passed as parameter, 
         as long with their information, into info_map.
@@ -23,12 +40,20 @@ public:
         representation is what should be used inside any intermediate 
         representaion instruction.                                           */
 
-    /*  Parameters: offset inside the method.                                */
-    std::string* new_temp(unsigned int);
-
     /*  Parameters: id with which generate the internal representation id
-                  , offset inside the method.                                */
-    std::string register_var(std::string, unsigned int);
+                  , offset inside the method
+                  , type of the new variable.                                */
+    std::string register_var(std::string, unsigned int, id_type);
+
+    /*  Precondition: the id has been registered, and it is of kind K_TEMP or 
+        K_VAR.                                                               */
+    id_type get_type(std::string);
+
+    /*  This method is implemented only in case that it is needed in a future
+        implementation of the compiler.
+        Precondition: the id has been registered, and the content is of kind 
+        K_TEMP or K_VAR.                                                     */
+    void set_type(std::string, id_type);
 
     /*  Parameters: id with which generate the internal representation id
                   , offset inside the method
@@ -60,11 +85,6 @@ public:
     std::string get_id_rep(std::string);
 
 
-    enum id_kind { K_TEMP
-                 , K_VAR
-                 , K_OBJECT
-                 , K_CLASS
-                 , K_METHOD };
 
     /*  Precondition: the id has been registered.                            */
     id_kind get_kind(std::string);
@@ -103,6 +123,10 @@ public:
 private:
     struct entry_info {
         id_kind entry_kind;
+
+        /*  For variables and temporaries. For the other entries, 
+            entry_type == T_UNDEFINED.                                       */
+        id_type entry_type;
 
         std::string rep;
 
@@ -217,7 +241,8 @@ public:
     /*  Inserts a new variable as an element into the symbols tables stack. 
         Parameters: the variable itself
                   , the key with which it is going to be registered
-                  , the offset inside the variable's method.
+                  , the offset inside the variable's method
+                  , the variable's type.
         Precondition: There have been more calls to push_symtable(...) than
         to pop_symtable(); i.e., there is still another symbols table to put 
         an element to. The element to be inserted is a variable.
@@ -225,7 +250,7 @@ public:
         current scope, along with its representation inside this->information 
         (as long as putting the object in scope was successful; otherwise, 
         NULL is returned as second element of the pair).                     */
-    std::pair<intermediate_symtable::put_results, std::string*> put_var(symtable_element, std::string, unsigned int);
+    std::pair<intermediate_symtable::put_results, std::string*> put_var(symtable_element, std::string, unsigned int, id_type);
 
     /*  Inserts a new object as an element into the symbols tables stack. 
         Parameters: the object itself
@@ -269,7 +294,8 @@ public:
         as a parameter.
         Parameters: the variable itself
                   , the key with which it is going to be registered
-                  , the variable's offset inside the method it belongs to.
+                  , the variable's offset inside the method it belongs to
+                  , the variable's type.
         Precondition: The element is a variable, and the string given to this
         method is equal to the variable's key.
         Returns: a pair containing the result of putting the variable into the
@@ -277,7 +303,7 @@ public:
         is a parameter of), along with its representation inside 
         this->information (as long as putting the variable in scope was 
         successful; otherwise, NULL is returned as second parameter).        */
-    std::pair<intermediate_symtable::put_param_results, std::string*> put_var_param(symtable_element&, std::string, unsigned int);
+    std::pair<intermediate_symtable::put_param_results, std::string*> put_var_param(symtable_element&, std::string, unsigned int, id_type);
 
     /*  Inserts a new object to the lastly inserted function (via put_func) as
         a parameter.
@@ -334,7 +360,8 @@ public:
         put_class).
         Parameters: the variable itself
                   , the key with which it is going to be registered
-                  , the offset inside the method its belong to.
+                  , the offset inside the method its belong to
+                  , the variable's type.
         Precondition: the second parameter matches the variable's key, and 
         there is a class to push this field into.
         Returns: a pair containing the result of putting the variable into the
@@ -343,7 +370,7 @@ public:
         this->information (as long as putting the variable in scope was 
         successful; otherwise, NULL is returned as second element of the 
         pair).                                                               */
-    std::pair<intermediate_symtable::put_field_results, std::string*> put_var_field(symtable_element&, std::string, unsigned int);
+    std::pair<intermediate_symtable::put_field_results, std::string*> put_var_field(symtable_element&, std::string, unsigned int, id_type);
 
     /*  Inserts a new object as a field to the lastly inserted class (via 
         put_class).

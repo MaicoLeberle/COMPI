@@ -1,28 +1,28 @@
 class Program {
+	bool b;
 
-	int x;
-
-	void set_x(int z) {
-		x = z;
+	void set_b(bool c) {
+		b = c;
 	}
 
-	int return_x() {
-		return x;
+	bool return_b() {
+		return b;
 	}
-
-	int read_int () extern;
 
 	void print_string(string s) extern;
-	
-	void main () {
-		set_x(read_int());
-		if (x == 1 || false) 
-			print_string("x == 1 || false\n");
-		else 
-			if (x == 2)
-				print_string("x == 2\n");
-			else 
-				print_string("x >= 3\n");
-		return;
+
+	void print_int(int x) extern;
+
+	void main() {
+		set_b(true);
+		if (b) {
+			for z = 1, 10 {
+				if (z == 2)
+					continue;
+				print_string("z == ");
+				print_int(z);
+				print_string("\n");
+			}
+		}
 	}
 }

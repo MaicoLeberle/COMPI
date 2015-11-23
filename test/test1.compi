@@ -1,6 +1,12 @@
 class Program {
 	
-	void main() {
+	int z;
 	
+	bool c;
+	
+	void main() {
+		int x;
+		bool b;
+		int y;
 	}
 }

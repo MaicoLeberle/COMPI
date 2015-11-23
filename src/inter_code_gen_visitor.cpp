@@ -136,10 +136,10 @@ std::string id, std::string class_name, unsigned int array_size){
 		#ifdef __DEBUG
 			std::pair<intermediate_symtable::put_results, std::string*> pair = s_table.put_var(variable,
 																		id,
-																		offset);
+																		offset, T_UNDEFINED);
 			assert(std::get<0>(pair) == intermediate_symtable::ID_PUT);
 		#else
-			s_table.put_var(variable, id, offset);
+			s_table.put_var(variable, id, offset, T_UNDEFINED);
 		#endif
 		instance_initialization(class_name, id);
 		// After instance_initialization, offset had been updated correctly.
@@ -152,7 +152,7 @@ std::string id, std::string class_name, unsigned int array_size){
 			symtable_element variable(id, type, array_size);
 			std::pair<intermediate_symtable::put_results, std::string*> pair = s_table.put_var(variable,
 																		id,
-																		offset);
+																		offset, T_UNDEFINED);
 			offset += calculate_size(type)*array_size;
 			#ifdef __DEBUG
 				assert(std::get<0>(pair) == intermediate_symtable::ID_PUT);
@@ -180,7 +180,7 @@ std::string id, std::string class_name, unsigned int array_size){
 			symtable_element variable(id, type);
 			std::pair<intermediate_symtable::put_results, std::string*> pair = s_table.put_var(variable,
 																		id,
-																		offset);
+																		offset, T_UNDEFINED);
 			offset += calculate_size(type);
 			#ifdef __DEBUG
 				assert(std::get<0>(pair) == intermediate_symtable::ID_PUT);
@@ -400,7 +400,7 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 					// TODO: cambiar esto cuando se haga el typedef
 					std::pair<intermediate_symtable::put_field_results, std::string*> pair = s_table.put_var_field(id,
 																				f->id,
-																				offset);
+																				offset, T_UNDEFINED);
 					#ifdef __DEBUG
 						assert(std::get<0>(pair) == intermediate_symtable::FIELD_PUT);
 					#endif
@@ -423,10 +423,10 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 						// TODO: cambiar esto cuando se haga el typedef
 						std::pair<intermediate_symtable::put_field_results, std::string*> pair = s_table.put_var_field(id,
 																									f->id,
-																									offset);
+																									offset, T_UNDEFINED);
 						assert(std::get<0>(pair) == intermediate_symtable::FIELD_PUT);
 					#else
-						s_table.put_var_field(id, f->id, offset);
+						s_table.put_var_field(id, f->id, offset, T_UNDEFINED);
 					#endif
 
 					offset += calculate_size(determine_type(node.type.type));
@@ -565,10 +565,10 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 					std::pair<intermediate_symtable::put_param_results, std::string*> pair2 = s_table.put_var_param(
 																				 var_param,
 																				 var_param.get_key(),
-																				 offset);
+																				 offset, T_UNDEFINED);
 					assert(std::get<0>(pair2) == intermediate_symtable::PARAM_PUT);
 				#else
-					s_table.put_var_param(var_param, var_param.get_key(), offset);
+					s_table.put_var_param(var_param, var_param.get_key(), offset, T_UNDEFINED);
 				#endif
 			}
 	}

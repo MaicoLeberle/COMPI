@@ -38,7 +38,7 @@ void test_binary_assign(){
 										quad_oper::PLUS));*/
 	translate_ir_code(std::string("x = 2 + 1"));
 	ids_info *s_table = new ids_info();
-	s_table->register_var(var, 0);
+	s_table->register_var(var, 0, T_UNDEFINED);
 
 	asm_code_generator g(ir_code, s_table);
 	g.translate_ir();
