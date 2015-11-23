@@ -157,9 +157,26 @@
   interna al proceso, se guarda información del alcance de los identificadores,
   así como cualquier otra información necesaria para luego generar el código
   intermedio de tres direcciones (e.g., tipo de la variable, el offset dentro
-  del cuerpo del método, las variable, etc.).
+  del cuerpo del método, las variable, etc.). Este proceso genera dos recursos:
+  el código de tres direcciones, que viene a ser el código intermedio de la
+  aplicación y la tabla de traducción de símbolos para la traducción a Assembly,
+  que guarda directamente información sobre las variables a utilizar en el
+  código assembly.
+
+  A partir de los recursos generados en la parte anterior se entra en la etapa
+  de {\bf generación de código assembly}, que producirá un archivo en código
+  assembly que luego será compilado mediante el compilador correspondiente.
 
   \section{Decisiones de Diseño}\label{sec:design}
+
+  Para la creación del AST nos basamos en la estructura propuesta en la serie de
+  posts de la página {\em gnuu}, llamado ``Writing Your Own Toy Compiler Using
+  Flex, Bison and LLVM''
+  \footnote{\url{http://gnuu.org/2009/09/18/writing-your-own-toy-compiler/}}.
+  Este fue adaptado a los requerimientos del lenguaje COMPI. Todos los nodos
+  heredan de una clase principal {\em node} que a grandes razgos se diferencia
+  entre declaraciones (de métodos y variables), órdenes de flujo ({\em
+  statements}, en inglés) y expresiones (matemáticas, comparativas, lógicas).
 
   \section{Conclusiones}\label{sec:conclusions}
 \end{document}
