@@ -6,7 +6,10 @@ using namespace std;
 
 void test_ids_info();
 
+void test_register_temp();
 void test_register_var();
+void test_get_type();
+void test_set_type();
 void test_register_obj();
 void test_register_method();
 void test_register_class();
@@ -49,6 +52,9 @@ void test_intermediate_new_label();
 
 
 void test_ids_info() {
+    cout << "\t1) new_temp: ";
+    test_register_temp();
+
     cout << "\t1) register_var: ";
     test_register_var();
 
@@ -95,17 +101,51 @@ void test_ids_info() {
     test_get_list_attributes();
 }
 
+void test_register_temp() {
+    ids_info information;
+
+    string *res = information.new_temp(10, T_STRING);
+    assert(res->compare("@t0") == 0);
+
+    string *res2 = information.new_temp(0, T_UNDEFINED);
+    assert(res2->compare("@t1") == 0);
+
+    cout << "OK." << endl;
+}
+
 void test_register_var() {
     ids_info information;
 
-    /*  Next, 0 is used as an offset everytime the identifier "variable" is 
-        registered. This has no particular meaning, just random.             */
-    string res = information.register_var(string("variable"), 10);
+    string res = information.register_var(string("variable"), 10, T_UNDEFINED);
     assert(res.compare("variable-0") == 0);
-    string res2 = information.register_var(string("variable"), 0);
+    string res2 = information.register_var(string("variable"), 0, T_UNDEFINED);
     assert(res2.compare("variable-1") == 0);
-    string res3 = information.register_var(string("variable"), 5);
+    string res3 = information.register_var(string("variable"), 5, T_UNDEFINED);
     assert(res3.compare("variable-2") == 0);
+
+    cout << "OK." << endl;
+}
+
+void test_get_type() {
+    ids_info information;
+
+    information.register_var(string("variable"), 10, T_BOOL);
+    assert(information.get_type(string("variable")) == T_BOOL);
+
+    information.new_temp(15, T_FLOAT);
+    assert(information.get_type(string("variable")) == T_FLOAT);
+
+    cout << "OK." << endl;
+}
+
+void test_set_type() {
+    ids_info information;
+
+    information.register_var(string("variable"), 1, T_CHAR);
+    assert(information.get_type(string("variable")) == T_CHAR);
+
+    information.set_type(string("variable"), T_UNDEFINED);
+    assert(information.get_type(string("variable")) == T_UNDEFINED);
 
     cout << "OK." << endl;
 }
@@ -160,7 +200,7 @@ void test_register_class() {
 void test_ids_info_id_exists() {
     ids_info information;
 
-    information.register_var(string("variable"), 16);
+    information.register_var(string("variable"), 16, T_UNDEFINED);
     assert(information.id_exists(string("variable")));
 
     cout << "OK." << endl;
@@ -168,8 +208,8 @@ void test_ids_info_id_exists() {
 
 void test_get_next_internal() {
     ids_info information;
-    information.register_var(string("variable"), 0);
-    information.register_var(string("variable"), 34);
+    information.register_var(string("variable"), 0, T_UNDEFINED);
+    information.register_var(string("variable"), 34, T_UNDEFINED);
 
     assert((information.get_next_internal(string("variable"))).compare(string("variable-2")) == 0);
 
@@ -178,17 +218,17 @@ void test_get_next_internal() {
 
 void test_new_temp() {
     ids_info information;
-    std::string* n = information.new_temp(89);
-    std::string* m = information.new_temp(0);
-    std::string* o = information.new_temp(89);
+    std::string* n = information.new_temp(89, T_UNDEFINED);
+    std::string* m = information.new_temp(0, T_UNDEFINED);
+    std::string* o = information.new_temp(89, T_UNDEFINED);
     
     assert(n);
-    assert((*n).compare(std::string("t-0")) == 0);
+    assert((*n).compare(std::string("@t0")) == 0);
     assert(m);
-    assert((*m).compare(std::string("t-1")) == 0);
+    assert((*m).compare(std::string("@t1")) == 0);
     assert(o);
-    assert((*o).compare(std::string("t-2")) == 0);
-    assert((*n).compare(std::string("t-0")) == 0);
+    assert((*o).compare(std::string("@t2")) == 0);
+    assert((*n).compare(std::string("@t0")) == 0);
 
     delete(n);
     delete(m);
@@ -197,9 +237,9 @@ void test_new_temp() {
 
 void test_unregister() {
     ids_info information;
-    information.register_var(string("variable"), 0);
+    information.register_var(string("variable"), 0, T_UNDEFINED);
     assert((information.get_next_internal(string("variable"))).compare(string("variable-1")) == 0);
-    information.register_var(string("variable"), 99);
+    information.register_var(string("variable"), 99, T_UNDEFINED);
     assert((information.get_next_internal(string("variable"))).compare(string("variable-2")) == 0);
     information.unregister(string("variable"));
     assert((information.get_next_internal(string("variable"))).compare(string("variable-1")) == 0);
@@ -212,9 +252,9 @@ void test_unregister() {
 void test_ids_info_get_id_rep() {
     ids_info information;
 
-    information.register_var(string("variable"), 1);
+    information.register_var(string("variable"), 1, T_UNDEFINED);
     assert(information.get_id_rep(string("variable")) == string("variable-0"));
-    information.register_var(string("variable"), 9);
+    information.register_var(string("variable"), 9, T_UNDEFINED);
     assert(information.get_id_rep(string("variable")) == string("variable-1"));
 
     cout << "OK." << endl;
@@ -222,19 +262,19 @@ void test_ids_info_get_id_rep() {
 
 void test_get_kind() {
     ids_info information;
-    information.register_var(string("variable"), 15);
-    assert(information.get_kind(string("variable")) == ids_info::K_VAR);
+    information.register_var(string("variable"), 15, T_UNDEFINED);
+    assert(information.get_kind(string("variable")) == K_VAR);
 
     information.register_obj(string("object"), 15, string("classA"), string("object.x-0"));
-    assert(information.get_kind(string("object")) == ids_info::K_OBJECT);
+    assert(information.get_kind(string("object")) == K_OBJECT);
     information.register_method(string("method"), 43, string("classB"));
-    assert(information.get_kind(string("method")) == ids_info::K_METHOD);
+    assert(information.get_kind(string("method")) == K_METHOD);
 
     list<string> l;
     l.push_back(string("one"));
     l.push_back(string("two"));
     information.register_class(string("class"), l);
-    assert(information.get_kind(string("class")) == ids_info::K_CLASS);
+    assert(information.get_kind(string("class")) == K_CLASS);
 
     cout << "OK." << endl;
 }
@@ -242,7 +282,7 @@ void test_get_kind() {
 void test_get_offset() {
     ids_info information;
 
-    information.register_var(string("variable"), 120);
+    information.register_var(string("variable"), 120, T_UNDEFINED);
     assert(information.get_offset(string("variable")) == 120);
     information.register_obj(string("object"), 32, string("classD"), string("object.firstAtt-0"));
     assert(information.get_offset(string("object")) == 32);
@@ -374,12 +414,12 @@ void test_intermediate_symtable_get_id_rep() {
     stack.push_symtable();
 
     symtable_element elem(string("variable"), symtable_element::INTEGER);
-    pair<intermediate_symtable::put_results, string*> res = stack.put_var(elem, elem.get_key(), 17);
+    pair<intermediate_symtable::put_results, string*> res = stack.put_var(elem, elem.get_key(), 17, T_UNDEFINED);
     assert(res.second != NULL);
     assert(string("variable-0").compare(stack.get_id_rep(string("variable"))) == 0);
 
     symtable_element elem2(string("variable2"), symtable_element::BOOLEAN);
-    pair<intermediate_symtable::put_results, string*> res2 = stack.put_var(elem2, elem2.get_key(), 0);
+    pair<intermediate_symtable::put_results, string*> res2 = stack.put_var(elem2, elem2.get_key(), 0, T_UNDEFINED);
     assert(res.second != NULL);
     assert(string("variable2-0").compare(stack.get_id_rep(string("variable2"))) == 0);
 
@@ -434,7 +474,7 @@ void test_intermediate_symtable_put_var_and_get() {
     stack.push_symtable();
 
     symtable_element elem(string("variable"), symtable_element::INTEGER);
-    pair<intermediate_symtable::put_results, string*> res = stack.put_var(elem, elem.get_key(), 89);
+    pair<intermediate_symtable::put_results, string*> res = stack.put_var(elem, elem.get_key(), 89, T_UNDEFINED);
     assert(res.first == intermediate_symtable::ID_PUT);
     assert(res.second != NULL);
     assert((*(res.second)).compare(string("variable-0")) == 0);
@@ -460,13 +500,13 @@ void test_intermediate_new_temp() {
     
     assert(res1.first == intermediate_symtable::ID_PUT);
     assert(res1.second != NULL);
-    assert((*res1.second).compare(std::string("t-0")) == 0);
+    assert((*res1.second).compare(std::string("@t0")) == 0);
     assert(res2.first == intermediate_symtable::ID_PUT);
     assert(res2.second != NULL);
-    assert((*res2.second).compare(std::string("t-1")) == 0);
+    assert((*res2.second).compare(std::string("@t1")) == 0);
     assert(res3.first == intermediate_symtable::ID_PUT);
     assert(res3.second != NULL);
-    assert((*res3.second).compare(std::string("t-2")) == 0);
+    assert((*res3.second).compare(std::string("@t2")) == 0);
 
     delete(res1.second);
     delete(res2.second);
@@ -515,7 +555,7 @@ void test_intermediate_symtable_put_var_param() {
 
 
     symtable_element var(string("variable"), symtable_element::BOOLEAN);
-    pair<intermediate_symtable::put_param_results, string*> res = stack.put_var_param(var, var.get_key(), 8);
+    pair<intermediate_symtable::put_param_results, string*> res = stack.put_var_param(var, var.get_key(), 8, T_UNDEFINED);
     assert(res.first == intermediate_symtable::PARAM_PUT);
     assert(res.second != NULL);
     assert((*(res.second)).compare(string("variable-0")) == 0);
@@ -588,7 +628,7 @@ void test_intermediate_symtable_put_var_field() {
     stack.put_class(c, c.get_key(), list<string>());
 
     symtable_element var(string("variable"), symtable_element::BOOLEAN);
-    pair<intermediate_symtable::put_field_results, string*> res = stack.put_var_field(var, var.get_key(), 17);
+    pair<intermediate_symtable::put_field_results, string*> res = stack.put_var_field(var, var.get_key(), 17, T_UNDEFINED);
     assert(res.first == intermediate_symtable::FIELD_PUT);
     assert(res.second != NULL);
     assert((*(res.second)).compare(string("variable-0")) == 0);
