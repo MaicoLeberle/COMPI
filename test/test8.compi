@@ -15,15 +15,10 @@ class Program {
 	void print_string(string s) extern;
 
 	void main() {
-		while (true) {
-			set_x(read_int());
-			if (return_x() == 5) 
-				break;
-			if (return_x() <= 6 || return_ex() >= 71) {
-				print_string("x not in interval (6, 70).\n");
-				continue;
-			}
-			print_string("x in interval (6, 70) and is not 5.\n");
-		}
+		if (!(-8 == (4 * (1+1))) || false) 
+			print_string("true\n");
+		else
+			print_stirng("false\n");
+		return;
 	}
 }

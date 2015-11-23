@@ -1,28 +1,29 @@
 class Program {
-	bool b;
+	
+	int x;
 
-	void set_b(bool c) {
-		b = c;
+	void set_x(int z) {
+		x = z;
 	}
 
-	bool return_b() {
-		return b;
+	int return_x() {
+		return x;
 	}
+
+	int read_int () extern;
 
 	void print_string(string s) extern;
 
-	void print_int(int x) extern;
-
 	void main() {
-		set_b(true);
-		if (b) {
-			for z = 1, 10 {
-				if (z == 5)
-					break;
-				print_string("z == ");
-				print_int(z);
-				print_string("\n");
+		while (true) {
+			set_x(read_int());
+			if (return_x() == 5) 
+				break;
+			if (return_x() <= 6 || return_ex() >= 71) {
+				print_string("x not in interval (6, 70).\n");
+				continue;
 			}
+			print_string("x in interval (6, 70) and is not 5.\n");
 		}
 	}
 }

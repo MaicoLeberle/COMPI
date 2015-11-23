@@ -17,8 +17,8 @@ class Program {
 		set_b(true);
 		if (b) {
 			for z = 1, 10 {
-				if (z == 2)
-					continue;
+				if (z == 5)
+					break;
 				print_string("z == ");
 				print_int(z);
 				print_string("\n");

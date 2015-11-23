@@ -1,12 +1,7 @@
-class Program {
-	
-	int z;
-	
-	bool c;
+class Program{
+
+	void print_string(string s) extern;
 	
 	void main() {
-		int x;
-		bool b;
-		int y;
 	}
 }
