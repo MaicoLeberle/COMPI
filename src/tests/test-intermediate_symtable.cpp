@@ -414,12 +414,12 @@ void test_intermediate_symtable_get_id_rep() {
     stack.push_symtable();
 
     symtable_element elem(string("variable"), symtable_element::INTEGER);
-    pair<intermediate_symtable::put_results, string*> res = stack.put_var(elem, elem.get_key(), 17, T_UNDEFINED);
+    pair<intermediate_symtable::put_results, string*> res = stack.put_var(elem, elem.get_key(), 17);
     assert(res.second != NULL);
     assert(string("variable-0").compare(stack.get_id_rep(string("variable"))) == 0);
 
     symtable_element elem2(string("variable2"), symtable_element::BOOLEAN);
-    pair<intermediate_symtable::put_results, string*> res2 = stack.put_var(elem2, elem2.get_key(), 0, T_UNDEFINED);
+    pair<intermediate_symtable::put_results, string*> res2 = stack.put_var(elem2, elem2.get_key(), 0);
     assert(res.second != NULL);
     assert(string("variable2-0").compare(stack.get_id_rep(string("variable2"))) == 0);
 
@@ -474,7 +474,7 @@ void test_intermediate_symtable_put_var_and_get() {
     stack.push_symtable();
 
     symtable_element elem(string("variable"), symtable_element::INTEGER);
-    pair<intermediate_symtable::put_results, string*> res = stack.put_var(elem, elem.get_key(), 89, T_UNDEFINED);
+    pair<intermediate_symtable::put_results, string*> res = stack.put_var(elem, elem.get_key(), 89);
     assert(res.first == intermediate_symtable::ID_PUT);
     assert(res.second != NULL);
     assert((*(res.second)).compare(string("variable-0")) == 0);
@@ -555,7 +555,7 @@ void test_intermediate_symtable_put_var_param() {
 
 
     symtable_element var(string("variable"), symtable_element::BOOLEAN);
-    pair<intermediate_symtable::put_param_results, string*> res = stack.put_var_param(var, var.get_key(), 8, T_UNDEFINED);
+    pair<intermediate_symtable::put_param_results, string*> res = stack.put_var_param(var, var.get_key(), 8);
     assert(res.first == intermediate_symtable::PARAM_PUT);
     assert(res.second != NULL);
     assert((*(res.second)).compare(string("variable-0")) == 0);
@@ -628,7 +628,7 @@ void test_intermediate_symtable_put_var_field() {
     stack.put_class(c, c.get_key(), list<string>());
 
     symtable_element var(string("variable"), symtable_element::BOOLEAN);
-    pair<intermediate_symtable::put_field_results, string*> res = stack.put_var_field(var, var.get_key(), 17, T_UNDEFINED);
+    pair<intermediate_symtable::put_field_results, string*> res = stack.put_var_field(var, var.get_key(), 17);
     assert(res.first == intermediate_symtable::FIELD_PUT);
     assert(res.second != NULL);
     assert((*(res.second)).compare(string("variable-0")) == 0);

@@ -250,7 +250,7 @@ public:
         current scope, along with its representation inside this->information 
         (as long as putting the object in scope was successful; otherwise, 
         NULL is returned as second element of the pair).                     */
-    std::pair<intermediate_symtable::put_results, std::string*> put_var(symtable_element, std::string, unsigned int, id_type);
+    std::pair<intermediate_symtable::put_results, std::string*> put_var(symtable_element, std::string, unsigned int);
 
     /*  Inserts a new object as an element into the symbols tables stack. 
         Parameters: the object itself
@@ -303,7 +303,7 @@ public:
         is a parameter of), along with its representation inside 
         this->information (as long as putting the variable in scope was 
         successful; otherwise, NULL is returned as second parameter).        */
-    std::pair<intermediate_symtable::put_param_results, std::string*> put_var_param(symtable_element&, std::string, unsigned int, id_type);
+    std::pair<intermediate_symtable::put_param_results, std::string*> put_var_param(symtable_element&, std::string, unsigned int);
 
     /*  Inserts a new object to the lastly inserted function (via put_func) as
         a parameter.
@@ -370,7 +370,7 @@ public:
         this->information (as long as putting the variable in scope was 
         successful; otherwise, NULL is returned as second element of the 
         pair).                                                               */
-    std::pair<intermediate_symtable::put_field_results, std::string*> put_var_field(symtable_element&, std::string, unsigned int, id_type);
+    std::pair<intermediate_symtable::put_field_results, std::string*> put_var_field(symtable_element&, std::string, unsigned int);
 
     /*  Inserts a new object as a field to the lastly inserted class (via 
         put_class).

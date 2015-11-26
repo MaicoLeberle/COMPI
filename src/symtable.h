@@ -25,7 +25,10 @@ public:
                  , BOOLEAN
                  , FLOAT
                  , VOID
-                 , ID };
+                 , ID
+                 , STRING
+                 , CHAR
+                 , UNDEFINED };
 
     /*  For the following constructors, only necessary information is given. 
         Other attributes will be inferred from this information.

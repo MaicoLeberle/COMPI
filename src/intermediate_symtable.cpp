@@ -230,7 +230,7 @@ std::pair<intermediate_symtable::put_results, std::string*> intermediate_symtabl
 }
 
 std::pair<intermediate_symtable::put_results, std::string*> 
-    intermediate_symtable::put_var(symtable_element e, std::string key, unsigned int offset, id_type type) {
+    intermediate_symtable::put_var(symtable_element e, std::string key, unsigned int offset) {
         /*  Besides putting the new variable into the symbols tables stack, it 
             is also necessary to register its new key.                       */
         symtables_stack::put_results res = (this->scopes).put(key, e);
@@ -241,8 +241,22 @@ std::pair<intermediate_symtable::put_results, std::string*>
         if (res == symtables_stack::ID_EXISTS)
             return(std::pair<intermediate_symtable::put_results, std::string*>(intermediate_symtable::ID_EXISTS, NULL));
 
-        std::string* rep = new std::string((this->information)->register_var(key, offset, type));
-        
+        std::string *rep;
+        if (e.get_type() == symtable_element::INTEGER)
+            rep = new std::string((this->information)->register_var(key, offset, T_INT));
+        else if (e.get_type() == symtable_element::BOOLEAN)
+            rep = new std::string((this->information)->register_var(key, offset, T_BOOL));
+        else if (e.get_type() == symtable_element::FLOAT)
+            rep = new std::string((this->information)->register_var(key, offset, T_FLOAT));
+        else if (e.get_type() == symtable_element::STRING)
+            rep = new std::string((this->information)->register_var(key, offset, T_STRING));
+        else if (e.get_type() == symtable_element::CHAR)
+            rep = new std::string((this->information)->register_var(key, offset, T_CHAR));
+        else {
+            // VOID, ID or UNDEFINED
+            rep = new std::string((this->information)->register_var(key, offset, T_UNDEFINED));
+        }
+
         return(std::pair<intermediate_symtable::put_results, std::string*>(intermediate_symtable::ID_PUT, rep));
 }
 
@@ -281,7 +295,7 @@ std::pair<intermediate_symtable::put_func_results, std::string*>
 }
 
 std::pair<intermediate_symtable::put_param_results, std::string*> 
-    intermediate_symtable::put_var_param(symtable_element& e, std::string key, unsigned int offset, id_type type) {
+    intermediate_symtable::put_var_param(symtable_element& e, std::string key, unsigned int offset) {
         assert(key.compare(e.get_key()) == 0);
         assert(e.get_class() == symtable_element::T_VAR);
 
@@ -295,7 +309,22 @@ std::pair<intermediate_symtable::put_param_results, std::string*>
         assert(this->func_name);
         assert((this->information)->id_exists(*(this->func_name)));
         ((this->information)->get_list_params(*(this->func_name))).push_back(key);
-        std::string* rep = new std::string((this->information)->register_var(key, offset, type));
+
+        std::string *rep;
+        if (e.get_type() == symtable_element::INTEGER)
+            rep = new std::string((this->information)->register_var(key, offset, T_INT));
+        else if (e.get_type() == symtable_element::BOOLEAN)
+            rep = new std::string((this->information)->register_var(key, offset, T_BOOL));
+        else if (e.get_type() == symtable_element::FLOAT)
+            rep = new std::string((this->information)->register_var(key, offset, T_FLOAT));
+        else if (e.get_type() == symtable_element::STRING)
+            rep = new std::string((this->information)->register_var(key, offset, T_STRING));
+        else if (e.get_type() == symtable_element::CHAR)
+            rep = new std::string((this->information)->register_var(key, offset, T_CHAR));
+        else {
+            // VOID, ID or UNDEFINED
+            rep = new std::string((this->information)->register_var(key, offset, T_UNDEFINED));
+        }
 
         return(std::pair<intermediate_symtable::put_param_results, std::string*>(intermediate_symtable::PARAM_PUT, rep));
 }
@@ -353,7 +382,7 @@ std::pair<intermediate_symtable::put_class_results, std::string*>
 }
 
 std::pair<intermediate_symtable::put_field_results, std::string*> 
-    intermediate_symtable::put_var_field(symtable_element& e, std::string key, unsigned int offset, id_type type) {
+    intermediate_symtable::put_var_field(symtable_element& e, std::string key, unsigned int offset) {
         symtables_stack::put_field_results res = (this->scopes).put_class_field(key, e);
 
         if(res == symtables_stack::FIELD_TYPE_ERROR)
@@ -365,7 +394,22 @@ std::pair<intermediate_symtable::put_field_results, std::string*>
         assert(this->class_name);
         assert((this->information)->id_exists(*(this->class_name)));
         ((this->information)->get_list_attributes(*(this->class_name))).push_back(key);
-        std::string* rep = new std::string((this->information)->register_var(key, offset, type));
+        
+        std::string *rep;
+        if (e.get_type() == symtable_element::INTEGER)
+            rep = new std::string((this->information)->register_var(key, offset, T_INT));
+        else if (e.get_type() == symtable_element::BOOLEAN)
+            rep = new std::string((this->information)->register_var(key, offset, T_BOOL));
+        else if (e.get_type() == symtable_element::FLOAT)
+            rep = new std::string((this->information)->register_var(key, offset, T_FLOAT));
+        else if (e.get_type() == symtable_element::STRING)
+            rep = new std::string((this->information)->register_var(key, offset, T_STRING));
+        else if (e.get_type() == symtable_element::CHAR)
+            rep = new std::string((this->information)->register_var(key, offset, T_CHAR));
+        else {
+            // VOID, ID or UNDEFINED
+            rep = new std::string((this->information)->register_var(key, offset, T_UNDEFINED));
+        }
 
         return(std::pair<intermediate_symtable::put_field_results, std::string*> (intermediate_symtable::FIELD_PUT, rep));
 }
