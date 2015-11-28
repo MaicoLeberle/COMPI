@@ -134,10 +134,10 @@ std::string id, std::string class_name, unsigned int array_size){
 		std::string *class_name_aux = new std::string(class_name);
 		symtable_element variable(id, class_name_aux);
 		#ifdef __DEBUG
-			std::pair<intermediate_symtable::put_results, std::string*> pair = s_table.put_var(variable,
+			std::pair<put_results, std::string*> pair = s_table.put_var(variable,
 																		id,
 																		offset);
-			assert(std::get<0>(pair) == intermediate_symtable::ID_PUT);
+			assert(std::get<0>(pair) == ID_PUT);
 		#else
 			s_table.put_var(variable, id, offset);
 		#endif
@@ -150,12 +150,12 @@ std::string id, std::string class_name, unsigned int array_size){
 			// TODO: cómo inicializamos un arreglo?
 
 			symtable_element variable(id, type, array_size);
-			std::pair<intermediate_symtable::put_results, std::string*> pair = s_table.put_var(variable,
+			std::pair<put_results, std::string*> pair = s_table.put_var(variable,
 																		id,
 																		offset);
 			offset += calculate_size(type)*array_size;
 			#ifdef __DEBUG
-				assert(std::get<0>(pair) == intermediate_symtable::ID_PUT);
+				assert(std::get<0>(pair) == ID_PUT);
 			#endif
 
 			dest = new_name_address(id);
@@ -178,12 +178,12 @@ std::string id, std::string class_name, unsigned int array_size){
 			}
 
 			symtable_element variable(id, type);
-			std::pair<intermediate_symtable::put_results, std::string*> pair = s_table.put_var(variable,
+			std::pair<put_results, std::string*> pair = s_table.put_var(variable,
 																		id,
 																		offset);
 			offset += calculate_size(type);
 			#ifdef __DEBUG
-				assert(std::get<0>(pair) == intermediate_symtable::ID_PUT);
+				assert(std::get<0>(pair) == ID_PUT);
 			#endif
 
 			dest = new_name_address(id);
@@ -281,10 +281,10 @@ void inter_code_gen_visitor::visit(node_class_decl& node) {
 	s_table.push_symtable();
 	#ifdef __DEBUG
 		// TODO: cambiar cuando tenga los typedef
-		std::pair<intermediate_symtable::put_class_results, std::string*> ret = s_table.put_class(new_class,
+		t_class_results ret = s_table.put_class(new_class,
 																	new_class.get_key(),
 																	std::list<std::string>());
-		assert(std::get<0>(ret) == intermediate_symtable::CLASS_PUT);
+		assert(std::get<0>(ret) == CLASS_PUT);
 	#else
 		s_table.put_class(new_class,
 						  new_class.get_key(),
@@ -349,13 +349,13 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 				// parámetro del objeto, pero no tengo claro cómo definirlo, de
 				// forma tal que pueda reemplazar a futuro toda ocurrencia del
 				// id de este objeto, por el id de su primer atributo.
-				std::pair<intermediate_symtable::put_results, std::string*> pair =
+				std::pair<put_results, std::string*> pair =
 						s_table.put_obj(id, f->id, offset, node.type.id, std::string(""));
 				// TODO: al intentar recuperar el id del primer atributo, recordar
 				// que parecieran estar guardándose estos en el orden inverso
 				// a como uno los guarda en la tabla de símbolos.
 				#ifdef __DEBUG
-					assert(std::get<0>(pair) == intermediate_symtable::ID_PUT);
+					assert(std::get<0>(pair) == ID_PUT);
 				#endif
 
 				// Insert code that initializes the attributes of the object.
@@ -368,7 +368,7 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 				// It is an attribute declaration. We just save the corresponding
 				// data, for future uses.
 				// TODO: cambiar esto cuando se haga el typedef
-				std::pair<intermediate_symtable::put_field_results, std::string*> pair =
+				t_field_results pair =
 						s_table.put_obj_field(id, f->id, offset, node.type.id, std::string(""));
 				// TODO: el último argumento sería el id del primer parámetro del objeto,
 				// pero no tengo claro cómo definirlo, de forma tal que pueda reemplazar
@@ -378,7 +378,7 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 				// que parecieran estar guardándose estos en el orden inverso
 				// a como uno los guarda en la tabla de símbolos.
 				#ifdef __DEBUG
-					assert(std::get<0>(pair) == intermediate_symtable::FIELD_PUT);
+					assert(std::get<0>(pair) == FIELD_PUT);
 				#endif
 			}
 			offset += calculate_size(determine_type(node.type.type));
@@ -398,11 +398,11 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 
 					symtable_element id(f->id, determine_type(node.type.type), f->array_size);
 					// TODO: cambiar esto cuando se haga el typedef
-					std::pair<intermediate_symtable::put_field_results, std::string*> pair = s_table.put_var_field(id,
+					t_field_results pair = s_table.put_var_field(id,
 																				f->id,
 																				offset);
 					#ifdef __DEBUG
-						assert(std::get<0>(pair) == intermediate_symtable::FIELD_PUT);
+						assert(std::get<0>(pair) == FIELD_PUT);
 					#endif
 					offset += calculate_size(determine_type(node.type.type))*f->array_size;
 				}
@@ -421,10 +421,10 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 
 					#ifdef __DEBUG
 						// TODO: cambiar esto cuando se haga el typedef
-						std::pair<intermediate_symtable::put_field_results, std::string*> pair = s_table.put_var_field(id,
+						t_field_results pair = s_table.put_var_field(id,
 																									f->id,
 																									offset);
-						assert(std::get<0>(pair) == intermediate_symtable::FIELD_PUT);
+						assert(std::get<0>(pair) == FIELD_PUT);
 					#else
 						s_table.put_var_field(id, f->id, offset);
 					#endif
@@ -476,12 +476,12 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 	symtable_element method(node.id, determine_type(node.type.type),
 							new std::list<symtable_element>());
 	#ifdef __DEBUG
-	    std::pair<intermediate_symtable::put_func_results, std::string*> pair =
+	    t_func_results pair =
 	    		s_table.put_func(method,
 						node.id,
 						0,
 						actual_class->get_key());
-	    assert(std::get<0>(pair) == intermediate_symtable::FUNC_PUT);
+	    assert(std::get<0>(pair) == FUNC_PUT);
 	#else
 		//s_table.put_func_field(method, method.get_key(), 0, actual_class->get_key());
 		s_table.put_func(method, method.get_key(), 0, actual_class->get_key());
@@ -518,11 +518,11 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 		// y recorremos el cuerpo de la misa. Cuando esta todo listo,
 		// agregamos el metodo a la clase, con put_func_field
 
-		std::pair<intermediate_symtable::put_field_results, std::string*> pair2 = s_table.put_func_field(method,
+		t_field_results pair2 = s_table.put_func_field(method,
 																		method.get_key(),
 																		0,
 																		actual_class->get_key());
-		assert(std::get<0>(pair2) == intermediate_symtable::FIELD_PUT);
+		assert(std::get<0>(pair2) == FIELD_PUT);
 	#else
 		s_table.put_func_field(method, method.get_key(), 0, actual_class->get_key());
     #endif
@@ -543,13 +543,13 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 				symtable_element obj_param(node.id, class_name);
 
 				#ifdef __DEBUG
-					std::pair<intermediate_symtable::put_param_results, std::string*> pair1 = s_table.put_obj_param(
+					t_param_results pair1 = s_table.put_obj_param(
 																				 obj_param,
 																				 node.id,
 																				 offset,
 																				 node.type.id,
 																				 std::string(""));
-					assert(std::get<0>(pair1) == intermediate_symtable::PARAM_PUT);
+					assert(std::get<0>(pair1) == PARAM_PUT);
 				#else
 					s_table.put_obj_param(obj_param, node.id, offset, node.type.id,
 										 std::string(""));
@@ -562,11 +562,11 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 				// un tipo básico.
 				symtable_element var_param(node.id, determine_type(node.type.type));
 				#ifdef __DEBUG
-					std::pair<intermediate_symtable::put_param_results, std::string*> pair2 = s_table.put_var_param(
+					t_param_results pair2 = s_table.put_var_param(
 																				 var_param,
 																				 var_param.get_key(),
 																				 offset);
-					assert(std::get<0>(pair2) == intermediate_symtable::PARAM_PUT);
+					assert(std::get<0>(pair2) == PARAM_PUT);
 				#else
 					s_table.put_var_param(var_param, var_param.get_key(), offset);
 				#endif
@@ -947,7 +947,7 @@ void inter_code_gen_visitor::visit(node_binary_operation_expr& node) {
 	right_operand = temp;
 
 	// New temporal for the result.
-	std::pair<intermediate_symtable::put_results, std::string*> pair =  s_table.new_temp(offset);
+	t_results pair =  s_table.new_temp(offset);
 	// TODO: chequear put_results
 	// TODO: no estoy usando new_temp_address
 	// TODO: notar que aquí habría ayudado que semantic_analysis guarde en el node
@@ -1026,7 +1026,7 @@ void inter_code_gen_visitor::visit(node_negate_expr& node) {
 	expr_call_appropriate_accept(node.expression);
 
 	// New temporal for the result.
-	std::pair<intermediate_symtable::put_results, std::string*> pair =  s_table.new_temp(offset);
+	std::pair<put_results, std::string*> pair =  s_table.new_temp(offset);
 	// TODO: chequear put_results
 	// TODO: no estoy usando new_temp_address
 	dest = new_name_address(*std::get<1>(pair));
@@ -1048,7 +1048,7 @@ void inter_code_gen_visitor::visit(node_negative_expr& node) {
 	expr_call_appropriate_accept(node.expression);
 
 	// New temporal for the result.
-	std::pair<intermediate_symtable::put_results, std::string*> pair =  s_table.new_temp(offset);
+	std::pair<put_results, std::string*> pair =  s_table.new_temp(offset);
 	// TODO: chequear put_results
 	// TODO: no estoy usando new_temp_address
 	dest = new_name_address(*std::get<1>(pair));
@@ -1074,7 +1074,7 @@ void inter_code_gen_visitor::visit(node_parentheses_expr& node) {
 	expr_call_appropriate_accept(node.expression);
 
 	/*// New temporal for the result.
-	std::pair<intermediate_symtable::put_results, std::string*> pair =  s_table.new_temp(offset);
+	std::pair<put_results, std::string*> pair =  s_table.new_temp(offset);
 	// TODO: chequear put_results
 	// TODO: no estoy usando new_temp_address
 	dest = new_name_address(*std::get<1>(pair));

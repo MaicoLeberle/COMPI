@@ -7,6 +7,10 @@
 #include <map>
 #include <utility>
 
+
+/*  ---------------------------------------------------------------------    */
+/*  Data types definitions related to ids_info class.                        */
+
 enum id_type { T_STRING
              , T_INT
              , T_FLOAT
@@ -19,6 +23,64 @@ enum id_kind { K_TEMP
              , K_OBJECT
              , K_CLASS
              , K_METHOD };
+
+/*  End of data types definitions related to ids_info class.    */
+/*  ---------------------------------------------------------------------    */
+
+
+/*  ---------------------------------------------------------------------    */
+/*  Data types definitions related to intermediate_symtable class.           */
+
+enum put_results { IS_RECURSIVE
+                 , ID_EXISTS
+                 , ID_PUT };
+
+typedef std::pair<put_results, std::string*> t_results;
+
+
+enum put_func_results { NOT_FUNC
+                          , FUNC_EXISTS
+                          , FUNC_PUT
+                          , FUNC_ERROR /* This last value is meant only for
+                                          debugging purposes. */ };
+
+typedef std::pair<put_func_results, std::string*> t_func_results;
+
+
+enum put_param_results { PARAM_PUT
+                      , PARAM_TYPE_ERROR
+                      , NO_PREV_FUNC };
+
+typedef std::pair<put_param_results, std::string*> t_param_results;
+
+
+enum put_class_results { NOT_CLASS
+                       , CLASS_EXISTS
+                       , CLASS_PUT
+                       , CLASS_ERROR /* This last value is meant only for
+                                      debugging purposes. */ };
+
+typedef std::pair<put_class_results, std::string*> t_class_results;
+
+
+enum put_field_results { FIELD_PUT
+                      , FIELD_TYPE_ERROR /* Classes cannot be fields of 
+                                            another classes. */
+                      , NO_PREV_CLASS /* A class should be under analysis 
+                                         in order to put a new class 
+                                         field in scope. */ 
+                      , FIELD_ERROR /*  This last value is meant only for
+                                        debugging purposes. */ };
+
+typedef std::pair<put_field_results, std::string*> t_field_results;
+
+typedef std::list<std::string>& t_attributes;
+
+typedef std::list<std::string>& t_params;
+
+/*  End of data types definitions related to intermediate_symtable class.    */
+/*  ---------------------------------------------------------------------    */
+
 
 class ids_info {
 public:
@@ -106,12 +168,12 @@ public:
     /*  Precondition: the id has been registered, and it is of kind K_CLASS.
         Returns: the list of all the attributes in the class, ordered as they
         were in the class's definition.                                      */
-    std::list<std::string>& get_list_attributes(std::string);
+    t_attributes get_list_attributes(std::string);
 
     /*  Precondition: the id has been registered, and it is of kind K_METHOD.
         Returns: the list of all parameters of the function, ordered as they
         were in the method's definition.                                     */
-    std::list<std::string>& get_list_params(std::string);
+    t_params get_list_params(std::string);
 
     /*  Updates the number of local variables (this includes the temporary 
         ones).
@@ -172,32 +234,6 @@ private:
 
 class intermediate_symtable {
 public:
-    enum put_results { IS_RECURSIVE
-                     , ID_EXISTS
-                     , ID_PUT };
-
-    enum put_func_results { NOT_FUNC
-                          , FUNC_EXISTS
-                          , FUNC_PUT
-                          , FUNC_ERROR /* This last value is meant only for
-                                          debugging purposes. */ };
-    enum put_class_results { NOT_CLASS
-                           , CLASS_EXISTS
-                           , CLASS_PUT
-                           , CLASS_ERROR /* This last value is meant only for
-                                          debugging purposes. */ };
-    enum put_param_results { PARAM_PUT
-                          , PARAM_TYPE_ERROR
-                          , NO_PREV_FUNC };
-
-    enum put_field_results { FIELD_PUT
-                          , FIELD_TYPE_ERROR /* Classes cannot be fields of 
-                                                another classes. */
-                          , NO_PREV_CLASS /* A class should be under analysis 
-                                             in order to put a new class 
-                                             field in scope. */ 
-                          , FIELD_ERROR /*  This last value is meant only for
-                                            debugging purposes. */ };
 
     intermediate_symtable(void);
 
@@ -236,7 +272,7 @@ public:
         current scope, along with its representation inside this->information
         (as long as putting the object in scope was succesful; otherwise, NULL
         is returned as second element of the pair). */
-    std::pair<intermediate_symtable::put_results, std::string*> new_temp(unsigned int);
+    t_results new_temp(unsigned int);
 
     /*  Inserts a new variable as an element into the symbols tables stack. 
         Parameters: the variable itself
@@ -250,7 +286,9 @@ public:
         current scope, along with its representation inside this->information 
         (as long as putting the object in scope was successful; otherwise, 
         NULL is returned as second element of the pair).                     */
-    std::pair<intermediate_symtable::put_results, std::string*> put_var(symtable_element, std::string, unsigned int);
+    t_results put_var(symtable_element
+                    , std::string
+                    , unsigned int);
 
     /*  Inserts a new object as an element into the symbols tables stack. 
         Parameters: the object itself
@@ -266,7 +304,11 @@ public:
         current scope, along with its representation inside this->information 
         (as long as putting the object in scope was successful; otherwise, 
         NULL is returned as second element of the pair).                     */
-    std::pair<intermediate_symtable::put_results, std::string*> put_obj(symtable_element& , std::string, unsigned int, std::string, std::string);
+    t_results put_obj(symtable_element&
+                    , std::string
+                    , unsigned int
+                    , std::string
+                    , std::string);
 
     /*  Inserts a new function to the symbols tables stack. This function is 
         remembered for future calls of put_*_param. Also, a new symbols
@@ -288,7 +330,10 @@ public:
         things), along with its representation inside this->information (as 
         long as putting the function in scope was successful; otherwise, NULL
         is returned as second element of the pair).                          */
-    std::pair<intermediate_symtable::put_func_results, std::string*> put_func(symtable_element&, std::string, unsigned int, std::string);
+    t_func_results put_func(symtable_element&
+                          , std::string
+                          , unsigned int
+                          , std::string);
 
     /*  Inserts a new variable to the lastly inserted function (via put_func) 
         as a parameter.
@@ -303,7 +348,9 @@ public:
         is a parameter of), along with its representation inside 
         this->information (as long as putting the variable in scope was 
         successful; otherwise, NULL is returned as second parameter).        */
-    std::pair<intermediate_symtable::put_param_results, std::string*> put_var_param(symtable_element&, std::string, unsigned int);
+    t_param_results put_var_param(symtable_element&
+                                , std::string
+                                , unsigned int);
 
     /*  Inserts a new object to the lastly inserted function (via put_func) as
         a parameter.
@@ -320,12 +367,17 @@ public:
         is a parameter of), along with its representation inside 
         this->information (as long as putting the object in scope was 
         successful; otherwise, NULL is returned as second parameter).        */
-    std::pair<intermediate_symtable::put_param_results, std::string*> put_obj_param(symtable_element&, std::string, unsigned int, std::string, std::string);
+    t_param_results put_obj_param(symtable_element&
+                                , std::string
+                                , unsigned int
+                                , std::string
+                                , std::string);
 
     /*  Updates the number of local variables (this includes the temporary 
         ones).
         Precondition: the id has been previously put.                        */
-    void set_number_vars(std::string, unsigned int);
+    void set_number_vars(std::string
+                       , unsigned int);
 
     /*  Simply performs a pop operation on the stack and resets the value of
         last_func. Caution not to pop some other symbols table on top of the 
@@ -354,7 +406,9 @@ public:
         things), along with its representation inside this->information (as
         long as putting the class in scope was succesful; otherwise, NULL is 
         returned as second element of the pair).                             */
-    std::pair<intermediate_symtable::put_class_results, std::string*> put_class(symtable_element&, std::string, std::list<std::string>);
+    t_class_results put_class(symtable_element&
+                            , std::string
+                            , std::list<std::string>);
 
     /*  Inserts a new variable as a field to the lastly inserted class (via 
         put_class).
@@ -370,7 +424,9 @@ public:
         this->information (as long as putting the variable in scope was 
         successful; otherwise, NULL is returned as second element of the 
         pair).                                                               */
-    std::pair<intermediate_symtable::put_field_results, std::string*> put_var_field(symtable_element&, std::string, unsigned int);
+    t_field_results put_var_field(symtable_element&
+                                , std::string
+                                , unsigned int);
 
     /*  Inserts a new object as a field to the lastly inserted class (via 
         put_class).
@@ -388,7 +444,11 @@ public:
         this->information (as long as putting the object in scope was 
         successful; otherwise, NULL is returned as second element of the 
         pair).                                                                */
-    std::pair<intermediate_symtable::put_field_results, std::string*> put_obj_field(symtable_element&, std::string, unsigned int, std::string, std::string);
+    t_field_results put_obj_field(symtable_element&
+                                , std::string
+                                , unsigned int
+                                , std::string
+                                , std::string);
 
     /*  Inserts a new function as a field to the lastly inserted class (via 
         put_class).
@@ -404,7 +464,10 @@ public:
         this->information (as long as putting the  in scope was 
         successful; otherwise, NULL is returned as second element of the 
         pair.                                                                */
-    std::pair<intermediate_symtable::put_field_results, std::string*> put_func_field(symtable_element&, std::string, unsigned int, std::string);
+    t_field_results put_func_field(symtable_element&
+                                 , std::string
+                                 , unsigned int
+                                 , std::string);
 
     /*  Simply performs a pop operation on the stack and resets the value of
         last_class. Caution not to pop some other symbols table on top of the 

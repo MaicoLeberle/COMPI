@@ -15,7 +15,8 @@ std::string ids_info::get_next_internal(std::string key) {
     return ((key + '-') + std::to_string(((this->internal).find(key))->second));
 }
 
-std::string* ids_info::new_temp(unsigned int o, id_type type) {
+std::string* ids_info::new_temp(unsigned int o
+                              , id_type type) {
     std::string* ret = new std::string("@t" + std::to_string(this->temp_number));
     assert((this->info_map).find(*ret) == (this->info_map).end());
 
@@ -31,7 +32,9 @@ std::string* ids_info::new_temp(unsigned int o, id_type type) {
     return ret;
 }
 
-std::string ids_info::register_var(std::string key, unsigned int offset, id_type type) {
+std::string ids_info::register_var(std::string key
+                                 , unsigned int offset
+                                 , id_type type) {
     entry_info information;
     
     information.entry_kind = K_VAR;
@@ -55,7 +58,8 @@ id_type ids_info::get_type(std::string key) {
     return ((((this->info_map).find(key))->second).entry_type);
 }
 
-void ids_info::set_type(std::string key, id_type type) {
+void ids_info::set_type(std::string key
+                      , id_type type) {
     assert((this->info_map).find(key) != (this->info_map).end());
     assert((this->get_kind(key) == K_TEMP) || 
            (this->get_kind(key) == K_VAR));
@@ -63,7 +67,10 @@ void ids_info::set_type(std::string key, id_type type) {
     (((this->info_map).find(key))->second).entry_type = type;
 }
 
-std::string ids_info::register_obj(std::string key, unsigned int offset, std::string owner, std::string address) {
+std::string ids_info::register_obj(std::string key
+                                 , unsigned int offset
+                                 , std::string owner
+                                 , std::string address) {
     entry_info information;
     
     information.entry_kind = K_OBJECT;
@@ -80,7 +87,9 @@ std::string ids_info::register_obj(std::string key, unsigned int offset, std::st
     return internal_key;
 }
 
-std::string ids_info::register_method(std::string key, unsigned int locals, std::string owner) {
+std::string ids_info::register_method(std::string key
+                                    , unsigned int locals
+                                    , std::string owner) {
     entry_info information;
 
     information.entry_kind = K_METHOD;
@@ -96,7 +105,8 @@ std::string ids_info::register_method(std::string key, unsigned int locals, std:
     return internal_key;
 }
 
-std::string ids_info::register_class(std::string key, std::list<std::string> attributes) {
+std::string ids_info::register_class(std::string key
+                                   , std::list<std::string> attributes) {
     entry_info information;
     
     information.entry_kind = K_CLASS;
@@ -160,13 +170,13 @@ std::string ids_info::get_owner_class(std::string key) {
     return *((((this->info_map).find(key))->second).owner);
 }
 
-std::list<std::string>& ids_info::get_list_attributes(std::string key) {
+t_attributes ids_info::get_list_attributes(std::string key) {
     assert((((this->info_map).find(key))->second).entry_kind == K_CLASS);
 
     return *((((this->info_map).find(key))->second).l_atts);
 }
 
-std::list<std::string>& ids_info::get_list_params(std::string key) {
+t_params ids_info::get_list_params(std::string key) {
     assert(this->id_exists(key));
     assert((this->info_map).find(key) != (this->info_map).end());
     assert((((this->info_map).find(key))->second).entry_kind == K_METHOD);
@@ -175,7 +185,8 @@ std::list<std::string>& ids_info::get_list_params(std::string key) {
     return(*((((this->info_map).find(key))->second).l_params));
 }
 
-void ids_info::set_number_vars(std::string key, unsigned int number) {
+void ids_info::set_number_vars(std::string key
+                             , unsigned int number) {
     assert((this->info_map).find(key) != (this->info_map).end());
     assert((((this->info_map).find(key))->second).entry_kind == K_METHOD);
 
@@ -224,22 +235,23 @@ symtable_element* intermediate_symtable::get (std::string key) {
     return((this->scopes).get(key));
 }
 
-std::pair<intermediate_symtable::put_results, std::string*> intermediate_symtable::new_temp(unsigned int offset) {
-    return (std::pair<intermediate_symtable::put_results, std::string*>
-            (intermediate_symtable::ID_PUT,(this->information)->new_temp(offset, id_type::T_UNDEFINED)) );
+t_results intermediate_symtable::new_temp(unsigned int offset) {
+    return (std::pair<put_results, std::string*>
+            (ID_PUT,(this->information)->new_temp(offset, id_type::T_UNDEFINED)) );
 }
 
-std::pair<intermediate_symtable::put_results, std::string*> 
-    intermediate_symtable::put_var(symtable_element e, std::string key, unsigned int offset) {
+t_results intermediate_symtable::put_var(symtable_element e
+                                       , std::string key
+                                       , unsigned int offset) {
         /*  Besides putting the new variable into the symbols tables stack, it 
             is also necessary to register its new key.                       */
         symtables_stack::put_results res = (this->scopes).put(key, e);
 
         if (res == symtables_stack::IS_RECURSIVE)
-            return(std::pair<intermediate_symtable::put_results, std::string*>(intermediate_symtable::IS_RECURSIVE, NULL));
+            return(t_results(IS_RECURSIVE, NULL));
 
         if (res == symtables_stack::ID_EXISTS)
-            return(std::pair<intermediate_symtable::put_results, std::string*>(intermediate_symtable::ID_EXISTS, NULL));
+            return(t_results(ID_EXISTS, NULL));
 
         std::string *rep;
         if (e.get_type() == symtable_element::INTEGER)
@@ -257,54 +269,62 @@ std::pair<intermediate_symtable::put_results, std::string*>
             rep = new std::string((this->information)->register_var(key, offset, T_UNDEFINED));
         }
 
-        return(std::pair<intermediate_symtable::put_results, std::string*>(intermediate_symtable::ID_PUT, rep));
+        return(t_results(ID_PUT, rep));
 }
 
-std::pair<intermediate_symtable::put_results, std::string*>
-    intermediate_symtable::put_obj(symtable_element& e, std::string key, unsigned int offset, std::string type, std::string address) {
+t_results intermediate_symtable::put_obj(symtable_element& e
+                                       , std::string key
+                                       , unsigned int offset
+                                       , std::string type
+                                       , std::string address) {
         /*  Besides putting the new object into the symbols tables stack, it 
             is also necessary to register its key.                           */
         symtables_stack::put_results res = (this->scopes).put(key, e);
 
         if (res == symtables_stack::IS_RECURSIVE)
-            return(std::pair<intermediate_symtable::put_results, std::string*>(intermediate_symtable::IS_RECURSIVE, NULL));
+            return(t_results(IS_RECURSIVE, NULL));
 
         if (res == symtables_stack::ID_EXISTS)
-            return(std::pair<intermediate_symtable::put_results, std::string*>(intermediate_symtable::ID_EXISTS, NULL));
+            return(t_results(ID_EXISTS, NULL));
 
         std::string* rep = new std::string((this->information)->register_obj(key, offset, type, address));
         
-        return(std::pair<intermediate_symtable::put_results, std::string*>(intermediate_symtable::ID_PUT, rep));
+        return(t_results(ID_PUT, rep));
 }
 
-std::pair<intermediate_symtable::put_func_results, std::string*>
-    intermediate_symtable::put_func(symtable_element& e, std::string key, unsigned int local_vars, std::string class_name) {
-        symtables_stack::put_func_results res = (this->scopes).put_func(key, e);
+t_func_results intermediate_symtable::put_func(symtable_element& e
+                                             , std::string key
+                                             , unsigned int local_vars
+                                             , std::string class_name) {
+        symtables_stack::put_func_results res = 
+                                       (this->scopes).put_func(key, e);
 
         if (res == symtables_stack::NOT_FUNC)
-            return(std::pair<intermediate_symtable::put_func_results, std::string*>(intermediate_symtable::NOT_FUNC, NULL));
+            return(t_func_results(NOT_FUNC, NULL));
         if (res == symtables_stack::FUNC_EXISTS)
-            return(std::pair<intermediate_symtable::put_func_results, std::string*>(intermediate_symtable::FUNC_EXISTS, NULL));
+            return(t_func_results(FUNC_EXISTS, NULL));
         if (res == symtables_stack::FUNC_ERROR)
-            return(std::pair<intermediate_symtable::put_func_results, std::string*>(intermediate_symtable::FUNC_ERROR, NULL));
+            return(t_func_results(FUNC_ERROR, NULL));
 
         this->func_name = new std::string(key);
         std::string* rep = new std::string((this->information)->register_method(key, local_vars, class_name));
 
-        return(std::pair<intermediate_symtable::put_func_results, std::string*>(intermediate_symtable::FUNC_PUT, rep));
+        return(t_func_results(FUNC_PUT, rep));
 }
 
-std::pair<intermediate_symtable::put_param_results, std::string*> 
-    intermediate_symtable::put_var_param(symtable_element& e, std::string key, unsigned int offset) {
+t_param_results intermediate_symtable::put_var_param(symtable_element& e
+                                                   , std::string key
+                                                   , unsigned int offset) {
         assert(key.compare(e.get_key()) == 0);
         assert(e.get_class() == symtable_element::T_VAR);
 
-        symtables_stack::put_param_results res = (this->scopes).put_func_param(key, e);
+        symtables_stack::put_param_results res = 
+                                        (this->scopes).put_func_param(key, e);
 
         if(res == symtables_stack::NO_PREV_FUNC)
-            return(std::pair<intermediate_symtable::put_param_results, std::string*>(intermediate_symtable::NO_PREV_FUNC, NULL));
+            return(t_param_results(NO_PREV_FUNC, NULL));
         if(res == symtables_stack::PARAM_TYPE_ERROR)
-            return(std::pair<intermediate_symtable::put_param_results, std::string*>(intermediate_symtable::PARAM_TYPE_ERROR, NULL));
+            return(t_param_results(PARAM_TYPE_ERROR, NULL));
 
         assert(this->func_name);
         assert((this->information)->id_exists(*(this->func_name)));
@@ -326,31 +346,36 @@ std::pair<intermediate_symtable::put_param_results, std::string*>
             rep = new std::string((this->information)->register_var(key, offset, T_UNDEFINED));
         }
 
-        return(std::pair<intermediate_symtable::put_param_results, std::string*>(intermediate_symtable::PARAM_PUT, rep));
+        return(t_param_results(PARAM_PUT, rep));
 }
 
-std::pair<intermediate_symtable::put_param_results, std::string*> 
-    intermediate_symtable::put_obj_param(symtable_element& e, std::string key, unsigned int offset, std::string owner, std::string address) {
+t_param_results intermediate_symtable::put_obj_param(symtable_element& e
+                                                   , std::string key
+                                                   , unsigned int offset
+                                                   , std::string owner
+                                                   , std::string address) {
         assert(key.compare(e.get_key()) == 0);
         assert(e.get_class() == symtable_element::T_OBJ);
 
-        symtables_stack::put_param_results res = (this->scopes).put_func_param(key, e);
+        symtables_stack::put_param_results res = 
+                                        (this->scopes).put_func_param(key, e);
 
         if(res == symtables_stack::NO_PREV_FUNC)
-            return(std::pair<intermediate_symtable::put_param_results, std::string*>(intermediate_symtable::NO_PREV_FUNC, NULL));
+            return(t_param_results(NO_PREV_FUNC, NULL));
 
         if(res == symtables_stack::PARAM_TYPE_ERROR)
-            return(std::pair<intermediate_symtable::put_param_results, std::string*>(intermediate_symtable::PARAM_TYPE_ERROR, NULL));
+            return(t_param_results(PARAM_TYPE_ERROR, NULL));
 
         assert(this->func_name);
         assert((this->information)->id_exists(*(this->func_name)));
         ((this->information)->get_list_params(*(this->func_name))).push_back(key);
         std::string* rep = new std::string((this->information)->register_obj(key, offset, owner, address));
 
-        return(std::pair<intermediate_symtable::put_param_results, std::string*>(intermediate_symtable::PARAM_PUT, rep));
+        return(t_param_results(PARAM_PUT, rep));
 }
 
-void intermediate_symtable::set_number_vars(std::string key, unsigned int number) {
+void intermediate_symtable::set_number_vars(std::string key
+                                          , unsigned int number) {
     assert((this->information)->id_exists(key));
     assert((this->information)->get_local_vars(key) <= number);
     (this->information)->set_number_vars(key, number);
@@ -362,34 +387,38 @@ void intermediate_symtable::finish_func_analysis() {
     this->func_name = NULL;
 }
 
-std::pair<intermediate_symtable::put_class_results, std::string*> 
-    intermediate_symtable::put_class(symtable_element& e, std::string key, std::list<std::string> l_atts) {
-        symtables_stack::put_class_results res = (this->scopes).put_class(key, e);
+t_class_results intermediate_symtable::put_class(symtable_element& e
+                                               , std::string key
+                                               , std::list<std::string> l_atts) {
+        symtables_stack::put_class_results res = 
+                                        (this->scopes).put_class(key, e);
 
         if(res == symtables_stack::NOT_CLASS)
-            return(std::pair<intermediate_symtable::put_class_results, std::string*> (intermediate_symtable::NOT_CLASS, NULL));
+            return(t_class_results(NOT_CLASS, NULL));
 
         if(res == symtables_stack::CLASS_EXISTS)
-            return(std::pair<intermediate_symtable::put_class_results, std::string*> (intermediate_symtable::CLASS_EXISTS, NULL));
+            return(t_class_results(CLASS_EXISTS, NULL));
 
         if(res == symtables_stack::CLASS_ERROR)
-            return(std::pair<intermediate_symtable::put_class_results, std::string*> (intermediate_symtable::CLASS_ERROR, NULL));
+            return(t_class_results(CLASS_ERROR, NULL));
 
         this->class_name = new std::string(key);
         std::string* rep = new std::string((this->information)->register_class(key, l_atts));
 
-        return(std::pair<intermediate_symtable::put_class_results, std::string*> (intermediate_symtable::CLASS_PUT, rep));
+        return(t_class_results(CLASS_PUT, rep));
 }
 
-std::pair<intermediate_symtable::put_field_results, std::string*> 
-    intermediate_symtable::put_var_field(symtable_element& e, std::string key, unsigned int offset) {
-        symtables_stack::put_field_results res = (this->scopes).put_class_field(key, e);
+t_field_results intermediate_symtable::put_var_field(symtable_element& e
+                                                   , std::string key
+                                                   , unsigned int offset) {
+        symtables_stack::put_field_results res = 
+                                        (this->scopes).put_class_field(key, e);
 
         if(res == symtables_stack::FIELD_TYPE_ERROR)
-            return(std::pair<intermediate_symtable::put_field_results, std::string*> (intermediate_symtable::FIELD_TYPE_ERROR, NULL));
+            return(t_field_results(FIELD_TYPE_ERROR, NULL));
 
         if(res == symtables_stack::NO_PREV_CLASS)
-            return(std::pair<intermediate_symtable::put_field_results, std::string*> (intermediate_symtable::NO_PREV_CLASS, NULL));
+            return(t_field_results(NO_PREV_CLASS, NULL));
 
         assert(this->class_name);
         assert((this->information)->id_exists(*(this->class_name)));
@@ -411,43 +440,50 @@ std::pair<intermediate_symtable::put_field_results, std::string*>
             rep = new std::string((this->information)->register_var(key, offset, T_UNDEFINED));
         }
 
-        return(std::pair<intermediate_symtable::put_field_results, std::string*> (intermediate_symtable::FIELD_PUT, rep));
+        return(t_field_results(FIELD_PUT, rep));
 }
 
-std::pair<intermediate_symtable::put_field_results, std::string*> 
-    intermediate_symtable::put_obj_field(symtable_element& e, std::string key, unsigned int offset, std::string class_name, std::string address) {
-        symtables_stack::put_field_results res = (this->scopes).put_class_field(key, e);
+t_field_results intermediate_symtable::put_obj_field(symtable_element& e
+                                                   , std::string key
+                                                   , unsigned int offset
+                                                   , std::string class_name
+                                                   , std::string address) {
+        symtables_stack::put_field_results res = 
+                                        (this->scopes).put_class_field(key, e);
         
         if(res == symtables_stack::FIELD_TYPE_ERROR)
-            return(std::pair<intermediate_symtable::put_field_results, std::string*> (intermediate_symtable::FIELD_TYPE_ERROR, NULL));
+            return(t_field_results(FIELD_TYPE_ERROR, NULL));
 
         if(res == symtables_stack::NO_PREV_CLASS)
-            return(std::pair<intermediate_symtable::put_field_results, std::string*> (intermediate_symtable::NO_PREV_CLASS, NULL));
+            return(t_field_results(NO_PREV_CLASS, NULL));
 
         assert(this->class_name);
         assert((this->information)->id_exists(*(this->class_name)));
         ((this->information)->get_list_attributes(*(this->class_name))).push_back(key);
         std::string* rep = new std::string((this->information)->register_obj(key, offset, class_name, address));
 
-        return(std::pair<intermediate_symtable::put_field_results, std::string*> (intermediate_symtable::FIELD_PUT, rep));
+        return(t_field_results(FIELD_PUT, rep));
 }
 
-std::pair<intermediate_symtable::put_field_results, std::string*> 
-    intermediate_symtable::put_func_field(symtable_element& e, std::string key, unsigned int local_vars, std::string class_name) {
-        symtables_stack::put_field_results res = (this->scopes).put_class_field(key, e);
+t_field_results intermediate_symtable::put_func_field(symtable_element& e
+                                                   , std::string key
+                                                   , unsigned int local_vars
+                                                   , std::string class_name) {
+        symtables_stack::put_field_results res = 
+                                        (this->scopes).put_class_field(key, e);
 
         if(res == symtables_stack::FIELD_TYPE_ERROR)
-            return(std::pair<intermediate_symtable::put_field_results, std::string*> (intermediate_symtable::FIELD_TYPE_ERROR, NULL));
+            return(t_field_results(FIELD_TYPE_ERROR, NULL));
 
         if(res == symtables_stack::NO_PREV_CLASS)
-            return(std::pair<intermediate_symtable::put_field_results, std::string*> (intermediate_symtable::NO_PREV_CLASS, NULL));
+            return(t_field_results(NO_PREV_CLASS, NULL));
 
         assert(this->class_name);
         assert((this->information)->id_exists(*(this->class_name)));
         ((this->information)->get_list_attributes(*(this->class_name))).push_back(key); 
         std::string* rep = new std::string((this->information)->register_method(key, local_vars, class_name));
 
-        return(std::pair<intermediate_symtable::put_field_results, std::string*> (intermediate_symtable::FIELD_PUT, rep));
+        return(t_field_results(FIELD_PUT, rep));
 }
 
 void intermediate_symtable::finish_class_analysis() {
