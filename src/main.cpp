@@ -1,3 +1,19 @@
+/*  Compile a COMPI file, up to certain stage of compilation.
+
+Usage:
+  main.cpp [-o <output>] [-target <stage>]
+  main.cpp
+
+Options:
+  -o <output>       Renames the executable file to OUTPUT.
+  -target <stage>   Set the compilation to perform up to stage. Values are
+                        parse: parsing stage.
+                        semantics: semantic analysis stage.
+                        intercode: intermediate code generation stage.
+                        assembly: assembly code generation stage.
+*/
+
+
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
@@ -83,6 +99,7 @@ int main(int argc, const char* argv[]) {
 		// para realizar la traducción?
 		asm_c_gen.translate_ir();
 		asm_c_gen.print_translation_intel_syntax();
+
     } else exit(EXIT_SUCCESS);
 
     return 0;

@@ -1,5 +1,13 @@
 #include <iostream>
+
+#include <fstream>
+// For execution of bash commands with std::system().
+#include <cstdlib>
+// Check if file or directory exists
+#include <sys/stat.h>
+
 #include <cassert>
+#include <string>
 #include "node.h"
 #include "semantic_analysis.h"
 #include "./tests/test_inter_code_gen_visitor.h"
@@ -1011,7 +1019,130 @@ void test_semantic_analysis(){
 	test_rule_24();
 }
 
+
+bool exists(std::string path) {
+	std::fstream f(path, std::ios::in | std::ios::ate);
+	bool res = !f.fail();
+	if (res)
+		f.close();
+	return (res);
+}
+
+bool files_exist(std::string path_temp, unsigned int t_index, unsigned int f_index) {
+	std::string input = path_temp
+		+ std::to_string(t_index)
+		+ std::string("/input")
+		+ std::to_string(f_index);
+	std::string output = path_temp
+		+ std::to_string(t_index)
+		+ std::string("/output")
+		+ std::to_string(f_index);
+
+	return (exists(input) && exists(output));
+}
+
+/*	Test the "semantics" (with respect to what the outputs should be, 
+	given certain input) of the test cases in ../test/*.				 
+
+	This testing has the preconditions of having a text output file in 
+	test/files/testX/execution/output (for X = test0, test1, ...) and a 
+	executable binary in test/files/testX/execution/bin (for X = test0, 
+	test1, ...).													     */
+void test_semantics_of_test_cases() {
+
+	std::cout << std::endl << std::endl << "Checking semantics of every test case provided:" << std::endl;
+
+	/*	Test case index. */
+	unsigned int t_index = 0;
+	/* (input, output) pair index. */
+	unsigned int f_index = 0;
+	const std::string path_temp = ("../test/files/test");
+	
+	/*	Input file. */
+	std::string input_path;
+	
+	/*	Output file of execution. */
+	std::string output_path;
+
+	/*	The expected output file. */
+	std::string exp_output_path;
+
+	while(exists(path_temp + std::to_string(t_index) + std::string("/execution/bin"))) {
+		/*	The binary file to be checked on exists. */
+		
+		f_index = 0;
+		std::string binary = path_temp
+					+ std::to_string(t_index)
+					+ std::string("/execution/bin");
+
+		while(files_exist(path_temp, t_index, f_index)) {
+			/*	There is a new (input, output) pair to be checked.			 */
+
+			input_path = path_temp 
+					+ std::to_string(t_index) 
+					+ std::string("/input") 
+					+ std::to_string(f_index);
+			output_path = path_temp
+					+ std::to_string(t_index)
+					+ std::string("/execution/output");
+			exp_output_path = path_temp 
+					+ std::to_string(t_index) 
+					+ std::string("/output") 
+					+ std::to_string(f_index);
+
+			std::string execution = binary
+					+ (std::string(" < ") + input_path)
+					+ (std::string(" > ") + output_path);
+			std::system(execution.c_str());
+			
+
+			/*	------------------------------------------------------------ */
+			/*	These instructions check that there was no difference between
+				the output that resulted from execution, and the expected 
+				output. 													 */
+
+			// First, build diff command.
+			std::string diff = std::string("diff ")
+					+ output_path
+					+ std::string(" ")
+					+ exp_output_path
+					+ std::string(" > extra.diff");
+			// Execute diff command.
+			std::system(diff.c_str());
+			// Open file that contains results of diff execution.
+			std::fstream extra;
+			extra.open("extra.diff", std::fstream::in);
+			assert(!extra.fail());
+			// Check that the end of the file is at position 0 
+			// (i.e., length is 0).
+			extra.seekg(0, extra.end);
+			if ((int)extra.tellg() != 0) {
+				std::cout << "Differences have been found between ";
+				std::cout << output_path << " and " << exp_output_path;
+				std::cout << ":" << std::endl;
+				std::system("cat extra.diff");
+				exit(1);
+			}
+
+			/*	------------------------------------------------------------ */
+
+			++f_index;
+		}
+	
+		++t_index;
+	}
+	
+	if (exists(std::string("extra.diff")))
+		std::system("rm extra.diff");
+
+	std::cout << "\tSemantics of the test cases has been proven correct." << std::endl;
+}
+
+
 int main(int argc, const char* argv[]) {
+
+	std::cout << std::endl;
+
 	test_parser();
 	test_semantic_analysis();
 	test_inter_code_gen_visitor();
@@ -1019,6 +1150,10 @@ int main(int argc, const char* argv[]) {
 	test_asm_instruction();
 	test_ir_parser();
 	test_asm_parser();
+
+	test_semantics_of_test_cases();
+
+	std::cout << std::endl;
 
     return 0;
 }
