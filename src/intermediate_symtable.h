@@ -84,13 +84,13 @@ typedef std::list<std::string>& t_params;
 
 class ids_info {
 public:
+    std::string get_next_internal(std::string);
+
     /*  At the end of the name, a '-' character followed by a number is 
         appended, such that the whole string is a unique identifier, has never
         been used before and will not be asigned to any other identifier in 
-        the rest of the source code.                                         */ 
-    std::string get_next_internal(std::string);
-
-    /*  Parameters: offset inside the method
+        the rest of the source code.                                          
+        Parameters: offset inside the method
                   , type of the new temporary variable.                      */
     std::string* new_temp(unsigned int, id_type);
 
@@ -162,7 +162,7 @@ public:
 
     /*  Precondition: the id has been registered, and it is of kind K_METHOD or
         K_OBJ.
-        Returns: the class name this method belongs to.                      */
+        Returns: the class name this object or method belongs to.             */
     std::string get_owner_class(std::string);
 
     /*  Precondition: the id has been registered, and it is of kind K_CLASS.
