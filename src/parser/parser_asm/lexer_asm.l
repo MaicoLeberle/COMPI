@@ -1,3 +1,6 @@
+/* Lexer for the sub-set of assembly code needed for translate a program
+   in COMPI.
+*/
 %{
 #include <iostream>
 #include <string>
@@ -26,33 +29,32 @@ alpha_num {alpha}|{digit}|_
 %%
 
 {spaces}                    ;
-{digit}+                    {asmlval.l_int = atoi(asmtext); 
+-?{digit}+                  {asmlval.l_int = atoi(asmtext); 
                             return L_INT;}
-{digit}+.{digit}+           {asmlval.l_float = atof(asmtext); 
+-?{digit}+.{digit}+         {asmlval.l_float = atof(asmtext); 
                             return L_FLOAT;}
-add                         return ADD;
-imul                        return IMUL;
-mul                         return MUL;
-idiv                        return IDIV;
-div                        return DIV;
-sub                         return SUB;
-neg                         return NEG;
-sar                         return SAR;
-not                         return NOT;
-shr                         return SHR;
-mov                         return MOV;
-jmp                         return JMP;
-je                          return JE;
-jne                         return JNE;
-jl                          return JL;
-jle                         return JLE;
-jg                          return JG;
-jge                         return JGE;
-call                        return CALL;
-leave                       return LEAVE;
-ret                         return RET;
-cmp                         return CMP;
-enter                       return ENTER;
+addl                         return ADDL;
+imull                        return IMULL;
+idivl                        return IDIVL;
+subl                         return SUBL;
+negl                         return NEGL;
+sarl                         return SARL;
+notl                         return NOTL;
+shrl                         return SHRL;
+movl                         return MOVL;
+jmp                          return JMP;
+je                           return JE;
+jne                          return JNE;
+jl                           return JL;
+jle                          return JLE;
+jg                           return JG;
+jge                          return JGE;
+call                         return CALL;
+leave                        return LEAVE;
+ret                          return RET;
+cmpl                         return CMPL;
+enter                        return ENTER;
+pushq                       return PUSHQ;
 {alpha}+({alpha_num}|\.|\_|\$)*\: {asmlval.label_id = new std::string(asmtext, asmleng-1);
                                 return LABEL;}
 rax                         {asmlval.register_val = register_id::RAX; 
@@ -129,7 +131,6 @@ r15b                        {asmlval.register_val = register_id::R15B;
                             return REGISTER;}
 \$                          return '$';
 \*                          return '*';
-\-                          return '-';
 %                           return '%';
 \,                          return ',';
 \(                          return '(';

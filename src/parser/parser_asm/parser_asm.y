@@ -35,8 +35,8 @@ asm_instructions_list *asm_code; // Pointer to the instructions' list.
 %token <register_val> REGISTER
 %token <label_id> LABEL_ID LABEL
 %token <op> OPERATION
-%token <token> ADD IMUL MUL IDIV DIV SUB NEG SAR NOT SHR MOV JMP JE JNE JL JLE 
-               JG JGE CALL LEAVE RET CMP ENTER
+%token <token> ADDL IMULL IDIVL SUBL NEGL SARL NOTL SHRL MOVL JMP JE JNE JL JLE 
+               JG JGE CALL LEAVE RET CMPL ENTER PUSHQ
 
 %type <asm_inst_list> inst_list
 %type <instruction> instruction arithmetic logic data_transfer control_transfer
@@ -73,46 +73,43 @@ instruction
 // TODO: no haria falta mantener ',' a estas alturas...
 // TODO: podriamos definir una categoria sintactico "origen" y "destino",
 // que abstraiga el tipo posible de operandos...
-// TODO: qué pasa con el tipo de los operandos?
+// TODO: los operandos numéricos son siempre 32 bits con signo. Esto significa
+// que siempre usamos data_type::L y que no precisamos de las versiones 
+// sin signo de las operaciones aritméticas.
 arithmetic
-    : ADD source ',' destination   {$$ = new asm_instruction_pointer(
+    : ADDL source ',' destination   {$$ = new asm_instruction_pointer(
                                     new_add_instruction(*$2, *$4, data_type::L));}
+    
+    | SUBL source ',' destination   {$$ = new asm_instruction_pointer(
+                                    new_sub_instruction(*$2, *$4, data_type::L));}
                                     
-    | IMUL source ',' destination   {$$ = new asm_instruction_pointer(
+    | IMULL source ',' destination   {$$ = new asm_instruction_pointer(
                                     new_mul_instruction(*$2, 
                                                         *$4, 
                                                         data_type::L,
                                                         true));}
-    
-    | MUL source ',' destination   {$$ = new asm_instruction_pointer(
-                                    new_mul_instruction(*$2, 
-                                                        *$4, 
-                                                        data_type::L,
-                                                        false));}
                                     
-    | IDIV source                   {$$ = new asm_instruction_pointer(
+    | IDIVL source                   {$$ = new asm_instruction_pointer(
                                     new_div_instruction(*$2, 
                                                         data_type::L,
                                                         true));}
-    
-    | DIV source                    {$$ = new asm_instruction_pointer(
-                                    new_div_instruction(*$2, 
-                                                        data_type::L,
-                                                        false));}
                                     
-    | NEG destination               {$$ = new asm_instruction_pointer(
+    | NEGL destination               {$$ = new asm_instruction_pointer(
                                     new_neg_instruction(*$2, data_type::L));}
 
 logic
-    : NOT destination                {$$ = new asm_instruction_pointer(
+    : NOTL destination                {$$ = new asm_instruction_pointer(
                                     new_not_instruction(*$2, data_type::L));}
                                     
-    | SHR immediate ',' destination  {$$ = new asm_instruction_pointer(
+    | SHRL immediate ',' destination  {$$ = new asm_instruction_pointer(
                                     new_shr_instruction(*$2, *$4, data_type::L));}
                                     
 data_transfer
-    : MOV source ',' destination    {$$ = new asm_instruction_pointer(
+    : MOVL source ',' destination    {$$ = new asm_instruction_pointer(
                                     new_mov_instruction(*$2, *$4, data_type::L));}
+                                    
+    | PUSHQ source                  {$$ = new asm_instruction_pointer(
+                                    new_pushq_instruction(*$2, data_type::L));}
 
 // TODO: nos haran falta las versions de estas instrucciones en donde el lugar
 // al que saltar se especifica mediante un registro?
@@ -148,7 +145,7 @@ control_transfer
                                     new_ret_instruction());}
                                     
 data_comparison
-    : CMP source ',' source         {$$ = new asm_instruction_pointer(
+    : CMPL source ',' source         {$$ = new asm_instruction_pointer(
                                     new_cmp_instruction(*$2, *$4, data_type::L));}
                                     
 misc
@@ -222,7 +219,8 @@ int_operand
 %%
 
 void asmerror(const char *s) {
-    std::cout << "Parse error on line " << asm_line_num << "! Message: " << s << std::endl;
+    std::cout << "ASM parser: Parse error on line " << asm_line_num << 
+                "! Message: " << s << std::endl;
 
     // might as well halt now:
     exit(EXIT_FAILURE);
