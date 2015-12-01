@@ -181,7 +181,8 @@ relop
 %%
 
 void irerror(const char *s) {
-    std::cout << "Parse error on line " << ir_line_num << "! Message: " << s << std::endl;
+    std::cout << "IR parser: Parse error on line " << ir_line_num << 
+                "! Message: " << s << std::endl;
 
     // might as well halt now:
     exit(EXIT_FAILURE);
