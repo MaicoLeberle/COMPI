@@ -24,7 +24,7 @@ void test_arithmetic_inst_translation(){
 	std::cout << "1) Translation of arithmetic instructions:";
 
 	// ADD.
-	translate_asm_code(std::string("add $3, %r10"));
+	translate_asm_code(std::string("addl $3, %r10"));
 
 	// TODO: borrar todo lo que estoy metiendo en el heap.
 	assert(asm_code->size() == 1);
@@ -36,7 +36,7 @@ void test_arithmetic_inst_translation(){
 
 	// MUL.
 	// Signed mul.
-	translate_asm_code(std::string("imul $3, %r10"));
+	translate_asm_code(std::string("imull $3, %r10"));
 
 	// TODO: borrar todo lo que estoy metiendo en el heap.
 	assert(asm_code->size() == 1);
@@ -46,22 +46,10 @@ void test_arithmetic_inst_translation(){
 			new_register_operand(register_id::R10),
 			data_type::L,
 			true));
-
-	// Unsigned mul.
-	translate_asm_code(std::string("mul $3, %r10"));
-
-	// TODO: borrar todo lo que estoy metiendo en el heap.
-	assert(asm_code->size() == 1);
-	it = asm_code->begin();
-	assert(is_mul_instruction(*it,
-			new_immediate_integer_operand(3),
-			new_register_operand(register_id::R10),
-			data_type::L,
-			false));
 
 	// DIV
 	// Signed div.
-	translate_asm_code(std::string("idiv $3"));
+	translate_asm_code(std::string("idivl $3"));
 
 	// TODO: borrar todo lo que estoy metiendo en el heap.
 	assert(asm_code->size() == 1);
@@ -71,20 +59,8 @@ void test_arithmetic_inst_translation(){
 			data_type::L,
 			true));
 
-	// Unsigned div.
-	translate_asm_code(std::string("div $3"));
-
-	// TODO: borrar todo lo que estoy metiendo en el heap.
-	assert(asm_code->size() == 1);
-	it = asm_code->begin();
-	assert(is_div_instruction(*it,
-			new_immediate_integer_operand(3),
-			data_type::L,
-			false));
-
-
 	// Neg.
-	translate_asm_code(std::string("neg %r10"));
+	translate_asm_code(std::string("negl %r10"));
 
 	// TODO: borrar todo lo que estoy metiendo en el heap.
 	assert(asm_code->size() == 1);
@@ -99,7 +75,7 @@ void test_logic_inst_translation(){
 	std::cout << "2) Translation of logic instructions:";
 
 	// NOT
-	translate_asm_code(std::string("not %r10"));
+	translate_asm_code(std::string("notl %r10"));
 
 	// TODO: borrar todo lo que estoy metiendo en el heap.
 	assert(asm_code->size() == 1);
@@ -109,7 +85,7 @@ void test_logic_inst_translation(){
 			data_type::L));
 
 	// SHR
-	translate_asm_code(std::string("shr $3, %r10"));
+	translate_asm_code(std::string("shrl $3, %r10"));
 
 	// TODO: borrar todo lo que estoy metiendo en el heap.
 	assert(asm_code->size() == 1);
@@ -126,7 +102,7 @@ void test_data_transfer_inst_translation(){
 	std::cout << "3) Translation of data transfer instructions:";
 
 	// NOT
-	translate_asm_code(std::string("mov $3, %r10"));
+	translate_asm_code(std::string("movl $3, %r10"));
 
 	// TODO: borrar todo lo que estoy metiendo en el heap.
 	assert(asm_code->size() == 1);
@@ -237,7 +213,7 @@ void test_data_comparison_inst_translation(){
 	std::cout << "5) Translation of data comparison instructions:";
 
 	// CMP.
-	translate_asm_code(std::string("cmp %r9, %r10"));
+	translate_asm_code(std::string("cmpl %r9, %r10"));
 
 	// TODO: borrar todo lo que estoy metiendo en el heap.
 	assert(asm_code->size() == 1);

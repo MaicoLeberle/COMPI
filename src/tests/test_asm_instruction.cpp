@@ -51,43 +51,43 @@ void test_print_intel_syntax(){
 	// jmp .label
 	std::string label("label");
 	inst = new_jmp_instruction(label);
-	assert(print_intel_syntax(inst) == std::string("\tjmp .label\n"));
+	assert(print_intel_syntax(inst) == std::string("\tjmp label\n"));
 
 	// je
 	// je .label
 	inst = new_je_instruction(label);
-	assert(print_intel_syntax(inst) == std::string("\tje .label\n"));
+	assert(print_intel_syntax(inst) == std::string("\tje label\n"));
 
 	// jne
 	// jne .label
 	inst = new_jne_instruction(label);
-	assert(print_intel_syntax(inst) == std::string("\tjne .label\n"));
+	assert(print_intel_syntax(inst) == std::string("\tjne label\n"));
 
 	// jl
 	// jl .label
 	inst = new_jl_instruction(label);
-	assert(print_intel_syntax(inst) == std::string("\tjl .label\n"));
+	assert(print_intel_syntax(inst) == std::string("\tjl label\n"));
 
 	// jle
 	// jle .label
 	inst = new_jle_instruction(label);
-	assert(print_intel_syntax(inst) == std::string("\tjle .label\n"));
+	assert(print_intel_syntax(inst) == std::string("\tjle label\n"));
 
 	// jg
 	// jg .label
 	inst = new_jg_instruction(label);
-	assert(print_intel_syntax(inst) == std::string("\tjg .label\n"));
+	assert(print_intel_syntax(inst) == std::string("\tjg label\n"));
 
 	// jge
 	// jge .label
 	inst = new_jge_instruction(label);
-	assert(print_intel_syntax(inst) == std::string("\tjge .label\n"));
+	assert(print_intel_syntax(inst) == std::string("\tjge label\n"));
 
 	// call
 	// call .label
 	// TODO: la etiqueta en este caso también comienza con .?
 	inst = new_call_instruction(label);
-	assert(print_intel_syntax(inst) == std::string("\tcall .label\n"));
+	assert(print_intel_syntax(inst) == std::string("\tcall label\n"));
 
 	// leave
 	inst = new_leave_instruction();
@@ -103,9 +103,9 @@ void test_print_intel_syntax(){
 	assert(print_intel_syntax(inst) == std::string("\tenter $1 , $1\n"));
 
 	// label
-	// .label
+	// label
 	inst = new_label_instruction(label);
-	assert(print_intel_syntax(inst) == std::string(" .label\n"));
+	assert(print_intel_syntax(inst) == std::string(" label\n"));
 
 	// cmp
 	// cmpq $1 , %rdi

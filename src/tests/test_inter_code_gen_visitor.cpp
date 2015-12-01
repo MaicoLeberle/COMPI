@@ -67,17 +67,6 @@ void test_class_decl(){
 
 	assert(are_equal_instructions_list(*translation, *ir_code));
 
-	// Only the main method's translation.
-	/*assert(translation->size() == 2);
-
-	// main method's label.
-	instructions_list::iterator it = translation->begin();
-	assert(is_label(*it, std::string("main.main")));
-
-	// enter instruction.
-	it++;
-	assert(is_enter_procedure(*it, 0));*/
-
 	// In the intermediate_symtable, just data about the classes.
 	intermediate_symtable *symtable = v1.get_symtable();
 
