@@ -1,5 +1,20 @@
 #include "inter_code_gen_visitor.h"
 
+/* TODO: cosas que faltan:
+ 	 	 _ no estoy pudiendo escribir código intermedio en los casos de test
+ 	 	 de este visitor, ya que no puedo escribir a mano nombre de temporales:
+ 	 	 ahora las temp son de la forma @tn
+ 	 	 _ ver rutina de llamada a procedimiento: The contents of the rIP are
+ 	 	 not directly readable by software. However, the rIP is pushed onto the
+ 	 	 stack by a call instruction (página 21 del pdf. del manual de amd).
+ 	 	 _ punteros en assembly?
+ 	 	 _ definir una nueva instrucción de 3-direcciones que me indique
+ 	 	 que tengo que generar código para declarar un string.
+ 	 	 _ Agregar el tipo de las variables, al registrarlas en la tabla
+ 	 	 de símbolos, para que, cuando genero el código assembly, pueda saber
+ 	 	 si tengo o no un parametro integer, cosa de ponerlo en los registros,
+ 	 	 antes que en la pila.
+*/
 std::string printable_field_id(reference_list ids);
 
 inter_code_gen_visitor::inter_code_gen_visitor() {
@@ -133,10 +148,14 @@ std::string id, std::string class_name, unsigned int array_size){
 		// TODO: por qué class_name tiene que pasarse por puntero?
 		std::string *class_name_aux = new std::string(class_name);
 		symtable_element variable(id, class_name_aux);
+		// TODO: notar que no le estamos pasando el último argumento. Se trata
+		// supuestamente, del nombre del primer atributo.
 		#ifdef __DEBUG
-			std::pair<put_results, std::string*> pair = s_table.put_var(variable,
-																		id,
-																		offset);
+			t_results pair = s_table.put_obj(variable,
+											id,
+											offset,
+											*class_name_aux,
+											std::string(""));
 			assert(std::get<0>(pair) == ID_PUT);
 		#else
 			s_table.put_var(variable, id, offset);
@@ -150,9 +169,7 @@ std::string id, std::string class_name, unsigned int array_size){
 			// TODO: cómo inicializamos un arreglo?
 
 			symtable_element variable(id, type, array_size);
-			std::pair<put_results, std::string*> pair = s_table.put_var(variable,
-																		id,
-																		offset);
+			t_results pair = s_table.put_var(variable, id, offset);
 			offset += calculate_size(type)*array_size;
 			#ifdef __DEBUG
 				assert(std::get<0>(pair) == ID_PUT);
@@ -178,9 +195,7 @@ std::string id, std::string class_name, unsigned int array_size){
 			}
 
 			symtable_element variable(id, type);
-			std::pair<put_results, std::string*> pair = s_table.put_var(variable,
-																		id,
-																		offset);
+			t_results pair = s_table.put_var(variable, id, offset);
 			offset += calculate_size(type);
 			#ifdef __DEBUG
 				assert(std::get<0>(pair) == ID_PUT);
@@ -349,7 +364,7 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 				// parámetro del objeto, pero no tengo claro cómo definirlo, de
 				// forma tal que pueda reemplazar a futuro toda ocurrencia del
 				// id de este objeto, por el id de su primer atributo.
-				std::pair<put_results, std::string*> pair =
+				t_results pair =
 						s_table.put_obj(id, f->id, offset, node.type.id, std::string(""));
 				// TODO: al intentar recuperar el id del primer atributo, recordar
 				// que parecieran estar guardándose estos en el orden inverso
@@ -396,11 +411,13 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 				else{
 					// {not into_method}
 
-					symtable_element id(f->id, determine_type(node.type.type), f->array_size);
+					symtable_element id(f->id,
+										determine_type(node.type.type),
+										f->array_size);
 					// TODO: cambiar esto cuando se haga el typedef
 					t_field_results pair = s_table.put_var_field(id,
-																				f->id,
-																				offset);
+																f->id,
+																offset);
 					#ifdef __DEBUG
 						assert(std::get<0>(pair) == FIELD_PUT);
 					#endif
@@ -422,8 +439,8 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 					#ifdef __DEBUG
 						// TODO: cambiar esto cuando se haga el typedef
 						t_field_results pair = s_table.put_var_field(id,
-																									f->id,
-																									offset);
+																	f->id,
+																	offset);
 						assert(std::get<0>(pair) == FIELD_PUT);
 					#else
 						s_table.put_var_field(id, f->id, offset);
@@ -451,24 +468,6 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 	// donde debería utilizar this en la traducción?
 	//  * tengo que agregar como parámetros en las llamadas, a los
 	// atributos del objeto para el cual se llama el método.
-	// TODO: porcion de la secuencia de llamada que le corresponde al proceso
-	// llamado:
-	//		_ Guardar valores de registros y otros datos de estado, referentes
-	//		al proceso llamador (entre ellos, el frame base pointer del proceso
-	//		llamador).
-	//		_ Definir la posicion de comienzo de su registro de activacion
-	//		el cual sera el valor actual del stack pointer.
-	//		Reservar espacio en la pila para sus variables locales y temporales
-	//		(si es que vamos a guardar todas en la pila, y no en registros).
-	// Todo esto lo realiza la instrucción ENTER.
-	// TODO: porción de la secuencia de retorno que le corresponde al método
-	//		llamado:
-	//		_ Colocar el valor de retorno en la posición de su registro de
-	//		activación adecuada para ello.
-	//		_ De la información de status almacenada en su registro de activación,
-	//		reestablecer el valor de tope de pila, y otros registros. Luego
-	//		retornar a la dirección de memoria de retorno que el proceso llamador
-	//		guardó en el registro de activación del proceso llamado.
 	#ifdef __DEBUG
 		std::cout << "Translating method " << node.id << std::endl;
 	#endif
@@ -562,13 +561,14 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 				// un tipo básico.
 				symtable_element var_param(node.id, determine_type(node.type.type));
 				#ifdef __DEBUG
-					t_param_results pair2 = s_table.put_var_param(
-																				 var_param,
-																				 var_param.get_key(),
-																				 offset);
+					t_param_results pair2 = s_table.put_var_param(var_param,
+																var_param.get_key(),
+																offset);
 					assert(std::get<0>(pair2) == PARAM_PUT);
 				#else
-					s_table.put_var_param(var_param, var_param.get_key(), offset);
+					s_table.put_var_param(var_param,
+											var_param.get_key(),
+											offset);
 				#endif
 			}
 	}
@@ -711,21 +711,10 @@ void inter_code_gen_visitor::visit(node_string_literal& node) {
 	//temp = std::string("$"+node.value);
 }
 
-// TODO: aqui o en el generador de codigo asm es que modelo nuestro registro
-// de activacion?. Qué componentes va a tener?. También, donde comenzamos a
-// definir la secuencia de llamada?
-// TODO: porcion de la secuencia de llamadas, que le corresponde al proceso
-// llamador:
-//		_ Calcular los parámetros a pasar. Guardarlos en la pila o en registros.
-//		_ Guardar una dirección de retorno y el valor del puntero de tope de
-//			pila.
-//		_ Actualizar el puntero de tope de pila para que apunte hasta donde
-//		comienzan las temporales y variables locales del procedimiento llamado.
 void inter_code_gen_visitor::visit(node_method_call_expr& node) {
 	#ifdef __DEBUG
 			std::cout << "Translating method call statement" << std::endl;
 	#endif
-
 	// First parameter: "this" reference
 	address_pointer this_param = nullptr;
 	if(node.method_call_data->ids.size() >= 2){
@@ -1026,7 +1015,7 @@ void inter_code_gen_visitor::visit(node_negate_expr& node) {
 	expr_call_appropriate_accept(node.expression);
 
 	// New temporal for the result.
-	std::pair<put_results, std::string*> pair =  s_table.new_temp(offset);
+	t_results pair =  s_table.new_temp(offset);
 	// TODO: chequear put_results
 	// TODO: no estoy usando new_temp_address
 	dest = new_name_address(*std::get<1>(pair));
@@ -1048,7 +1037,7 @@ void inter_code_gen_visitor::visit(node_negative_expr& node) {
 	expr_call_appropriate_accept(node.expression);
 
 	// New temporal for the result.
-	std::pair<put_results, std::string*> pair =  s_table.new_temp(offset);
+	t_results pair =  s_table.new_temp(offset);
 	// TODO: chequear put_results
 	// TODO: no estoy usando new_temp_address
 	dest = new_name_address(*std::get<1>(pair));
@@ -1074,7 +1063,7 @@ void inter_code_gen_visitor::visit(node_parentheses_expr& node) {
 	expr_call_appropriate_accept(node.expression);
 
 	/*// New temporal for the result.
-	std::pair<put_results, std::string*> pair =  s_table.new_temp(offset);
+	t_results pair =  s_table.new_temp(offset);
 	// TODO: chequear put_results
 	// TODO: no estoy usando new_temp_address
 	dest = new_name_address(*std::get<1>(pair));

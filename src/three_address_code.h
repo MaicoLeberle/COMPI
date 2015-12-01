@@ -167,6 +167,25 @@ address_pointer new_name_address(const std::string& name);
 
 address_pointer new_label_address(const std::string& label);
 
+// Getters
+quad_oper get_inst_op(const quad_pointer&);
+
+quad_type get_inst_type(const quad_pointer&);
+
+address_pointer get_inst_result(const quad_pointer&);
+
+address_pointer get_inst_arg1(const quad_pointer&);
+
+address_pointer get_inst_arg2(const quad_pointer&);
+
+address_type get_address_type(const address_pointer&);
+
+/* PRE : {address->type == address_type::ADDRESS_NAME} */
+std::string get_address_name(const address_pointer&);
+
+/* PRE : {address->type == address_type::ADDRESS_CONSTANT} */
+value_type get_constant_address_type(const address_pointer&);
+
 // Procedures for debugging.
 // TODO: quizás debería recibir un address_pointer
 bool is_label(const quad_pointer& instruction,

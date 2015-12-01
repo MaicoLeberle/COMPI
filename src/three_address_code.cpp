@@ -204,6 +204,50 @@ quad_pointer new_return_inst(const address_pointer& value){
 	return instruction;
 }
 
+// Getters
+quad_oper get_inst_op(const quad_pointer& instruction){
+	return instruction->op;
+}
+
+quad_type get_inst_type(const quad_pointer& instruction){
+	return instruction->type;
+}
+
+address_pointer get_inst_result(const quad_pointer& instruction){
+	return instruction->result;
+}
+
+address_pointer get_inst_arg1(const quad_pointer& instruction){
+	return instruction->arg1;
+}
+
+address_pointer get_inst_arg2(const quad_pointer& instruction){
+	return instruction->arg2;
+}
+
+address_type get_address_type(const address_pointer& address){
+	return address->type;
+}
+
+std::string get_address_name(const address_pointer& address){
+	// PRE
+	#ifdef __DEBUG
+		assert(address->type == address_type::ADDRESS_NAME);
+	#endif
+
+	return *address->value.name;
+}
+
+value_type get_constant_address_type(const address_pointer& address){
+	// PRE
+	#ifdef __DEBUG
+		assert(address->type == address_type::ADDRESS_CONSTANT);
+	#endif
+
+	return address->value.constant.type;
+}
+
+// Procedures for debugging
 
 bool is_label(const quad_pointer& instruction, const std::string& label){
 	return instruction->type == quad_type::LABEL &&
