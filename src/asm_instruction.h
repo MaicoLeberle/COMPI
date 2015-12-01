@@ -8,7 +8,7 @@
 #include <iostream> // cout
 
 /******************************************************************
- * Types to represent ASM instructions' operands..
+ * Types to represent ASM instructions' operands.
  ******************************************************************/
 
 enum class register_id {
@@ -88,7 +88,7 @@ struct operand {
 		// base + index × scale + offset.
 		// TODO: ver página 16 del Vol. 1 del manual de prog. de x86_64
 		struct {
-			unsigned int offset;
+			int offset;
 			register_id base;
 			register_id index;
 			unsigned int scale;
@@ -110,7 +110,6 @@ struct operand {
 				// no varía?
 				int ival;
 				float fval;
-				bool bval;
 			} val;
 		}imm;
 
@@ -128,10 +127,10 @@ typedef std::shared_ptr<operand> operand_pointer;
 enum class operation {
 	// Arithmetic
 	ADD,
-	// TODO: sólo utilizamos la versión con signo de los operadores?
+	// TODO: sólo utilizamos la versión con signo de los operadores!
 	IMUL,
 	MUL,
-	// TODO: sólo utilizamos la versión con signo de los operadores?
+	// TODO: sólo utilizamos la versión con signo de los operadores!
 	IDIV,
 	DIV,
 	SUB,
@@ -140,12 +139,16 @@ enum class operation {
 	SAR, // sar[b|w|l|q] imm,d -> d = d>>imm (arithmetic right shift: the
 		 // spaces are filled in such a way to preserve the sign of the number
 		 // being slid)
+
 	// Logic
 	NOT,
 	SHR, // shr[b|w|l|q] imm,d -> d = d>>imm (logical right shift: the spaces
 		 // are always filled with zeros)
+
 	// Data transfer
 	MOV,
+	PUSHQ,
+
 	// Control transfer
 	JMP, // Unconditional jump
 	JE,	 // Jump if equal
@@ -157,8 +160,10 @@ enum class operation {
 	CALL,
 	LEAVE,
 	RET,
+
 	// Data comparison
 	CMP, // CMP s1, s2 set flags based on s 1 − s 2
+
 	// Misc
 	ENTER,
 	LABEL
@@ -188,10 +193,8 @@ operand_pointer new_register_operand(register_id);
 
 operand_pointer new_immediate_integer_operand(int);
 operand_pointer new_immediate_float_operand(float);
-// TODO: donde usamos esto?
-operand_pointer new_immediate_boolean_operand(bool);
 
-operand_pointer new_memory_operand(unsigned int offset,
+operand_pointer new_memory_operand(int offset,
 								   register_id base,
 								   register_id index,
 								   unsigned int scale);
@@ -270,6 +273,9 @@ asm_instruction_pointer new_label_instruction(std::string);
 
 asm_instruction_pointer new_enter_instruction(const operand_pointer& stack_space,
 										const operand_pointer& nesting_level);
+
+asm_instruction_pointer new_pushq_instruction(const operand_pointer& source,
+												data_type ops_type);
 
 /******************************************************************
  * Printing

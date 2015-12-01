@@ -30,16 +30,7 @@ operand_pointer new_immediate_float_operand(float imm_float){
 	return op;
 }
 
-operand_pointer new_immediate_boolean_operand(bool imm_boolean){
-	operand_pointer op = operand_pointer(new operand);
-	op->op_addr = operand_addressing::IMMEDIATE;
-	op->value.imm.val.bval = imm_boolean;
-	op->value.imm.imm_op_type = immediate_op_type::BOOLEAN;
-
-	return op;
-}
-
-operand_pointer new_memory_operand(unsigned int offset,
+operand_pointer new_memory_operand(int offset,
 									register_id base,
 									register_id index,
 									unsigned int scale){
@@ -87,6 +78,18 @@ asm_instruction_pointer new_mov_instruction(const operand_pointer& source,
 
 	return inst;
 
+}
+
+asm_instruction_pointer new_pushq_instruction(const operand_pointer& source,
+												data_type ops_type){
+	asm_instruction_pointer inst = asm_instruction_pointer(new asm_instruction);
+	inst->op = operation::PUSHQ;
+	inst->ops_type = ops_type;
+	inst->source = source;
+	inst->destination = nullptr;
+	inst->is_signed = false;
+
+	return inst;
 }
 
 asm_instruction_pointer new_mul_instruction(const operand_pointer& source,
@@ -179,6 +182,7 @@ asm_instruction_pointer new_div_instruction(const operand_pointer& dividend,
 	}
 	inst->ops_type = ops_type;
 	inst->destination = dividend;
+	// TODO: esto no hace falta, siempre los operandos tienen signo.
 	inst->is_signed = is_signed;
 
 	return inst;
@@ -599,22 +603,12 @@ std::string print_operand_intel_syntax(const operand_pointer& operand){
 					// TODO:?
 					break;
 
-				case immediate_op_type::INTEGER:
-					ret =  std::string("$" + std::to_string(operand->value.imm.val.ival));
-					break;
-
-				case immediate_op_type::BOOLEAN:{
-					if(operand->value.imm.val.bval){
-						ret = std::string("$1");
-					}
-					else{
-						// {not operand->value.imm.bval}
-						ret = std::string("$0");
-					}
-					break;
-				}
+				default:
+					// {operand->value.imm.imm_op_type ==
+					// 	immediate_op_type::INTEGER}
+					ret =  std::string("$" +
+							std::to_string(operand->value.imm.val.ival));
 			}
-
 			break;
 		}
 
@@ -636,7 +630,7 @@ std::string print_operand_intel_syntax(const operand_pointer& operand){
 		default:
 			// {operand->op_addr == None}
 			// It's a label.
-			ret = std::string("." + *operand->value.label);
+			ret = std::string(*operand->value.label);
 	}
 
 	#ifdef __DEBUG
@@ -684,6 +678,7 @@ std::string obtain_data_type(data_type d_type){
 
 // TODO: parte de la semántica de este procedimiento consiste en no lidiar
 // con cuestiones de indentación, cosa que sí va a hacer print_intel_syntax
+// TODO: aparentemente, la sintaxis intel es exactamente al revés: destino<-origen
 std::string print_binary_op_intel_syntax(const asm_instruction_pointer& instruction){
 	std::string ret, prefix;
 
@@ -919,21 +914,18 @@ bool are_equal_operands(const operand_pointer& op1,
 		if (op1->op_addr == op2->op_addr){
 			switch(op1->op_addr){
 				case operand_addressing::IMMEDIATE:{
+
 					switch(op1->value.imm.imm_op_type){
 						case immediate_op_type::INTEGER:
 							ret = op2->value.imm.imm_op_type == immediate_op_type::INTEGER &&
 								op1->value.imm.val.ival == op2->value.imm.val.ival;
 							break;
 
-						case immediate_op_type::FLOAT:
+						default:
+							// {op1->value.imm.imm_op_type ==
+							//	immediate_op_type::FLOAT}
 							ret = op2->value.imm.imm_op_type == immediate_op_type::FLOAT &&
 								op1->value.imm.val.fval == op2->value.imm.val.fval;
-							break;
-
-						case immediate_op_type::BOOLEAN:
-							ret = op2->value.imm.imm_op_type == immediate_op_type::BOOLEAN &&
-								op1->value.imm.val.bval == op2->value.imm.val.bval;
-							break;
 					}
 					break;
 				}

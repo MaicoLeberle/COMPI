@@ -4,6 +4,23 @@
 #include "inter_code_gen_visitor.h"
 #include "asm_instruction.h"
 
+/* Bibliography adopted:
+ * [1] "Notes on x86-64 programming",
+ * 		available at https://www.lri.fr/~filliatr/ens/compil/x86-64.pdf.
+ *
+ * [2] "AMD64 Architecture Programmer’s Manual Volume 1: Application
+ * 		Programming", available at
+ * 		http://developer.amd.com/wordpress/media/2012/10/24592_APM_v11.pdf.
+ *
+ * [3] "X86-64 Architecture Guide", available at
+ * 		http://www.myoops.org/cocw/mit/NR/
+ * 		rdonlyres/Electrical-Engineering-and-Computer-Science/
+ * 		6-035Fall-2005/
+ * 		A5797AF0-7976-4F22-90C3-AF15A2688988/0/x86_64_guide.pdf
+ *
+ * [4] "System V Application Binary Interface AMD64 Architecture Processor
+ * 		Supplement", available at http://www.x86-64.org/documentation/abi.pdf
+ * */
 
 /* BINARY_ASSIGN x = y + z:
  * 		addw y,z (z = y+z) Los operandos son de tipo word?
@@ -125,8 +142,13 @@ public:
 
 private:
 	instructions_list *ir;
+	// Auxiliary list of pushq instructions, that put parameters passed to a
+	// procedure, into the stack, in the corresponding order.
+	asm_instructions_list *stack_params;
 	asm_instructions_list *translation;
 	ids_info *s_table;
+	register_id act_reg_av; // Actual register available for integer parameters.
+	bool using_registers;
 
 	operand_pointer get_address(address_pointer address);
 	void translate_binary_op(const quad_pointer&);
@@ -137,12 +159,103 @@ private:
 	void translate_unconditional_jump(const quad_pointer&);
 	void translate_conditional_jump(const quad_pointer&);
 	void translate_relational_jump(const quad_pointer&);
-	void translate_parameter(const quad_pointer&);
+
+	/* Translates the 3-address "call" instruction. Also, if there are
+	 * parameters to put into the stack, the procedure introduces the
+	 * corresponding instructions, to save them in reverse order (the
+	 * parameters that go into the stack, are managed internally).
+	 *
+	 * Calling sequence:
+	 * 			_ Evaluate and pass parameters (according to the convention
+	 * 			described in translate_parameter).
+	 *
+	 * 			_ Set %rax to the total number of floating point parameters
+	 * 			passed to the function in vector registers ([4]).
+	 *
+	 * 			_ Save the return address (value of EIP, to point to the next
+	 * 			instruction, after the calling sequence).
+	 *
+	 * 			_ Jump to the position where the prodedure's definition begins.
+	 * 			(this last 2 steps are performed by the instruction
+	 * 			"call procedure_label").
+	 *
+	 * PARAMETER: 3-address code instruction: call label, n
+	 * */
 	void translate_procedure_call(const quad_pointer&);
 	void translate_function_call(const quad_pointer&);
+
+	/* Translates a param instruction, following the C calling convention,
+	 * adopted by linux and GNU tools for the x86-64 ([1] and [4]):
+	 * 		_ Integer arguments (up to the first six) are passed in registers,
+	 * 		namely: %rdi, %rsi, %rdx, %rcx, %r8, %r9.
+	 *
+	 * 		_ Floating arguments (up to 8) are passed in SSE registers
+	 * 		%xmm0, %xmm1, ..., %xmm7
+	 *
+	 * 		_ Any arguments passed on the stack are pushed in reverse
+	 * 		(right-to-left) order.
+	 *
+	 * PARAMETER: 3-address code instruction: param x
+	 * */
+	void translate_parameter(const quad_pointer&);
+
+	/* Translates the 3-address code "return" statement, following the C
+	 * calling convention, adopted by linux and GNU tools for the x86-64
+	 * ([1] and [4]):
+	 *		_ An integer value is returned into register rax or rdx. As we
+	 *		do not use register rax for other purpose, we use it to return
+	 *		integer values from procedures.
+	 *
+	 *		_ Sets %rsp to %rbp and then pops the stack into %rbp, effectively
+	 *		popping the entire current stack frame (from [1], which is done by
+	 *		a single "leave" instruction).
+	 *
+	 *		_ Pops the top of the stack into %rip (done by a single "ret"
+	 *		instruction), thus resuming execution in the calling routine
+	 *		(from [1]).
+	 * */
 	void translate_return(const quad_pointer&);
+
 	void translate_label(const quad_pointer&);
+
+	/*	Translates an "enter" instruction, whose purpose is to set the
+	 *  stack frame of the called procedure. This involves [2]:
+	 *  	_ Save, into the stack, the current value of rBP register.
+	 *
+	 *  	_ Store the value of the frame pointer into rBP:
+	 *  	"The value of the rSP register at that moment is a frame pointer
+	 *  	for the current procedure: positive
+	 *  	offsets from this pointer give access to the parameters passed to
+	 *  	the procedure, and negative offsets
+	 *  	give access to the local variables which will be allocated later"
+	 *  	from [2].
+	 *
+	 *  	_ Decrement the value of the rSP pointer, to allocate space
+	 *  	for local variables used in the procedure.
+	 *
+	 *  Notes:
+	 *  	_ "the callee is responsible for preserving the value of registers
+	 *  %rbp %rbx, and %r12-r15, as these registers are owned by the caller.",
+	 *  from [3]. As we only use rBP, into every procedure, we just make sure
+	 *  to save only the value of it.
+	 *
+	 *  	_ All the steps needed to set the stack frame, are performed by
+	 *  the assembly's enter instruction [2].
+	 *
+	 *  	_ In COMPI, we don't have nested procedures. Thus, the second
+	 *  parameter of assembly's enter instruction, is always 0.
+	 *
+	 *  PARAMETER: 3-address code instruction: enter x, where x is the number
+	 *  of bytes to allocate into the stack frame, for the local variables
+	 *  used in the procedure. */
 	void translate_enter_procedure(const quad_pointer&);
+
+	/* Returns the next register available, for integer parameters, following
+	 * the order: %rdi, %rsi, %rdx, %rcx, %r8, %r9 or none (when there are no
+	 * more registers available).
+	 * Sets the attribute act_reg_av to the register selected*/
+	register_id get_next_reg_av();
+	void allocate_integer_param(const operand_pointer&);
 };
 
 #endif
