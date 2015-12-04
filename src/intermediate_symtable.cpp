@@ -12,7 +12,7 @@ std::string ids_info::get_next_internal(std::string key) {
         (this->internal).insert(std::pair<std::string, unsigned int>(key, 0));
     
 
-    return ((key + '-') + std::to_string(((this->internal).find(key))->second));
+    return ((key + '@') + std::to_string(((this->internal).find(key))->second));
 }
 
 std::string* ids_info::new_temp(unsigned int o
@@ -185,8 +185,8 @@ t_params ids_info::get_list_params(std::string key) {
     return(*((((this->info_map).find(key))->second).l_params));
 }
 
-void ids_info::set_number_vars(std::string key
-                             , unsigned int number) {
+void ids_info::set_number_vars(std::string key,
+                               unsigned int number) {
     assert((this->info_map).find(key) != (this->info_map).end());
     assert((((this->info_map).find(key))->second).entry_kind == K_METHOD);
 
@@ -196,7 +196,17 @@ void ids_info::set_number_vars(std::string key
         *((((this->info_map).find(key))->second).local_vars) = number;
 }
 
+void ids_info::set_offset(std::string key, 
+                unsigned int number) {
+    assert((this->info_map).find(key) != (this->info_map).end());
+    assert((((this->info_map).find(key))->second).entry_kind != K_METHOD);
+    assert((((this->info_map).find(key))->second).entry_kind != K_CLASS);
 
+    if(!(((this->info_map).find(key))->second).offset)
+        (((this->info_map).find(key))->second).offset = new unsigned int(number);
+    else
+        *((((this->info_map).find(key))->second).offset) = number;
+}
 
 
 /*  ----------------------------------------------------------------------------------------------------    

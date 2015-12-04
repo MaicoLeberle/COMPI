@@ -179,8 +179,13 @@ public:
         ones).
         Precondition: the id has been registered, and it is of kind K_METHOD.
         The number of variables passed as parameter should be greater than
-        the size of the  list of parameters already put in the method's list.*/
+        the size of the list of parameters already put in the method's list. */
     void set_number_vars(std::string, unsigned int);
+
+    /*  Updates the offset.
+        Precondition: the id has been registered, and it is not of kind 
+        K_METHOD or kind K_CLASS.                                            */
+    void set_offset(std::string, unsigned int);
 
 private:
     struct entry_info {
