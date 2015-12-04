@@ -169,14 +169,189 @@
 
   \section{Decisiones de Diseño}\label{sec:design}
 
+  \subsection{Análisis sintáctico y AST}
+
   Para la creación del AST nos basamos en la estructura propuesta en la serie de
   posts de la página {\em gnuu}, llamado ``Writing Your Own Toy Compiler Using
   Flex, Bison and LLVM''
   \footnote{\url{http://gnuu.org/2009/09/18/writing-your-own-toy-compiler/}}.
   Este fue adaptado a los requerimientos del lenguaje COMPI. Todos los nodos
-  heredan de una clase principal {\em node} que a grandes razgos se diferencia
+  heredan de una clase principal {\tt node} que a grandes razgos se diferencia
   entre declaraciones (de métodos y variables), órdenes de flujo ({\em
   statements}, en inglés) y expresiones (matemáticas, comparativas, lógicas).
+  Hay algunas enumeraciones para definir los tipos (int, bool, float, etc.), los
+  operadores relacionales (suma, resta, igual, distinto, y, o, etc.) y
+  finalmente operadores de asignación. Se definieron {\em smart pointers} sobre
+  todas las clases para hacer más sencillo el manejo de memoria.
+
+  \subsection{Patrón visitor}
+
+  Antes de describir las decisiones de diseño tomadas en las etapas de  análisis
+  semántico y generación de código intermedio, es preciso aclarar cierto
+  mecanismo elegido para implementar dichas etapas: el módulo {\tt visitor} (declarado
+  en {\tt src/visitor.h}).
+
+	La clase visitor solo implementa 2 métodos: el modo de ``aceptar'' (visitar)
+	una expresión y el modo de aceptar una sentencia, en ambos casos en función
+	del tipo de cada una. El resto de los métodos de la clase son métodos
+	virtuales, cuya implementación será establecida por las clases que hereden de
+	visitor.
+
+	Nótese también que las distintas clases en {\tt node.h} que representan cada
+	uno de los constructos de un programa heredan (directamente o indirectamente)
+	de la clase {\tt node}, la cual tiene una clase virtual accept, que recibe un
+	parámetro de tipo visitor. La idea es que cada constructo de un programa
+	defina la manera de ``aceptarlo''; es decir, de visitarlo mediante una entidad
+	externa, en este caso de tipo visitor. Todos estas clases básicamente
+	implementan accept como una llamada al método visit del visitor pasado como
+	parámetro, con ellos mismos ({\tt *this}) como parámetros.
+
+	De este modo, cada clase que herede de visitor define la manera de recorrer un
+	programa, y computar lo que sea necesario. Teniendo esto en cuenta, véanse las
+	decisiones tomadas en cada una de las 3 etapas siguientes del proceso de
+	compilación; a saber, análisis semántico, generación de código intermedio y
+	generación de código assembly.
+
+  \subsection{Análisis semántico}
+
+	El análisis semántico, según se pidió que se realice en la sección 3.7 de la
+	descripción del lenguaje COMPI, se implementa fundamentalmente en la clase
+	{\tt semantic\_analysis}, declarada en {\tt src/semantic\_analysis.h}. Dicha
+	clase hereda de visitor, e implementa el modo de recorrer un programa (una
+	estrucutra de tipo {\tt program\_pointer}, definido como {\tt
+	std::shared\_ptr$<$node\_program$>$} en {\tt node.h}) chequeando las
+	características semánticas requeridas por el lenguaje. Para realización de su
+	trabajo, {\tt semantic\_analysis} contiene un atributo de tipo {\tt
+	symtables\_stack}.
+
+	La clase {\tt symtables\_stack} modela el scope actual dentro de un programa
+	COMPI, mediante la creación de una pila de objetos de tipo symtable, cada uno
+	de los cuales contiene un {\tt std::map} que asocia un identificador a su
+	información correspondiente, contenida en un objeto de tipo {\tt
+	symtable\_element}.
+
+	Consideraciones a tener en cuenta en esta etapa:
+
+  \begin{itemize}
+    \item Por el modo en que se procesan los métodos y clases dentro de un
+    programa COMPI (i.e., avanzando sintácticamente en el código fuente), es
+    preciso actualizar la información asociada a objetos {\tt symtable\_element}
+    de tipo {\tt T\_FUNCTION} o {\tt T\_CLASS} cada vez que se define un
+    parámetro o atributo nuevo, respectivamente, a medida que se avanza en el
+    análisis del programa. Con este fin fueron creados {\tt
+    symtable\_element::put\_func\_param} y {\tt
+    symtable\_element::put\_class\_field}.
+  	\item Como se ha tomado la decisión de no permitir tipos de datos recursivos
+  	(i.e., clases que contienen atributos que son objetos de la propia clase que
+  	se está definiendo), entonces es preciso, a la hora de chequear que la
+  	definición de un atributo en una clase, saber el nombre de la clase que se
+  	está definiendo. Esto se realiza mediante {\tt symtable::is\_recursive}.
+  	\item No se pueden definir dos identificadores iguales dentro de una sola
+  	symtable, y el método {\tt symtable::id\_exists} chequea esto.
+  	\item El análisis del scope creado por las funciones se implementa mediante
+  	{\tt symtables\_stack::put\_fun}, {\tt symtables\_stack::put\_func\_param} y
+  	{\tt symtables\_stack::finish\_func\_analysis}. Análogamente, el análisis
+  	del scope de las clases se realia mediante {\tt
+  	symtables\_stack::put\_class}, {\tt symtables\_stack::put\_class\_field} y
+  	{\tt symtables\_stack::finish\_class\_analysis}. De este modo, la resolución
+  	de scopes es transparente para el usuario de {\tt symtables\_stack}.
+  \end{itemize}
+
+  \subsection{Generación de código intermedio}
+
+	Ésta se realiza, fundamentalmente, en la clase {\tt inter\_code\_gen\_visitor}
+	(la cual hereda de la clase visitor también) declarada en {\tt
+	src/inter\_code\_gen\_visitor.h}. Esta clase implementa el modo de generar
+	código intermedio para cierto constructo de un programa COMPI (constructo el
+	cual se encuentra representado como objeto de alguna de las clases declaradas
+	en {\tt src/node.h}).
+
+	Se utilizan las constantes definidas en {\tt src/constants.h} (valores
+	iniciales de las variables, y espacio ocupado por cada tipo de variable).
+
+	Además, se ha implementado un módulo {\tt three\_address\_code} (en {\tt
+	src/three\_address\_code.h}) donde se definen varios tipos de datos que se
+	utilizarán en la generación de código intermedio. El principal es struct quad,
+	que será la forma en que hemos optado representar a las instrucciones de
+	código intermedio: consiste de un tipo de instrucción, un operador
+	(correspondiente a ese tipo de instrucción) y 3 direcciones de memoria (varias
+	instrucciones no usarán la totalidad de estas direcciones de memoria). Además,
+	en este módulo se definen todas las funciones necesarias para construir o
+	chequear propiedades de instrucciones de código intermedio ({\tt
+	std::shared\_ptr$<$quad$>$}).
+
+	Para generar código intermedio es necesario volver a modelar la resolución de
+	scopes como se ha hecho en la etapa de análisis semántico, y este trabajo es
+	realizado por una nueva clase: {\tt intermediate\_symtable} (declarada en {\tt
+	src/intermediate\_symtable.h}).
+
+	Pero {\tt intermediate\_symtable} no solo contiene un atributo de tipo {\tt
+	symtables\_stack} para modelar la resolución de scopes, sino que también
+	construye, a medida que se van generando las instrucciones de código
+	intermedio (trabajo realizado por {\tt inter\_code\_gen\_visitor}), una tabla
+	de símbolos (clase {\tt ids\_info}, también declarada en {\tt
+	intermediate\_symtable.h}) que contiene información necesaria para
+	posteriormente poder generar código assembly. Dicha información (almacenada en
+	{\tt ids\_info}, con {\tt ids\_info::entry\_info} como principal reunión de
+	datos) incluye: tipo de identificador (método, variable, variable temporal,
+	etc.), tipo de dato, {\tt std::string} que representa el modo en que cierto
+	identificador ha sido representado en la lista de instrucciones de código
+	intermedio en cierto punto de scope, offset del identificador dentro del
+	registro de activación al que pertenece (para posteriormente poder calcular la
+	dirección exacta del identificador en memoria, en relación al valor de rbp en
+	tiempo de ejecución), número de variables locales si se trata de un método
+	(incluidas las variables temporales, que se almacenan en memoria también),
+	clase a la que se pertenece si se trata de un método o un atributo, lista de
+	atributos o de parámetros (si se trata de una clase o una función,
+	respectivamente).
+
+	Además, nótese que {\tt intermediate\_symtable} tiene una interfaz similar a
+	la de {\tt symtables\_stack}, con el agregado de las funciones:
+
+  \begin{itemize}
+  	\item {\tt intermediate\_symtable::new\_label} (que devuelve una nueva
+  	etiqueta auxiliar que el usuario podrá incorporar en su código intermedio
+  	con la seguridad de ser	única),
+  	\item {\tt intermediate\_symtable::set\_number\_vars} (que permite modificar
+  	el número de variables, temporales o no, utilizadas en la función actual, lo
+  	cual será útil posteriormente al generar el código assembly de registro de
+  	activación para dicha función),
+  	\item {\tt intermediate\_symtable::new\_temp} (que registra una nueva
+  	variable temporal y le otorga una representación de tipo {\tt std::string}
+  	única),
+    \item {\tt intermediate\_symtable::get\_ids\_info} (que devolverá la tabla
+    de símbolos con la información generada durante la generación de código
+    intermedio, necesaria para la generación de código assembly).
+  \end{itemize}
+
+  \section{Generación de código assembly}
+
+  Teniendo ya una lista de instrucciones de código intermedio junto a la tabla
+  de símbolos (construida en la generación de dicha lista, y que contiene
+  información necesaria para esta etapa), se procede a la generación de código
+  intermedio mediante la clase {\tt asm\_code\_generator} (declarada en
+  {\tt src/asm\_code\_generator.h}).
+
+	Cabe aclarar aquí que se implementó el protocolo de stack frame (registro de
+	activación) correspondiente al sistema {\tt V AMD64 ABI}. Dicho sistema
+	establece que los primeros 6 parámetros que se desean pasar al llamar a una
+	función son pasados los registros {\tt RDI}, {\tt RSI}, {\tt RDX}, {\tt RCX},
+	{\tt R8} y {\tt R9}. Los restantes parámetros se pasan ``pusheándolos'' al
+	stack frame. Técnicamente, el sistema {\tt V AMD64 ABI} otorga los 128 bytes
+	siguientes a la dirección a la que apunta el registro {\tt RSP} para que los
+	utilice la función en ejecución si le resulta necesario para almacenar
+	variables temporales. Pero, por simplicidad, nuestro compilador guarda cada
+	variable temporal en el stack frame, cargándolas en registros si es necesario
+	computar algún valor sobre las variables temporales. Los resultados de tales
+	cómputos también son guardados en el stack frame.
+
+	Por último, observar que en el módulo {\tt asm\_instruction} ({\tt
+	src/asm\_instruction.h}) se definen los tipos de datos análogos a los
+	definidos en el módulo {\tt three\_address\_code}, pero para esta etapa.
+	Contiene toda la información necesaria para poder generar la lista de
+	instrucciones en assembly, junto a funciones (como {\tt
+	print\_asm\_instructions\_list\_intel\_syntax}) que sirven para obtener,
+	finalmente, el código assembly.
 
   \section{Conclusiones}\label{sec:conclusions}
 \end{document}
@@ -240,11 +415,11 @@
 %     int inc(int x) {
 %       return x + 1;
 %     }
-%     int read_int() extern;
+%     int read\_int() extern;
 %     void print(string s) extern;
 %     void main() {
 %       int y;
-%       y = read_int();
+%       y = read\_int();
 %       y = inc(y);
 %       if (y == 1)
 %         printf("y==1\n");
