@@ -56,7 +56,13 @@
 
   El siguiente documento se organiza de la siguiente manera: la sección
   \ref{sec:struct} describe la estructura del directorio del proyecto y explica
-  como compilarlo y correr la suite de tests del mismo.
+  como compilarlo y correr la suite de tests del mismo. La sección
+  \ref{sec:architecture} muestra un diagrama de la arquitectura del proyecto, al
+  tiempo que la analiza y describe. La sección \ref{sec:design} hace un repaso
+  general de las decisiones de diseño más importantes que se tomaron a lo largo
+  del proyecto. Finalmente, la sección \ref{sec:conclusions} cierra el informe
+  con una visión general de los puntos fuertes del proyecto y nuestras visiones
+  al respecto.
 
   \section{Estructura del Proyecto}\label{sec:struct}
 
@@ -355,76 +361,3 @@
 
   \section{Conclusiones}\label{sec:conclusions}
 \end{document}
-
-% La sección
-% \ref{sec:spec} describe las características del lenguaje \textsc{compi}:
-% léxico, gramática y semántica.
-%
-% Como se modulariza, como se compila y como se pueden correr los ejemplos y
-% {\em tests}.
-
-% \section{Especificaciones de COMPI}\label{sec:spec}
-%
-% Un programa {\sc compi} consiste en una lista de declaraciones de clases,
-% atributos y métodos. Estos atributos son variables globales que pueden ser
-% accedidas por todos los métodos de la clase y por todos los objetos
-% instanciados de una clase. Los objetos referencian sus atributos e invocan sus
-% métodos con la notacin habitual. Ambos, atributos y mtodos son siempre
-% públicos ya que el lenguaje no tiene modificadores de visibilidad. El lenguaje
-% no permite la creación dinámica de objetos.
-%
-% La declaración de métodos define funciones y procedimientos. El programa debe
-% contener la declaración de una clase llamada {\bf main} con un método llamado
-% del mismo nombre. Este método no tiene parámetros. La ejecución de un programa
-% COMPI comienza con el método {\bf main}.
-%
-% El lenguaje {\sc compi} es case-sensitive. De igual manera, lo son las
-% palabras reservadas y los identificadores del mismo.
-%
-% La palabras reservadas son las siguientes:
-% \begin{multicols}{5}
-%   \begin{itemize}
-%     \item boolean
-%     \item break
-%     \item class
-%     \item continue
-%     \item else
-%     \item false
-%     \item float
-%     \item for
-%     \item if
-%     \item int
-%     \item return
-%     \item true
-%     \item void
-%     \item while
-%     \item extern
-%   \end{itemize}
-% \end{multicols}
-%
-% El lenguaje acepta comentarios, de una sola línea con {\bf //} o de múltiples
-% líneas, delimitado por {\bf /*} y {\bf */}. Los literales del lenguaje son
-% cadenas de caracteres, enteros y reales.
-%
-% Los tipos básicos de {\sc compi} son {\bf int}, {\bf float} y {\bf boolean}.
-%
-% Un ejemplo de programa en {\sc compi} es:
-%
-% \begin{verbatim}
-%   class Program {
-%     int inc(int x) {
-%       return x + 1;
-%     }
-%     int read\_int() extern;
-%     void print(string s) extern;
-%     void main() {
-%       int y;
-%       y = read\_int();
-%       y = inc(y);
-%       if (y == 1)
-%         printf("y==1\n");
-%       else
-%         printf("y!=1\n");
-%     }
-%   }
-% \end{verbatim}
