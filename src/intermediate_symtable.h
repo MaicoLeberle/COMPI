@@ -92,7 +92,7 @@ public:
         the rest of the source code.                                          
         Parameters: offset inside the method
                   , type of the new temporary variable.                      */
-    std::string* new_temp(unsigned int, id_type);
+    std::string* new_temp(int, id_type);
 
     /*  The following register_* methods register the id passed as parameter, 
         as long with their information, into info_map.
@@ -105,7 +105,7 @@ public:
     /*  Parameters: id with which generate the internal representation id
                   , offset inside the method
                   , type of the new variable.                                */
-    std::string register_var(std::string, unsigned int, id_type);
+    std::string register_var(std::string, int, id_type);
 
     /*  Precondition: the id has been registered, and it is of kind K_TEMP or 
         K_VAR.                                                               */
@@ -122,7 +122,7 @@ public:
                   , name of the parameter id's type (its class)
                   , the string that represents the beginning address of the 
                     object.                                                  */
-    std::string register_obj(std::string, unsigned int, std::string, std::string);
+    std::string register_obj(std::string, int, std::string, std::string);
 
     /*  Parameters: id with which generate the internal representation id
                   , number of local variables in the method
@@ -154,7 +154,7 @@ public:
     /*  Precondition: the id has been registered, and it is of kind K_VAR or 
         K_OBJECT.
         Returns: the id's offset inside its method's body.                   */
-    unsigned int get_offset(std::string);
+    int get_offset(std::string);
 
     /*  Precondition: the id has been registered, and it is of kind K_METHOD.
         Returns: the number of local variables inside this method's body.    */
@@ -185,7 +185,7 @@ public:
     /*  Updates the offset.
         Precondition: the id has been registered, and it is not of kind 
         K_METHOD or kind K_CLASS.                                            */
-    void set_offset(std::string, unsigned int);
+    void set_offset(std::string, int);
 
 private:
     struct entry_info {
@@ -198,7 +198,7 @@ private:
         std::string rep;
 
         /*  For variables and objects.                                       */
-        unsigned int* offset = NULL;
+        int* offset = NULL;
 
         /*  For objects (declaring the object's type) and methods (declaring
             the class this method belongs to).                               */
@@ -277,7 +277,7 @@ public:
         current scope, along with its representation inside this->information
         (as long as putting the object in scope was succesful; otherwise, NULL
         is returned as second element of the pair). */
-    t_results new_temp(unsigned int);
+    t_results new_temp(int);
 
     /*  Inserts a new variable as an element into the symbols tables stack. 
         Parameters: the variable itself
@@ -293,7 +293,7 @@ public:
         NULL is returned as second element of the pair).                     */
     t_results put_var(symtable_element
                     , std::string
-                    , unsigned int);
+                    , int);
 
     /*  Inserts a new object as an element into the symbols tables stack. 
         Parameters: the object itself
@@ -311,7 +311,7 @@ public:
         NULL is returned as second element of the pair).                     */
     t_results put_obj(symtable_element&
                     , std::string
-                    , unsigned int
+                    , int
                     , std::string
                     , std::string);
 
@@ -355,7 +355,7 @@ public:
         successful; otherwise, NULL is returned as second parameter).        */
     t_param_results put_var_param(symtable_element&
                                 , std::string
-                                , unsigned int);
+                                , int);
 
     /*  Inserts a new object to the lastly inserted function (via put_func) as
         a parameter.
@@ -374,7 +374,7 @@ public:
         successful; otherwise, NULL is returned as second parameter).        */
     t_param_results put_obj_param(symtable_element&
                                 , std::string
-                                , unsigned int
+                                , int
                                 , std::string
                                 , std::string);
 
@@ -431,7 +431,7 @@ public:
         pair).                                                               */
     t_field_results put_var_field(symtable_element&
                                 , std::string
-                                , unsigned int);
+                                , int);
 
     /*  Inserts a new object as a field to the lastly inserted class (via 
         put_class).
@@ -451,7 +451,7 @@ public:
         pair).                                                                */
     t_field_results put_obj_field(symtable_element&
                                 , std::string
-                                , unsigned int
+                                , int
                                 , std::string
                                 , std::string);
 

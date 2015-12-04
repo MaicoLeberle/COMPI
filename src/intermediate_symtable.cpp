@@ -15,7 +15,7 @@ std::string ids_info::get_next_internal(std::string key) {
     return ((key + '@') + std::to_string(((this->internal).find(key))->second));
 }
 
-std::string* ids_info::new_temp(unsigned int o
+std::string* ids_info::new_temp(int o
                               , id_type type) {
     std::string* ret = new std::string("@t" + std::to_string(this->temp_number));
     assert((this->info_map).find(*ret) == (this->info_map).end());
@@ -24,7 +24,7 @@ std::string* ids_info::new_temp(unsigned int o
 
     information.entry_kind = K_TEMP;
     information.entry_type = type;
-    information.offset = new unsigned int(o);
+    information.offset = new int(o);
 
     (this->info_map).insert(std::pair<std::string, entry_info>(*ret, information));
     
@@ -33,13 +33,13 @@ std::string* ids_info::new_temp(unsigned int o
 }
 
 std::string ids_info::register_var(std::string key
-                                 , unsigned int offset
+                                 , int offset
                                  , id_type type) {
     entry_info information;
     
     information.entry_kind = K_VAR;
     information.entry_type = type;
-    information.offset =  new unsigned int(offset);
+    information.offset =  new int(offset);
 
     std::string internal_key = this->get_next_internal(key);
     ++((this->internal).find(key))->second;
@@ -68,13 +68,13 @@ void ids_info::set_type(std::string key
 }
 
 std::string ids_info::register_obj(std::string key
-                                 , unsigned int offset
+                                 , int offset
                                  , std::string owner
                                  , std::string address) {
     entry_info information;
     
     information.entry_kind = K_OBJECT;
-    information.offset = new unsigned int(offset);
+    information.offset = new int(offset);
     information.owner = new std::string(owner);
     information.begin_address = new std::string(address);
 
@@ -149,7 +149,7 @@ id_kind ids_info::get_kind(std::string key) {
     return ((((this->info_map).find(key))->second).entry_kind);
 }
 
-unsigned int ids_info::get_offset(std::string key) {
+int ids_info::get_offset(std::string key) {
     assert((((this->info_map).find(key))->second).entry_kind == K_VAR
         || (((this->info_map).find(key))->second).entry_kind == K_OBJECT
         || (((this->info_map).find(key))->second).entry_kind == K_TEMP);
@@ -197,13 +197,13 @@ void ids_info::set_number_vars(std::string key,
 }
 
 void ids_info::set_offset(std::string key, 
-                unsigned int number) {
+                          int number) {
     assert((this->info_map).find(key) != (this->info_map).end());
     assert((((this->info_map).find(key))->second).entry_kind != K_METHOD);
     assert((((this->info_map).find(key))->second).entry_kind != K_CLASS);
 
     if(!(((this->info_map).find(key))->second).offset)
-        (((this->info_map).find(key))->second).offset = new unsigned int(number);
+        (((this->info_map).find(key))->second).offset = new int(number);
     else
         *((((this->info_map).find(key))->second).offset) = number;
 }
@@ -245,14 +245,14 @@ symtable_element* intermediate_symtable::get (std::string key) {
     return((this->scopes).get(key));
 }
 
-t_results intermediate_symtable::new_temp(unsigned int offset) {
+t_results intermediate_symtable::new_temp(int offset) {
     return (std::pair<put_results, std::string*>
             (ID_PUT,(this->information)->new_temp(offset, id_type::T_UNDEFINED)) );
 }
 
 t_results intermediate_symtable::put_var(symtable_element e
                                        , std::string key
-                                       , unsigned int offset) {
+                                       , int offset) {
         /*  Besides putting the new variable into the symbols tables stack, it 
             is also necessary to register its new key.                       */
         symtables_stack::put_results res = (this->scopes).put(key, e);
@@ -284,7 +284,7 @@ t_results intermediate_symtable::put_var(symtable_element e
 
 t_results intermediate_symtable::put_obj(symtable_element& e
                                        , std::string key
-                                       , unsigned int offset
+                                       , int offset
                                        , std::string type
                                        , std::string address) {
         /*  Besides putting the new object into the symbols tables stack, it 
@@ -324,7 +324,7 @@ t_func_results intermediate_symtable::put_func(symtable_element& e
 
 t_param_results intermediate_symtable::put_var_param(symtable_element& e
                                                    , std::string key
-                                                   , unsigned int offset) {
+                                                   , int offset) {
         assert(key.compare(e.get_key()) == 0);
         assert(e.get_class() == symtable_element::T_VAR);
 
@@ -361,7 +361,7 @@ t_param_results intermediate_symtable::put_var_param(symtable_element& e
 
 t_param_results intermediate_symtable::put_obj_param(symtable_element& e
                                                    , std::string key
-                                                   , unsigned int offset
+                                                   , int offset
                                                    , std::string owner
                                                    , std::string address) {
         assert(key.compare(e.get_key()) == 0);
@@ -420,7 +420,7 @@ t_class_results intermediate_symtable::put_class(symtable_element& e
 
 t_field_results intermediate_symtable::put_var_field(symtable_element& e
                                                    , std::string key
-                                                   , unsigned int offset) {
+                                                   , int offset) {
         symtables_stack::put_field_results res = 
                                         (this->scopes).put_class_field(key, e);
 
@@ -455,7 +455,7 @@ t_field_results intermediate_symtable::put_var_field(symtable_element& e
 
 t_field_results intermediate_symtable::put_obj_field(symtable_element& e
                                                    , std::string key
-                                                   , unsigned int offset
+                                                   , int offset
                                                    , std::string class_name
                                                    , std::string address) {
         symtables_stack::put_field_results res = 
