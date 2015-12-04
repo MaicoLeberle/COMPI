@@ -9,8 +9,8 @@
 \usepackage{layout}
 
 \geometry{
-  left=2.5cm,
-  right=2.5cm,
+  left=2cm,
+  right=2cm,
   top=3.5cm,
   bottom=3cm
 }
@@ -20,6 +20,8 @@
 \usepackage{chicago}
 \usepackage{multicol}
 \usepackage{hyperref}
+
+\def\labelitemi{$\bullet$}
 
 \linespread{1.3}
 
@@ -32,7 +34,7 @@
   Cardellino, Cristian $\cdot$ Leberle, Maico $\cdot$ Soldevila, Mallku
 }
 
-\date{31 de Octubre de 2015}
+\date{}
 
 \begin{document}
   \maketitle
@@ -179,8 +181,8 @@
 
   Para la creación del AST nos basamos en la estructura propuesta en la serie de
   posts de la página {\em gnuu}, llamado ``Writing Your Own Toy Compiler Using
-  Flex, Bison and LLVM''
-  \footnote{\url{http://gnuu.org/2009/09/18/writing-your-own-toy-compiler/}}.
+  Flex, Bison and
+  LLVM''\footnote{\url{http://gnuu.org/2009/09/18/writing-your-own-toy-compiler/}}.
   Este fue adaptado a los requerimientos del lenguaje COMPI. Todos los nodos
   heredan de una clase principal {\tt node} que a grandes razgos se diferencia
   entre declaraciones (de métodos y variables), órdenes de flujo ({\em
@@ -360,4 +362,19 @@
 	finalmente, el código assembly.
 
   \section{Conclusiones}\label{sec:conclusions}
+
+  En términos generales tenemos un balance positivo de este trabajo. El proyecto
+  fue de gran utilidad para entender el proceso de un compilador. Desde el
+  diseño del lenguaje hasta la generación del código objeto. El resultado final
+  fue el mismo compilador de COMPI que se encuentra disponible web.
+
+  En el trabajo entregado buscamos seguir los lineamientos propuestos al
+  principio de la materia en cuestión de diseño del lenguaje COMPI. Nos
+  encontramos con algunos obstáculos, algunos de ellos los pudimos solucionar
+  con facilidad y otros quedarían pendientes de disponer de mayor tiempo.
+
+  La materia en sí mostró ser de gran utilidad, teniendo en cuenta el transfondo
+  fuertemente teórico que esta carrera posee, trabajando nuevos conceptos, más
+  en el campo de lo práctico que lo teórico.
+
 \end{document}
