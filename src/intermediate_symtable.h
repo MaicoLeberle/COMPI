@@ -74,9 +74,9 @@ enum put_field_results { FIELD_PUT
 
 typedef std::pair<put_field_results, std::string*> t_field_results;
 
-typedef std::list<std::string>& t_attributes;
+typedef std::list<std::string> t_attributes;
 
-typedef std::list<std::string>& t_params;
+typedef std::list<std::string> t_params;
 
 /*  End of data types definitions related to intermediate_symtable class.    */
 /*  ---------------------------------------------------------------------    */
@@ -168,12 +168,12 @@ public:
     /*  Precondition: the id has been registered, and it is of kind K_CLASS.
         Returns: the list of all the attributes in the class, ordered as they
         were in the class's definition.                                      */
-    t_attributes get_list_attributes(std::string);
+    t_attributes& get_list_attributes(std::string);
 
     /*  Precondition: the id has been registered, and it is of kind K_METHOD.
         Returns: the list of all parameters of the function, ordered as they
         were in the method's definition.                                     */
-    t_params get_list_params(std::string);
+    t_params& get_list_params(std::string);
 
     /*  Updates the number of local variables (this includes the temporary 
         ones).

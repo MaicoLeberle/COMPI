@@ -170,15 +170,16 @@ std::string ids_info::get_owner_class(std::string key) {
     return *((((this->info_map).find(key))->second).owner);
 }
 
-t_attributes ids_info::get_list_attributes(std::string key) {
+t_attributes& ids_info::get_list_attributes(std::string key) {
+    assert(this->id_exists(key));
     assert((((this->info_map).find(key))->second).entry_kind == K_CLASS);
+    assert((((this->info_map).find(key))->second).l_atts);
 
     return *((((this->info_map).find(key))->second).l_atts);
 }
 
-t_params ids_info::get_list_params(std::string key) {
+t_params& ids_info::get_list_params(std::string key) {
     assert(this->id_exists(key));
-    assert((this->info_map).find(key) != (this->info_map).end());
     assert((((this->info_map).find(key))->second).entry_kind == K_METHOD);
     assert((((this->info_map).find(key))->second).l_params);
 
