@@ -307,6 +307,9 @@ t_func_results intermediate_symtable::put_func(symtable_element& e
                                              , std::string key
                                              , unsigned int local_vars
                                              , std::string class_name) {
+        /*  Check that e is effectively a function.                          */
+        assert(e.get_class() == symtable_element::T_FUNCTION);
+
         symtables_stack::put_func_results res = 
                                        (this->scopes).put_func(key, e);
 
@@ -377,9 +380,17 @@ t_param_results intermediate_symtable::put_obj_param(symtable_element& e
         if(res == symtables_stack::PARAM_TYPE_ERROR)
             return(t_param_results(PARAM_TYPE_ERROR, NULL));
 
+        /*  Check that we are in the middle of a function analysis, and that 
+            the name of the function being analyzed exists as an ID registered,
+            whose kind is K_METHOD.                                          */
         assert(this->func_name);
         assert((this->information)->id_exists(*(this->func_name)));
+        assert((this->information)->get_kind(*(this->func_name)) == K_METHOD);
+
+        /*  Now that being within a function analysis has been checked, we can
+            push the new parameter into the function's parameters list.      */
         ((this->information)->get_list_params(*(this->func_name))).push_back(key);
+
         std::string* rep = new std::string((this->information)->register_obj(key, offset, owner, address));
 
         return(t_param_results(PARAM_PUT, rep));
