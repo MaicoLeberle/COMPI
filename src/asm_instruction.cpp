@@ -80,6 +80,29 @@ asm_instruction_pointer new_mov_instruction(const operand_pointer& source,
 
 }
 
+asm_instruction_pointer new_lea_instruction(const operand_pointer& source,
+											const operand_pointer& destination,
+											data_type ops_type){
+
+	#ifdef __DEBUG
+		assert(destination->op_addr == operand_addressing::REGISTER ||
+			   destination->op_addr == operand_addressing::MEMORY);
+	#endif
+
+	// TODO: precondición: source y destination se refieren a valores del
+	// mismo tipo.
+	asm_instruction_pointer inst = asm_instruction_pointer(new asm_instruction);
+	inst->op = operation::LEA;
+	// TODO: cómo determino el tipo de información de source?
+	inst->ops_type = ops_type;
+	inst->source = source;
+	inst->destination = destination;
+	inst->is_signed = false;
+
+	return inst;
+
+}
+
 asm_instruction_pointer new_pushq_instruction(const operand_pointer& source,
 												data_type ops_type){
 	asm_instruction_pointer inst = asm_instruction_pointer(new asm_instruction);
@@ -702,6 +725,10 @@ std::string print_binary_op_intel_syntax(const asm_instruction_pointer& instruct
 
 		case operation::MOV:
 			prefix = std::string("mov" + obtain_data_type(instruction->ops_type));
+			break;
+
+		case operation::LEA:
+			prefix = std::string("lea" + obtain_data_type(instruction->ops_type));
 			break;
 
 		case operation::ENTER:

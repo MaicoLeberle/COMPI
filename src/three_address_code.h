@@ -178,6 +178,12 @@ address_pointer get_inst_arg1(const quad_pointer&);
 
 address_pointer get_inst_arg2(const quad_pointer&);
 
+/* PRE : {quad->type == quad_type::LABEL} */
+std::string get_label(const quad_pointer&);
+
+/* PRE : {quad->type == quad_type::RELATIONAL_JUMP} */
+std::string get_relational_jmp_label(const quad_pointer&);
+
 address_type get_address_type(const address_pointer&);
 
 /* PRE : {address->type == address_type::ADDRESS_NAME} */
@@ -185,6 +191,9 @@ std::string get_address_name(const address_pointer&);
 
 /* PRE : {address->type == address_type::ADDRESS_CONSTANT} */
 value_type get_constant_address_type(const address_pointer&);
+
+/* PRE : {address->type == address_type::ADDRESS_LABEL} */
+std::string get_label_address_value(const address_pointer&);
 
 // Procedures for debugging.
 // TODO: quizás debería recibir un address_pointer

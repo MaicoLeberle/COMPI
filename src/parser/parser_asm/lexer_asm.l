@@ -42,6 +42,7 @@ sarl                         return SARL;
 notl                         return NOTL;
 shrl                         return SHRL;
 movl                         return MOVL;
+leal                         return LEAL;
 jmp                          return JMP;
 je                           return JE;
 jne                          return JNE;

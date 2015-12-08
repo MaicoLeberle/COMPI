@@ -147,8 +147,10 @@ private:
 	asm_instructions_list *stack_params;
 	asm_instructions_list *translation;
 	ids_info *s_table;
-	register_id act_reg_av; // Actual register available for integer parameters.
+	register_id last_reg_used; // Last register used for integer parameters.
 	bool using_registers;
+	int params_in_registers; // Quantity of integer parameters put into registers.
+	std::string last_label;
 
 	operand_pointer get_address(address_pointer address);
 	void translate_binary_op(const quad_pointer&);
@@ -233,6 +235,13 @@ private:
 	 *  	_ Decrement the value of the rSP pointer, to allocate space
 	 *  	for local variables used in the procedure.
 	 *
+	 *		_ If there are integer parameters into registers, take them into
+	 *		the stack frame.
+	 *		TODO: la razón, aparente, para realizar esto:
+	 *		"Parameters send to function in registers rdi-r9 aren't preserved
+	 *		in stack area ? What happens when child function is called ?", de
+	 *		http://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64/
+	 *
 	 *  Notes:
 	 *  	_ "the callee is responsible for preserving the value of registers
 	 *  %rbp %rbx, and %r12-r15, as these registers are owned by the caller.",
@@ -254,8 +263,9 @@ private:
 	 * the order: %rdi, %rsi, %rdx, %rcx, %r8, %r9 or none (when there are no
 	 * more registers available).
 	 * Sets the attribute act_reg_av to the register selected*/
-	register_id get_next_reg_av();
-	void allocate_integer_param(const operand_pointer&);
+	register_id get_next_reg_av(register_id);
+
+	void allocate_integer_param(const operand_pointer& val, bool pass_address);
 };
 
 #endif

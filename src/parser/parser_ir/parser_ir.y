@@ -76,6 +76,8 @@ instruction
     
 /* TODO: abstraer los operadores en otras producciones, de otro no terminal,
         cuyo tipo sea quad_oper */
+/* TODO: src/parser/parser_ir/parser_ir.y: warning: 4 shift/reduce conflicts [-Wconflicts-sr]
+ */
 binary_assign
     : address '=' address '+' address              {$$ = new quad_pointer(
                                                         new_binary_assign(*$1, *$3, *$5, 

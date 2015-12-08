@@ -36,7 +36,7 @@ asm_instructions_list *asm_code; // Pointer to the instructions' list.
 %token <label_id> LABEL_ID LABEL
 %token <op> OPERATION
 %token <token> ADDL IMULL IDIVL SUBL NEGL SARL NOTL SHRL MOVL JMP JE JNE JL JLE 
-               JG JGE CALL LEAVE RET CMPL ENTER PUSHQ
+               JG JGE CALL LEAVE RET CMPL ENTER PUSHQ LEAL
 
 %type <asm_inst_list> inst_list
 %type <instruction> instruction arithmetic logic data_transfer control_transfer
@@ -108,6 +108,9 @@ data_transfer
     : MOVL source ',' destination    {$$ = new asm_instruction_pointer(
                                     new_mov_instruction(*$2, *$4, data_type::L));}
                                     
+    | LEAL source ',' destination    {$$ = new asm_instruction_pointer(
+                                    new_lea_instruction(*$2, *$4, data_type::L));}
+    
     | PUSHQ source                  {$$ = new asm_instruction_pointer(
                                     new_pushq_instruction(*$2, data_type::L));}
 

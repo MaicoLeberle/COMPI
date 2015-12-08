@@ -147,6 +147,7 @@ enum class operation {
 
 	// Data transfer
 	MOV,
+	LEA,
 	PUSHQ,
 
 	// Control transfer
@@ -205,6 +206,10 @@ operand_pointer new_label_operand(std::string label);
  * Constructors of instructions.
  ******************************************************************/
 asm_instruction_pointer new_mov_instruction(const operand_pointer& source,
+											const operand_pointer& destination,
+											data_type ops_type);
+
+asm_instruction_pointer new_lea_instruction(const operand_pointer& source,
 											const operand_pointer& destination,
 											data_type ops_type);
 

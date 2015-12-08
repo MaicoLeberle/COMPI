@@ -225,6 +225,24 @@ address_pointer get_inst_arg2(const quad_pointer& instruction){
 	return instruction->arg2;
 }
 
+std::string get_label(const quad_pointer& instruction){
+	// PRE
+	#ifdef __DEBUG
+		assert(instruction->type == LABEL);
+	#endif
+
+	return get_label_address_value(instruction->arg1);
+}
+
+std::string get_relational_jmp_label(const quad_pointer& instruction){
+	// PRE
+	#ifdef __DEBUG
+		assert(instruction->type == RELATIONAL_JUMP);
+	#endif
+
+	return get_label_address_value(instruction->result);
+}
+
 address_type get_address_type(const address_pointer& address){
 	return address->type;
 }
@@ -245,6 +263,15 @@ value_type get_constant_address_type(const address_pointer& address){
 	#endif
 
 	return address->value.constant.type;
+}
+
+std::string get_label_address_value(const address_pointer& address){
+	// PRE
+	#ifdef __DEBUG
+		assert(address->type == address_type::ADDRESS_LABEL);
+	#endif
+
+	return *address->value.label;
 }
 
 // Procedures for debugging

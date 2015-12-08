@@ -483,14 +483,50 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 	    assert(std::get<0>(pair) == FUNC_PUT);
 	#else
 		//s_table.put_func_field(method, method.get_key(), 0, actual_class->get_key());
-		s_table.put_func(method, method.get_key(), 0, actual_class->get_key());
+		s_table.put_func(method, node.id, 0, actual_class->get_key());
     #endif
 	// Generate code for the method declaration.
 	inst_list->push_back(new_label(actual_class->get_key()+"."+node.id));
 
 	// Initialize offset.
 	unsigned int offset_prev = offset;
+	// TODO: usar la referencia this, para mejorar la legibilidad del código!
+
+	// TODO: notar que la forma de modelar scope con código asm consiste:
+	// 				_ en que aquí registremos parámetros, a los que le
+	//				asignamos un offset fijo en el stack frame;
+	//
+	//				_ luego, que el código de llamada ubique los
+	// 				parámetros en el stack en orden que se corresponda con este
+	//				offset.
+	//
+	//				_ finalmente, el procedimiento asume estos offsets, y va
+	//				a buscar ahí los parámetros.
 	offset = 0;
+
+	// TODO: borrar esto!!!!!!!!!!!!!
+	if(node.id != std::string("main")){
+		// Add the "this" reference as first parameter.
+		std::string this_param("this");
+		std::string *class_name = new std::string(this->actual_class->get_key());
+		symtable_element obj_param(this_param, class_name);
+
+		#ifdef __DEBUG
+			t_param_results pair1 = s_table.put_obj_param(obj_param,
+														 this_param,
+														 offset,
+														 *class_name,
+														 std::string(""));
+			assert(std::get<0>(pair1) == PARAM_PUT);
+		#else
+			s_table.put_obj_param(obj_param, this_param, offset, *class_name,
+								 std::string(""));
+		#endif
+
+		offset += reference_width;
+	}
+
+	// Add the remaining parameters.
 	for(auto p : node.parameters) {
 		p->accept(*this);
 	}
@@ -518,9 +554,9 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 		// agregamos el metodo a la clase, con put_func_field
 
 		t_field_results pair2 = s_table.put_func_field(method,
-																		method.get_key(),
-																		0,
-																		actual_class->get_key());
+														method.get_key(),
+														0,
+														actual_class->get_key());
 		assert(std::get<0>(pair2) == FIELD_PUT);
 	#else
 		s_table.put_func_field(method, method.get_key(), 0, actual_class->get_key());
@@ -542,16 +578,18 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 				symtable_element obj_param(node.id, class_name);
 
 				#ifdef __DEBUG
-					t_param_results pair1 = s_table.put_obj_param(
-																				 obj_param,
-																				 node.id,
-																				 offset,
-																				 node.type.id,
-																				 std::string(""));
+					t_param_results pair1 = s_table.put_obj_param(obj_param,
+																 node.id,
+																 offset,
+																 node.type.id,
+																 std::string(""));
 					assert(std::get<0>(pair1) == PARAM_PUT);
 				#else
-					s_table.put_obj_param(obj_param, node.id, offset, node.type.id,
-										 std::string(""));
+					s_table.put_obj_param(obj_param,
+										node.id,
+										offset,
+										node.type.id,
+										std::string(""));
 				#endif
 			}
 			break;
@@ -731,7 +769,10 @@ void inter_code_gen_visitor::visit(node_method_call_expr& node) {
 		this_param = new_name_address(std::string("this"));
 	}
 
-	// TODO: no estoy utilizando la variable this_param
+	// Add the "this" reference as parameter.
+	inst_list->push_back(new_parameter_inst(this_param));
+
+	// Add the remaining parameters.
 	for(auto r : node.method_call_data->parameters){
 		expr_call_appropriate_accept(r);
 		inst_list->push_back(new_parameter_inst(temp));

@@ -12,30 +12,26 @@
  * 		a memoria estos parámetros?
  *
  * TODO: fijarse cómo resolver la llamada a servicios de la librería estándar
- * de C: qué label utilizamos? */
+ * de C: qué label utilizamos?
+ *
+ * TODO: agregar al Makefile la dependendencia de las unidades de compilación
+ * con respecto a los archivos de header. */
 
 asm_code_generator::asm_code_generator(instructions_list *_ir, ids_info *_s_table) :
 ir(_ir), s_table(_s_table) {
 
 	translation = new asm_instructions_list();
 	stack_params = nullptr;
-	act_reg_av = register_id::NONE;
-	using_registers = false;
+	last_reg_used = register_id::NONE;
+	params_in_registers = 0;
 }
 
-register_id asm_code_generator::get_next_reg_av(){
+register_id asm_code_generator::get_next_reg_av(register_id reg){
 	register_id ret;
 
-	switch(act_reg_av){
+	switch(reg){
 		case register_id::NONE:
-			if(not using_registers){
-				ret = register_id::RDI;
-				using_registers = true;
-			}
-			else{
-				// {using_registers}
-				ret = register_id::NONE;
-			}
+			ret = register_id::RDI;
 			break;
 
 		case register_id::RDI:
@@ -60,11 +56,10 @@ register_id asm_code_generator::get_next_reg_av(){
 
 		default:
 			#ifdef __DEBUG
-				assert(act_reg_av == register_id::R9);
+				assert(reg == register_id::R9);
 			#endif
 			ret = register_id::NONE;
 	}
-	act_reg_av = ret;
 
 	return ret;
 }
@@ -445,20 +440,15 @@ void asm_code_generator::translate_conditional_jump(const quad_pointer& instruct
 void asm_code_generator::translate_relational_jump(const quad_pointer& instruction){
 	operand_pointer x = get_address(instruction->arg1);
 	operand_pointer y = get_address(instruction->arg2);
-	data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
-	// TODO: en la generación de código intermedio, no nos aseguramos de
-	// esto?
+	data_type ops_type = data_type::L;
 	translation->push_back(new_cmp_instruction(x, y, ops_type));
 
-	// TODO: utilizar encapsulamiento!!!
 	switch(get_inst_op(instruction)){
 		case quad_oper::LESS:
 			// RELATIONAL_JUMP: if x < y goto L
 			//		cmp[b|w|l|q] x , y (set flags based on y − x)
 			//		jl L 				(salta si la comparación resultó less (signed <))
-			// TODO: fijarse si estamos extrayendo correctamente las distintas componentes
-			// de instruction
-			translation->push_back(new_jl_instruction(*instruction->result->value.label));
+			translation->push_back(new_jl_instruction(get_relational_jmp_label(instruction)));
 			break;
 
 		case quad_oper::LESS_EQUAL:
@@ -466,35 +456,35 @@ void asm_code_generator::translate_relational_jump(const quad_pointer& instructi
 			//		cmp[b|w|l|q] x , y (set flags based on y − x)
 			//		jle L 				(salta si la comparación resultó less or
 			//		equal (signed <=))
-			translation->push_back(new_jle_instruction(*instruction->result->value.label));
+			translation->push_back(new_jle_instruction(get_relational_jmp_label(instruction)));
 			break;
 
 		case quad_oper::GREATER:
 			// RELATIONAL_JUMP,	// if x > y goto L
 			// 		cmp[b|w|l|q] x , y (set flags based on y − x)
 			//		jg L
-			translation->push_back(new_jg_instruction(*instruction->result->value.label));
+			translation->push_back(new_jg_instruction(get_relational_jmp_label(instruction)));
 			break;
 
 		case quad_oper::GREATER_EQUAL:
 			// RELATIONAL_JUMP,	// if x >= y goto L
 			// 		cmp[b|w|l|q] x , y (set flags based on y − x)
 			//		jge L 				(salta si la comparación resultó greater or equal (signed >=)
-			translation->push_back(new_jge_instruction(*instruction->result->value.label));
+			translation->push_back(new_jge_instruction(get_relational_jmp_label(instruction)));
 			break;
 
 		case quad_oper::EQUAL:
 			// RELATIONAL_JUMP,	// if x == y goto L
 			// 		cmp[b|w|l|q] x , y (set flags based on y − x)
 			//		je L 				(salta si la comparación resultó equal to zero)
-			translation->push_back(new_je_instruction(*instruction->result->value.label));
+			translation->push_back(new_je_instruction(get_relational_jmp_label(instruction)));
 			break;
 
 		case quad_oper::DISTINCT:
 			// RELATIONAL_JUMP,	// if x != y goto L
 			// 		cmp[b|w|l|q] x , y (set flags based on y − x)
 			//		jne L 				(salta si la comparación resultó not equal to zero)
-			translation->push_back(new_jne_instruction(*instruction->result->value.label));
+			translation->push_back(new_jne_instruction(get_relational_jmp_label(instruction)));
 			break;
 
 		default:
@@ -504,20 +494,33 @@ void asm_code_generator::translate_relational_jump(const quad_pointer& instructi
 
 }
 
-void asm_code_generator::allocate_integer_param(const operand_pointer& val){
-	// TODO: en qué momento libero los registros?
-	register_id reg = get_next_reg_av();
-	if(reg != register_id::NONE){
-		translation->push_back(
-				new_mov_instruction(val, new_register_operand(reg), data_type::L));
+void asm_code_generator::allocate_integer_param(const operand_pointer& val,
+												bool pass_address){
+	register_id reg = get_next_reg_av(last_reg_used);
+	if(reg != register_id::NONE and params_in_registers < INT_PARAMS_INTO_REG){
+		if(pass_address){
+			translation->push_back(new_lea_instruction(val,
+													new_register_operand(reg),
+													data_type::L));
+		}
+		else{
+			// {not pass_address}
+			translation->push_back(new_mov_instruction(val,
+													new_register_operand(reg),
+													data_type::L));
+		}
+
+		last_reg_used = reg;
+		params_in_registers++;
 	}
 	else{
-		// {reg == register_id::NONE}
+		// {reg == register_id::NONE or
+		//	params_in_registers >= INT_PARAMS_INTO_REG}
+
 		// No more registers available: additional arguments,
-		// if needed, are passed into stack slots immmediately
+		// if needed, are passed into stack slots immediately
 		// above the return address, in inverse order.
 		if(stack_params == nullptr){
-			// TODO: borrar!
 			stack_params = new asm_instructions_list();
 		}
 		stack_params->insert(stack_params->begin(),
@@ -526,6 +529,8 @@ void asm_code_generator::allocate_integer_param(const operand_pointer& val){
 }
 
 void asm_code_generator::translate_parameter(const quad_pointer& instruction){
+	// TODO: usar métodos accesores que no requieran conocimiento sobre donde
+	// estamos metiendo arg1!
 	address_pointer arg1 = get_inst_arg1(instruction);
 	operand_pointer x = get_address(arg1);
 
@@ -534,43 +539,52 @@ void asm_code_generator::translate_parameter(const quad_pointer& instruction){
 	// del método en donde se declara.
 	address_type addr_type = get_address_type(arg1);
 
-	if(addr_type == address_type::ADDRESS_NAME or addr_type == address_type::ADDRESS_TEMP){
+	if(addr_type == address_type::ADDRESS_NAME or
+	addr_type == address_type::ADDRESS_TEMP){
 			std::string name = get_address_name(arg1);
-			id_type type = s_table->get_type(name);
 
-			switch(type){
-				case T_INT:
-					allocate_integer_param(x);
-					break;
-
-				case T_BOOL:
-					// TODO: lo tratamos como un entero de 32 bits?. En
-					// abi.pdf, se indica que los booleanos deben tener un byte
-					// de longitud, y sólo el bit 0 debe contener el valor booleano
-					// mientras que los demás bits deben ser 0.
-					allocate_integer_param(x);
-					break;
-
-				case T_FLOAT:
-					// TODO: terminar
-					break;
-
-				case T_STRING:
-					break;
-
-				case T_CHAR:
-					break;
+			switch(s_table->get_kind(name)){
+				case K_OBJECT:
+					// Objects are managed by reference.
+					allocate_integer_param(x, true);
 
 				default:
-					// {type == T_UNDEFINED}
-					break;
+					id_type type = s_table->get_type(name);
+
+					switch(type){
+						case T_INT:
+							allocate_integer_param(x, false);
+							break;
+
+						case T_BOOL:
+							// TODO: lo tratamos como un entero de 32 bits?. En
+							// abi.pdf, se indica que los booleanos deben tener un byte
+							// de longitud, y sólo el bit 0 debe contener el valor booleano
+							// mientras que los demás bits deben ser 0.
+							allocate_integer_param(x, false);
+							break;
+
+						case T_FLOAT:
+							// TODO: terminar
+							break;
+
+						case T_STRING:
+							break;
+
+						case T_CHAR:
+							break;
+
+						default:
+							// {type == T_UNDEFINED}
+							break;
+					}
 			}
 		}
 	else{
 		// {addr_type == address_type::ADDRESS_CONSTANT}
 		switch(get_constant_address_type(arg1)){
 			case value_type::INTEGER:{
-				allocate_integer_param(x);
+				allocate_integer_param(x, false);
 				break;
 			}
 
@@ -591,9 +605,9 @@ void asm_code_generator::translate_procedure_call(const quad_pointer& instructio
 	if(stack_params != nullptr){
 		for (asm_instructions_list::iterator it = stack_params->begin();
 		it != stack_params->end(); ++it){
+
 			translation->push_back(*it);
 		}
-
 		delete stack_params;
 		stack_params = nullptr;
 	}
@@ -611,6 +625,10 @@ void asm_code_generator::translate_procedure_call(const quad_pointer& instructio
 
 	// Save EIP and jump to the called procedure.
 	translation->push_back(new_call_instruction(*instruction->arg1->value.label));
+
+	// Reset the state of attributes used to manage the passing of parameters.
+	last_reg_used = register_id::NONE;
+	params_in_registers = 0;
 }
 
 void asm_code_generator::translate_function_call(const quad_pointer& instruction){
@@ -633,17 +651,63 @@ void asm_code_generator::translate_return(const quad_pointer& instruction){
 }
 
 void asm_code_generator::translate_label(const quad_pointer& instruction){
-	translation->push_back(new_label_instruction(*instruction->result->value.label));
+	last_label = get_label(instruction);
+	translation->push_back(new_label_instruction(last_label));
 }
 
 void asm_code_generator::translate_enter_procedure(const quad_pointer&
 													instruction){
+	// Update the stack space to be allocated, taking into account the
+	// integer parameters.
+	// TODO: estoy asumiendo que siempre last_label tiene la etiqueta correcta.
+	t_params params = s_table->get_list_params(last_label);
+	std::string param_name;
+	t_params int_params;
 
+	for(t_params::iterator it = params.begin(); it != params.end(); it++){
+		param_name = *it;
+
+		if(s_table->get_type(param_name) == T_INT){
+			int_params.push_back(*it);
+		}
+	}
+
+	#ifdef __DEBUG
+		assert(int_params.size() <= 6);
+	#endif
+
+	// TODO: vamos a tener que actualizar la cantidad de bytes que pedimos en
+	// el stack, para que ahora incluya los parámetros que pasamos de los
+	// registros, al stack.
+	// TODO: no acceder directamente a los atributos de las quad. Utilizar
+	// los getters!
 	operand_pointer stack_space = new_immediate_integer_operand(
-									instruction->arg1->value.constant.val.ival
-									);
+								instruction->arg1->value.constant.val.ival
+								+ integer_width*int_params.size());
+
 	operand_pointer nesting = new_immediate_integer_operand(0);
 	translation->push_back(new_enter_instruction(stack_space, nesting));
+
+	// Put the parameters into the stack, right into the beginning of the stack
+	// frame.
+	int offset = 0;
+	register_id reg = register_id::NONE;
+	for(t_params::iterator it = int_params.begin(); it != int_params.end(); it++){
+		reg = get_next_reg_av(reg);
+
+		// The new positions of this parameters are below the rBP pointer.
+		offset -= integer_width;
+		translation->push_back(
+					new_mov_instruction(new_register_operand(reg),
+										new_memory_operand(offset,
+															register_id::RBP,
+															register_id::NONE,
+															1),
+										data_type::L));
+
+		// Update the offset of the parameter.
+		s_table->set_offset(*it, offset);
+	}
 }
 
 void asm_code_generator::translate_ir(void){
@@ -663,7 +727,6 @@ void asm_code_generator::translate_ir(void){
 			case quad_type::COPY:
 				translate_copy(*it);
 				break;
-
 
 			case quad_type::INDEXED_COPY_TO:
 				translate_indexed_copy_to(*it);

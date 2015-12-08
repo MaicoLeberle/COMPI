@@ -455,8 +455,17 @@ void test_enter(){
 	std::cout << "6) Translation of the enter instruction: ";
 
 	// enter x
-	translate_ir_code(std::string("enter 1"));
+	translate_ir_code(std::string("method:\n"
+								"enter 4"));
 	ids_info *s_table = new ids_info();
+
+	// Register information about "method".
+	std::string method("method");
+	std::string key("x");
+	// TODO: habrá una forma menos complicada de hacer esto?
+	s_table->register_method(method, 0, std::string("class"));
+	s_table->get_list_params(method).push_back(key);
+	s_table->register_var(key, 0, T_INT);
 
 	asm_code_generator g(ir_code, s_table);
 	g.translate_ir();
@@ -464,7 +473,9 @@ void test_enter(){
 	asm_instructions_list *translation = g.get_translation();
 
 	// 0 levels of nesting.
-	std::string asm_program_text = "enter $1, $0\n";
+	std::string asm_program_text = "method:"
+									"enter $8, $0\n"
+									"movl %rdi, -4(%rbp)";
 
 	translate_asm_code(asm_program_text);
 

@@ -184,7 +184,8 @@ void test_field_decl(){
 
 	translation = v2.get_inst_list();
 	ir_program = "class2.method:\n"
-				 "enter "+std::to_string(integer_width*2 + float_width*2 +
+				 "enter "+std::to_string(reference_width +
+						 	 	 	 	 integer_width*2 + float_width*2 +
 						 	 	 	 	 boolean_width*2)+"\n"
 				 "n = "+std::to_string(integer_initial_value)+"\n"
 				 "x = "+std::to_string(float_initial_value)+"\n"
@@ -226,7 +227,7 @@ void test_method_decl(){
 	instructions_list *translation = v1.get_inst_list();
 
 	std::string ir_program = "class2.method:\n"
-				"enter " + std::to_string(integer_width +
+				"enter " + std::to_string(reference_width + integer_width +
 									integer_width +
 									float_width) + "\n" +
 				"n = " + std::to_string(integer_initial_value) +
@@ -268,6 +269,13 @@ void test_method_decl(){
 	assert((*param).get_key() == std::string("m"));
 	assert((*param).get_type() == symtable_element::INTEGER);
 
+	// Parameter "this"
+	param++;
+	assert((*param).get_class() == symtable_element::T_OBJ);
+	assert((*param).get_key() == std::string("this"));
+	assert((*param).get_type() == symtable_element::ID);
+	assert(*(*param).get_class_type() == std::string("class2"));
+
 	std::cout << "OK. " << std::endl;
 }
 
@@ -292,7 +300,7 @@ void test_assignment_stm(){
 	instructions_list *translation = v1.get_inst_list();
 
 	std::string ir_program = "class1.method:\n"
-							"enter "+std::to_string(integer_width) + "\n"
+							"enter "+std::to_string(reference_width + integer_width) + "\n"
 							"n = " + std::to_string(integer_initial_value) + "\n"
 							"n = 1\n"
 							"n = n + 1\n"
@@ -333,13 +341,13 @@ void test_method_call_statement(){
 
 	instructions_list *translation = v1.get_inst_list();
 	std::string ir_program = "class1.method1:\n"
-							"enter 0\n"
+							"enter "+std::to_string(reference_width) + "\n"
 							"class1.method2:\n"
-							"enter " + std::to_string(2*integer_width) + "\n"
+							"enter " + std::to_string(reference_width + 2*integer_width) + "\n"
 							"param this\n"
 							"call class1.method1,1\n"
 							"class2.method3:\n"
-							"enter " + std::to_string(2*integer_width) + "\n"
+							"enter " + std::to_string(reference_width + 2*integer_width) + "\n"
 							"x = "+std::to_string(integer_initial_value) + "\n"
 							"y = "+std::to_string(integer_initial_value) + "\n"
 							"param obj\n"
@@ -376,7 +384,7 @@ void test_if_statement(){
 
 	std::string ir_program = "class1.method1:\n"
 							"enter " +
-								std::to_string(integer_width) + "\n"
+								std::to_string(reference_width + integer_width) + "\n"
 							"x = " + std::to_string(integer_initial_value) + "\n"
 							"ifFalse true goto L1\n"
 							"x = 1\n"
@@ -414,7 +422,7 @@ void test_for_statement(){
 
 	std::string ir_program = "class1.method1:\n"
 							"enter " +
-							std::to_string(integer_width) + "\n"
+							std::to_string(reference_width + integer_width) + "\n"
 							"y = 1\n"
 							"x = 1\n"
 							"L1:\n"
@@ -453,7 +461,7 @@ void test_while_statement(){
 
 	std::string ir_program = "class1.method1:\n"
 							"enter " +
-								std::to_string(integer_width) + "\n"
+								std::to_string(reference_width + integer_width) + "\n"
 							"y = 1\n"
 							"L1:\n"
 							"ifFalse true goto L2\n"
@@ -488,7 +496,7 @@ void test_return_statement(){
 	instructions_list *translation = v1.get_inst_list();
 
 	std::string ir_program = "class1.method1:\n"
-								"enter 0\n"
+								"enter " + std::to_string(reference_width) + "\n"
 								"return 1\n"
 								"main.main:\n"
 								"enter 0";
@@ -518,7 +526,7 @@ void test_break_statement(){
 	instructions_list *translation = v1.get_inst_list();
 
 	std::string ir_program = "class1.method1:\n"
-							"enter 0\n"
+							"enter " + std::to_string(reference_width) + "\n"
 							"L1:\n"
 							"ifFalse true goto L2\n"
 							"goto L2\n"
@@ -552,7 +560,7 @@ void test_continue_statement(){
 	instructions_list *translation = v1.get_inst_list();
 
 	std::string ir_program = "class1.method1:\n"
-							"enter 0\n"
+							"enter " + std::to_string(reference_width) + "\n"
 							"L1:\n"
 							"ifFalse true goto L2\n"
 							"goto L1\n"
@@ -586,7 +594,7 @@ void test_skip_statement(){
 	instructions_list *translation = v1.get_inst_list();
 
 	std::string ir_program = "class1.method1:\n"
-							"enter 0\n"
+							"enter " + std::to_string(reference_width) + "\n"
 							"L1:\n"
 							"ifFalse true goto L2\n"
 							"goto L1\n"
@@ -626,7 +634,7 @@ void test_binary_operation_expr(){
 	// privado, quizás podríamos emplear algún símbolo especial para identificarlas
 	// como $?
 	std::string ir_program = "class1.method1:\n"
-							"enter " + std::to_string(integer_width) + "\n"
+							"enter " + std::to_string(reference_width + integer_width) + "\n"
 							"t-0 = 1 + 2\n"
 							"x = t-0\n"
 							"main.main:\n"
