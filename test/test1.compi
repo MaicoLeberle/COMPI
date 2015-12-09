@@ -1,4 +1,4 @@
-class Program {
+class Main {
 	
 	int z;
 	

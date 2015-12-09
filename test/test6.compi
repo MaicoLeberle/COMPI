@@ -1,4 +1,4 @@
-class Program {
+class Main {
 	bool b;
 
 	void set_b(bool c) {
