@@ -119,7 +119,7 @@ std::string symtable::get_id() {
 /*  START OF PUTTERS.   */
 
 bool symtable::put (std::string key, symtable_element value) {
-    if (id_exists(key) || is_recursive(value))
+    if (this->id_exists(key) || this->is_recursive(value))
         return false;
     if (this->id != NULL && value.get_class() == symtable_element::T_CLASS)
         /*  A class cannot be defined inside another class or function.      */

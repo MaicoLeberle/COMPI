@@ -307,6 +307,9 @@ t_func_results intermediate_symtable::put_func(symtable_element& e
                                              , std::string key
                                              , unsigned int local_vars
                                              , std::string class_name) {
+        /*  Check that the key with which e is going to be registered is
+            effectively e's key.                                             */
+        assert(key.compare(e.get_key()) == 0);
         /*  Check that e is effectively a function.                          */
         assert(e.get_class() == symtable_element::T_FUNCTION);
 
