@@ -139,7 +139,7 @@ std::string ids_info::get_id_rep(std::string key) {
         return (key + "::" + *((((this->info_map).find(key))->second).owner));
     } else {
         assert((this->internal).find(key) != (this->internal).end());
-        return (key + '-' + std::to_string(((this->internal).find(key))->second - 1));
+        return (key + '@' + std::to_string(((this->internal).find(key))->second - 1));
     }
 }
 
@@ -447,7 +447,7 @@ t_field_results intermediate_symtable::put_var_field(symtable_element& e
 
         assert(this->class_name);
         assert((this->information)->id_exists(*(this->class_name)));
-        ((this->information)->get_list_attributes(*(this->class_name))).push_back(key);
+        ((this->information)->get_list_attributes(*(this->class_name))).push_front(key);
         
         std::string *rep;
         if (e.get_type() == symtable_element::INTEGER)
@@ -484,7 +484,7 @@ t_field_results intermediate_symtable::put_obj_field(symtable_element& e
 
         assert(this->class_name);
         assert((this->information)->id_exists(*(this->class_name)));
-        ((this->information)->get_list_attributes(*(this->class_name))).push_back(key);
+        ((this->information)->get_list_attributes(*(this->class_name))).push_front(key);
         std::string* rep = new std::string((this->information)->register_obj(key, offset, class_name, address));
 
         return(t_field_results(FIELD_PUT, rep));
@@ -505,7 +505,7 @@ t_field_results intermediate_symtable::put_func_field(symtable_element& e
 
         assert(this->class_name);
         assert((this->information)->id_exists(*(this->class_name)));
-        ((this->information)->get_list_attributes(*(this->class_name))).push_back(key); 
+        ((this->information)->get_list_attributes(*(this->class_name))).push_front(key); 
         std::string* rep = new std::string((this->information)->register_method(key, local_vars, class_name));
 
         return(t_field_results(FIELD_PUT, rep));
