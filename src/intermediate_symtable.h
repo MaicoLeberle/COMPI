@@ -74,7 +74,9 @@ enum put_field_results { FIELD_PUT
 
 typedef std::pair<put_field_results, std::string*> t_field_results;
 
-typedef std::list<std::string> t_attributes;
+typedef std::pair<std::string, int*> t_att;
+
+typedef std::list<t_att> t_attributes;
 
 typedef std::list<std::string> t_params;
 
@@ -132,7 +134,7 @@ public:
     /*  Parameters: id with which generate the internal representation id
                   , list of attributes in the class (in the same order they 
                     have been declared in the source code).                  */
-    std::string register_class(std::string, std::list<std::string>);
+    std::string register_class(std::string, t_attributes);
 
     /*  Precondition: There have been more calls to register_* with the 
         parameter id than calls to unregister with the same id.              */
@@ -214,10 +216,10 @@ private:
         std::string* begin_address;
 
         /*  For classes.                                                     */
-        std::list<std::string>* l_atts = NULL;
+        t_attributes* l_atts = NULL;
 
         /*  For methods.                                                     */
-        std::list<std::string>* l_params = NULL;
+        t_params* l_params = NULL;
 
     };
     
@@ -258,7 +260,7 @@ public:
     void push_symtable(void);
 
     /*  Create a new symbols table related to a function or class.
-        PRECONDITION: get_class_type() == (T_CLASS || T_FUNCTION)            */
+        Precondition: get_class_type() == (T_CLASS || T_FUNCTION)            */
     void push_symtable(symtable_element&);
 
     /*  Precondition: There have been more calls to push_symtable than
@@ -268,7 +270,15 @@ public:
     /*  Precondition: There have been more calls to push_symtable than
         to pop_symtable; i.e., there is still another symbols table to get 
         an element from.                                                     */ 
-    symtable_element* get (std::string);
+    symtable_element* get(std::string);
+
+    /*  Parameres:  ID of the attribute
+                  , name of the class that the attribute belongs to.
+        Precondition: The ID of the attribute has been registered via put_obj*,
+        and whose class is the same as the second parameter of this method.
+        Return: Offset of the attribute inside its class. Return type is (int*)
+        , in case that the parameters do not pass the preconditions.         */
+    int* get_offset(std::string, std::string);
 
     /*  Creates a new temporary variable that will not be inserted into the 
         symbols tables stack, but will be registered in this->information.
@@ -413,7 +423,7 @@ public:
         returned as second element of the pair).                             */
     t_class_results put_class(symtable_element&
                             , std::string
-                            , std::list<std::string>);
+                            , t_attributes);
 
     /*  Inserts a new variable as a field to the lastly inserted class (via 
         put_class).

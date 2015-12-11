@@ -106,11 +106,11 @@ std::string ids_info::register_method(std::string key
 }
 
 std::string ids_info::register_class(std::string key
-                                   , std::list<std::string> attributes) {
+                                   , t_attributes attributes) {
     entry_info information;
     
     information.entry_kind = K_CLASS;
-    information.l_atts = new std::list<std::string>(attributes);
+    information.l_atts = new t_attributes(attributes);
     
     std::string internal_key = this->get_next_internal(key);
     ++((this->internal).find(key))->second;
@@ -242,13 +242,27 @@ void intermediate_symtable::pop_symtable() {
     (this->scopes).pop_symtable();
 }
 
-symtable_element* intermediate_symtable::get (std::string key) {
+symtable_element* intermediate_symtable::get(std::string key) {
     return((this->scopes).get(key));
+}
+
+int* intermediate_symtable::get_offset(std::string key, std::string class_name) {
+    int* ret = NULL;
+    
+    if ((this->information)->id_exists(key) 
+        &&
+        ((this->information)->get_kind(key) == K_VAR ||
+         (this->information)->get_kind(key) == K_OBJECT) 
+        &&
+        ((this->information)->get_owner_class(key)).compare(class_name) == 0) 
+            ret = new int((this->information)->get_offset(key));
+
+    return(ret);
 }
 
 t_results intermediate_symtable::new_temp(int offset) {
     return (std::pair<put_results, std::string*>
-            (ID_PUT,(this->information)->new_temp(offset, id_type::T_UNDEFINED)) );
+            (ID_PUT,(this->information)->new_temp(offset, id_type::T_UNDEFINED)));
 }
 
 t_results intermediate_symtable::put_var(symtable_element e
@@ -414,7 +428,7 @@ void intermediate_symtable::finish_func_analysis() {
 
 t_class_results intermediate_symtable::put_class(symtable_element& e
                                                , std::string key
-                                               , std::list<std::string> l_atts) {
+                                               , t_attributes l_atts) {
         symtables_stack::put_class_results res = 
                                         (this->scopes).put_class(key, e);
 
@@ -447,7 +461,8 @@ t_field_results intermediate_symtable::put_var_field(symtable_element& e
 
         assert(this->class_name);
         assert((this->information)->id_exists(*(this->class_name)));
-        ((this->information)->get_list_attributes(*(this->class_name))).push_front(key);
+        int* aux = new int(offset);
+        ((this->information)->get_list_attributes(*(this->class_name))).push_front(t_att(key, aux));
         
         std::string *rep;
         if (e.get_type() == symtable_element::INTEGER)
@@ -484,7 +499,7 @@ t_field_results intermediate_symtable::put_obj_field(symtable_element& e
 
         assert(this->class_name);
         assert((this->information)->id_exists(*(this->class_name)));
-        ((this->information)->get_list_attributes(*(this->class_name))).push_front(key);
+        ((this->information)->get_list_attributes(*(this->class_name))).push_front(t_att(key, new int(offset)));
         std::string* rep = new std::string((this->information)->register_obj(key, offset, class_name, address));
 
         return(t_field_results(FIELD_PUT, rep));
@@ -505,7 +520,7 @@ t_field_results intermediate_symtable::put_func_field(symtable_element& e
 
         assert(this->class_name);
         assert((this->information)->id_exists(*(this->class_name)));
-        ((this->information)->get_list_attributes(*(this->class_name))).push_front(key); 
+        ((this->information)->get_list_attributes(*(this->class_name))).push_front(t_att(key, NULL)); 
         std::string* rep = new std::string((this->information)->register_method(key, local_vars, class_name));
 
         return(t_field_results(FIELD_PUT, rep));
