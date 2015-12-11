@@ -427,8 +427,7 @@ void intermediate_symtable::finish_func_analysis() {
 }
 
 t_class_results intermediate_symtable::put_class(symtable_element& e
-                                               , std::string key
-                                               , t_attributes l_atts) {
+                                               , std::string key) {
         symtables_stack::put_class_results res = 
                                         (this->scopes).put_class(key, e);
 
@@ -442,7 +441,7 @@ t_class_results intermediate_symtable::put_class(symtable_element& e
             return(t_class_results(CLASS_ERROR, NULL));
 
         this->class_name = new std::string(key);
-        std::string* rep = new std::string((this->information)->register_class(key, l_atts));
+        std::string* rep = new std::string((this->information)->register_class(key, t_attributes()));
 
         return(t_class_results(CLASS_PUT, rep));
 }

@@ -410,20 +410,18 @@ public:
         symbols table. Finally, the class's id is registered inside 
         this->information.
         Parameters: the class itself
-                  , the key with which it is going to be registered
-                  , the list of local attributes of the class.
+                  , the key with which it is going to be registered.
         Precondition: There have been more calls to push_symtable than
         to pop_symtable; i.e., there is still another symbols table to put 
         an element to. The element to be inserted is a class. Every previous 
         class has already been fully analyzed.
-        Returns: a pair contaiing the result of putting the class into the 
+        Returns: a pair containing the result of putting the class into the 
         current scope (which implies pushing a new symbols table, and other 
         things), along with its representation inside this->information (as
         long as putting the class in scope was succesful; otherwise, NULL is 
         returned as second element of the pair).                             */
     t_class_results put_class(symtable_element&
-                            , std::string
-                            , t_attributes);
+                            , std::string);
 
     /*  Inserts a new variable as a field to the lastly inserted class (via 
         put_class).
