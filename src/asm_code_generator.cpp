@@ -17,7 +17,8 @@
  * TODO: agregar al Makefile la dependendencia de las unidades de compilación
  * con respecto a los archivos de header. */
 
-asm_code_generator::asm_code_generator(instructions_list *_ir, ids_info *_s_table) :
+asm_code_generator::asm_code_generator(instructions_list *_ir,
+										ids_info *_s_table) :
 ir(_ir), s_table(_s_table) {
 
 	translation = new asm_instructions_list();
@@ -64,6 +65,21 @@ register_id asm_code_generator::get_next_reg_av(register_id reg){
 	return ret;
 }
 
+// TODO: esto debería estar en ids_info?
+bool asm_code_generator::is_attribute(std::string var_name){
+	bool ret = false;
+
+	for(t_attributes::iterator it = this->actual_class_attributes.begin();
+	it != this->actual_class_attributes.end(); it++){
+		if(var_name == std::get<0>(*it)){
+			ret = true;
+			break;
+		}
+	}
+
+	return ret;
+}
+
 void asm_code_generator::print_translation_intel_syntax(){
 	for(asm_instructions_list::iterator it = translation->begin();
 		it != translation->end();
@@ -83,15 +99,18 @@ operand_pointer asm_code_generator::get_address(address_pointer address){
 
 	switch(address->type){
 		case address_type::ADDRESS_NAME:{
-			ret = new_memory_operand(s_table->get_offset(*address->value.name),
-									register_id::RBP,
-									register_id::NONE,
-									1);
+			std::string var_name = get_address_name(address);
+			ret = new_memory_operand(
+								s_table->get_offset(get_address_name(address)),
+								register_id::RBP,
+								register_id::NONE,
+								1);
 			break;
 		}
 
 		case address_type::ADDRESS_TEMP:{
-			ret = new_memory_operand(s_table->get_offset(*address->value.label),
+			ret = new_memory_operand(s_table->get_offset(
+									get_label_address_value(address)),
 									register_id::RBP,
 									register_id::NONE,
 									1);
@@ -99,26 +118,26 @@ operand_pointer asm_code_generator::get_address(address_pointer address){
 		}
 
 		case address_type::ADDRESS_CONSTANT:{
-			switch(address->value.constant.type){
+			switch(get_constant_address_type(address)){
 				case value_type::BOOLEAN:
-					if(address->value.constant.val.bval){
+					if(get_constant_address_boolean_value(address)){
 						ret = new_immediate_integer_operand(1);
 						break;
 					}
 					else{
-						// {not address->value.constant.val.bval}
+						// {not get_constant_address_boolean_value(address)}
 						ret = new_immediate_integer_operand(0);
 						break;
 					}
 
 				case value_type::INTEGER:
 					ret = new_immediate_integer_operand(
-							address->value.constant.val.ival);
+							get_constant_address_integer_value(address));
 					break;
 
 				case value_type::FLOAT:
 					ret = new_immediate_float_operand(
-							address->value.constant.val.fval);
+							get_constant_address_float_value(address));
 					break;
 			}
 
@@ -146,11 +165,24 @@ void asm_code_generator::translate_binary_op(const quad_pointer& instruction){
 			// the destination of the product.
 			// TODO: en la generación de código intermedio, no nos aseguramos de
 			// esto?
-			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
-			translation->push_back(new_mov_instruction(y, new_register, data_type::L));
+			data_type ops_type = data_type::L;
+			// TODO: cada vez que llamo a get_address, tengo que averiguar si
+			// el address se refiere a un atributo. Si así fuera, tengo que
+			// determinar la ubicación del atributo, en base al uso de la
+			// referencia this, y utilizar, quizás lea en vez de mov. El offset
+			// de los atributos deberia entonces referirse a su pos dentro del
+			// objeto.
+			translation->push_back(new_mov_instruction(y,
+														new_register,
+														data_type::L));
 			// TODO: signed?
-			translation->push_back(new_mul_instruction(z, new_register, data_type::L, true));
-			translation->push_back(new_mov_instruction(new_register, x, data_type::L));
+			translation->push_back(new_mul_instruction(z,
+														new_register,
+														data_type::L,
+														true));
+			translation->push_back(new_mov_instruction(new_register,
+														x,
+														data_type::L));
 			break;
 		}
 
@@ -343,6 +375,17 @@ void asm_code_generator::translate_unary_op(const quad_pointer& instruction){
 			translation->push_back(new_mov_instruction(new_register, x, ops_type));
 			break;
 		}
+
+		default:{
+			// UNARY_ASSIGN x = & y
+			// lea[b|w|l|q] y,x
+			operand_pointer x = get_address(get_unary_assign_dest(instruction));
+			operand_pointer y = get_address(get_unary_assign_src(instruction));
+			data_type ops_type = data_type::L;
+
+			translation->push_back(new_lea_instruction(y, x, ops_type));
+			break;
+		}
 	}
 }
 
@@ -350,12 +393,13 @@ void asm_code_generator::translate_copy(const quad_pointer& instruction){
 	// COPY x = y:
 	// 		mov[b|w|l|q] y,x (move s to d; tendremos que ver el tipo de los operandos
 	// 		para determinar el tipo de instrucción?)
-	operand_pointer x = get_address(instruction->result);
-	operand_pointer y = get_address(instruction->arg1);
+	operand_pointer x = get_address(get_copy_inst_dest(instruction));
+	operand_pointer y = get_address(get_copy_inst_orig(instruction));
 
 	#ifdef __DEBUG
-		assert(instruction->result->type == ADDRESS_NAME ||
-				instruction->result->type == ADDRESS_TEMP);
+		address_type type = get_address_type(get_copy_inst_dest(instruction));
+		assert(type == address_type::ADDRESS_NAME ||
+			   type == address_type::ADDRESS_TEMP);
 	#endif
 
 	translation->push_back(new_mov_instruction(y, x, data_type::L));
@@ -368,16 +412,29 @@ void asm_code_generator::translate_indexed_copy_to(const quad_pointer& instructi
 	//		la dirección (base + index × scale + offset) TODO: ver qué significa cada
 	//		componente)
 	// TODO: por ahora no hacemos arreglos
-	/*
-	// TODO: de donde saco offset, base, etc?
-	operand_pointer x = new_memory_operand(offset, base, index, scale);
-	operand_pointer y = get_address(instruction->arg2);
-	data_type ops_type; // TODO: cómo determino el tipo de los operandos?
-	// We use a new register to ensure that the second operand can be
-	// the destination of the product.
-	// TODO: en la generación de código intermedio, no nos aseguramos de
-	// esto?
-	translation->push_back(new_mov_instruction(y, x, ops_type));*/
+
+	// TODO: que hay de la directiva PTR?
+	operand_pointer dest = get_address(get_indexed_copy_to_dest(instruction));
+	operand_pointer index = get_address(get_indexed_copy_to_index(instruction));
+	int offset = get_constant_address_integer_value(get_indexed_copy_to_index(instruction));
+	operand_pointer orig = get_address(get_indexed_copy_to_src(instruction));
+
+	#ifdef __DEBUG
+		address_type type = get_address_type(get_indexed_copy_to_dest(instruction));
+		assert(type == address_type::ADDRESS_NAME ||
+			   type == address_type::ADDRESS_TEMP);
+	#endif
+
+	// TODO: esta bien este registro?
+	operand_pointer reg = new_register_operand(register_id::RDI);
+	operand_pointer pos = new_memory_operand(offset,
+											register_id::RDI,
+											register_id::NONE,
+											1);
+
+	translation->push_back(new_mov_instruction(dest, reg, data_type::L));
+	translation->push_back(new_mov_instruction(orig, pos, data_type::L));
+
 }
 
 void asm_code_generator::translate_indexed_copy_from(const quad_pointer& instruction){
@@ -394,13 +451,34 @@ void asm_code_generator::translate_indexed_copy_from(const quad_pointer& instruc
 	// TODO: en la generación de código intermedio, no nos aseguramos de
 	// esto?
 	translation->push_back(new_mov_instruction(y, x, ops_type));*/
+	operand_pointer dest = get_address(get_indexed_copy_from_dest(instruction));
+	operand_pointer index = get_address(get_indexed_copy_from_index(instruction));
+	int offset = get_constant_address_integer_value(get_indexed_copy_from_index(instruction));
+	operand_pointer orig = get_address(get_indexed_copy_from_orig(instruction));
+
+	#ifdef __DEBUG
+		address_type type = get_address_type(get_indexed_copy_from_dest(instruction));
+		assert(type == address_type::ADDRESS_NAME ||
+			   type == address_type::ADDRESS_TEMP);
+	#endif
+
+	// TODO: esta bien este registro?
+	operand_pointer reg = new_register_operand(register_id::RDI);
+	operand_pointer pos = new_memory_operand(offset,
+											register_id::RDI,
+											register_id::NONE,
+											1);
+
+	translation->push_back(new_mov_instruction(orig, reg, data_type::L));
+	translation->push_back(new_mov_instruction(pos, dest, data_type::L));
 }
 
-void asm_code_generator::translate_unconditional_jump(const quad_pointer& instruction){
+void asm_code_generator::translate_unconditional_jump(
+											const quad_pointer& instruction){
 	// UNCONDITIONAL_JUMP,	// goto L
 	// jmp L
-	// TODO: está en arg1 la etiqueta?
-	translation->push_back(new_jmp_instruction(*instruction->arg1->value.label));
+	translation->push_back(new_jmp_instruction(get_label_inst_label(
+																instruction)));
 }
 
 void asm_code_generator::translate_conditional_jump(const quad_pointer& instruction){
@@ -412,9 +490,7 @@ void asm_code_generator::translate_conditional_jump(const quad_pointer& instruct
 	//		Luego usar:
 	//			jcc L  donde cc es la condición adecuada, para que salte si x es verdadero
 	operand_pointer aux_reg = new_register_operand(register_id::R8D);
-	// TODO: fijarse si estamos extrayendo correctamente las distintas componentes
-	// de instruction
-	operand_pointer x = get_address(instruction->arg1);
+	operand_pointer x = get_address(get_conditional_jmp_guard(instruction));
 	// TODO: en la generación de código intermedio, no nos aseguramos de
 	// esto?
 	operand_pointer aux = new_immediate_integer_operand(1);
@@ -425,11 +501,13 @@ void asm_code_generator::translate_conditional_jump(const quad_pointer& instruct
 
 	switch(instruction->op){
 		case quad_oper::IFTRUE:
-			translation->push_back(new_je_instruction(*instruction->arg2->value.label));
+			translation->push_back(new_je_instruction(
+										get_conditional_jmp_label(instruction)));
 			break;
 
 		case quad_oper::IFFALSE:
-			translation->push_back(new_jne_instruction(*instruction->arg2->value.label));
+			translation->push_back(new_jne_instruction(
+										get_conditional_jmp_label(instruction)));
 			break;
 
 		default:
@@ -531,29 +609,29 @@ void asm_code_generator::allocate_integer_param(const operand_pointer& val,
 void asm_code_generator::translate_parameter(const quad_pointer& instruction){
 	// TODO: usar métodos accesores que no requieran conocimiento sobre donde
 	// estamos metiendo arg1!
-	address_pointer arg1 = get_inst_arg1(instruction);
-	operand_pointer x = get_address(arg1);
+	address_pointer param = get_param_inst_param(instruction);
+	operand_pointer param_address = get_address(param);
 
 	// TODO: vamos a poder manejar strings...fijarse qué pasa cuando compilamos
 	// un string con gcc: declara una sección identificada con etiqueta, fuera
 	// del método en donde se declara.
-	address_type addr_type = get_address_type(arg1);
+	address_type addr_type = get_address_type(param);
 
 	if(addr_type == address_type::ADDRESS_NAME or
 	addr_type == address_type::ADDRESS_TEMP){
-			std::string name = get_address_name(arg1);
+			std::string name = get_address_name(param);
 
 			switch(s_table->get_kind(name)){
 				case K_OBJECT:
 					// Objects are managed by reference.
-					allocate_integer_param(x, true);
+					allocate_integer_param(param_address, true);
 
 				default:
 					id_type type = s_table->get_type(name);
 
 					switch(type){
 						case T_INT:
-							allocate_integer_param(x, false);
+							allocate_integer_param(param_address, false);
 							break;
 
 						case T_BOOL:
@@ -561,7 +639,7 @@ void asm_code_generator::translate_parameter(const quad_pointer& instruction){
 							// abi.pdf, se indica que los booleanos deben tener un byte
 							// de longitud, y sólo el bit 0 debe contener el valor booleano
 							// mientras que los demás bits deben ser 0.
-							allocate_integer_param(x, false);
+							allocate_integer_param(param_address, false);
 							break;
 
 						case T_FLOAT:
@@ -582,9 +660,9 @@ void asm_code_generator::translate_parameter(const quad_pointer& instruction){
 		}
 	else{
 		// {addr_type == address_type::ADDRESS_CONSTANT}
-		switch(get_constant_address_type(arg1)){
+		switch(get_constant_address_type(param)){
 			case value_type::INTEGER:{
-				allocate_integer_param(x, false);
+				allocate_integer_param(param_address, false);
 				break;
 			}
 
@@ -624,7 +702,8 @@ void asm_code_generator::translate_procedure_call(const quad_pointer& instructio
 												data_type::L));
 
 	// Save EIP and jump to the called procedure.
-	translation->push_back(new_call_instruction(*instruction->arg1->value.label));
+	translation->push_back(new_call_instruction(get_label_inst_label(
+																instruction)));
 
 	// Reset the state of attributes used to manage the passing of parameters.
 	last_reg_used = register_id::NONE;
@@ -651,8 +730,15 @@ void asm_code_generator::translate_return(const quad_pointer& instruction){
 }
 
 void asm_code_generator::translate_label(const quad_pointer& instruction){
-	last_label = get_label(instruction);
-	translation->push_back(new_label_instruction(last_label));
+	// If the label doesn't represents the beginning of a method's definition,
+	// this strings are not used, so their actual values are of no interest.
+	this->actual_method_name = get_label_inst_method_name(instruction);
+	this->actual_class_name = get_label_inst_class_name(instruction);
+	this->actual_class_attributes = s_table->get_list_attributes(
+													this->actual_class_name);
+	this->last_label = get_label_inst_label(instruction);
+
+	translation->push_back(new_label_instruction(this->last_label));
 }
 
 void asm_code_generator::translate_enter_procedure(const quad_pointer&
@@ -660,7 +746,7 @@ void asm_code_generator::translate_enter_procedure(const quad_pointer&
 	// Update the stack space to be allocated, taking into account the
 	// integer parameters.
 	// TODO: estoy asumiendo que siempre last_label tiene la etiqueta correcta.
-	t_params params = s_table->get_list_params(last_label);
+	t_params params = s_table->get_list_params(this->actual_method_name);
 	std::string param_name;
 	t_params int_params;
 
@@ -682,7 +768,7 @@ void asm_code_generator::translate_enter_procedure(const quad_pointer&
 	// TODO: no acceder directamente a los atributos de las quad. Utilizar
 	// los getters!
 	operand_pointer stack_space = new_immediate_integer_operand(
-								instruction->arg1->value.constant.val.ival
+								get_enter_inst_bytes(instruction)
 								+ integer_width*int_params.size());
 
 	operand_pointer nesting = new_immediate_integer_operand(0);

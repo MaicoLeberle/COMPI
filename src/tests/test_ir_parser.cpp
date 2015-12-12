@@ -126,6 +126,20 @@ void test_unary_assignment_translation(){
 							new_name_address(std::string("Y")),
 							quad_oper::NEGATION));
 
+
+	////////////////////////
+	// ADDRESS OF
+	////////////////////////
+	translate_ir_code(std::string("X = * Y"));
+
+	// TODO: borrar todo lo que estoy metiendo en el heap.
+	assert(ir_code->size() == 1);
+	it = ir_code->begin();
+	assert(is_unary_assignment(*it,
+							new_name_address(std::string("X")),
+							new_name_address(std::string("Y")),
+							quad_oper::ADDRESS_OF));
+
 	std::cout << "OK. " << std::endl;
 }
 
@@ -209,7 +223,8 @@ void test_jump_translation(){
 	// TODO: borrar todo lo que estoy metiendo en el heap.
 	assert(ir_code->size() == 1);
 	instructions_list::iterator it = ir_code->begin();
-	assert(is_unconditional_jump_inst(*it,std::string("L1")));
+	assert(is_unconditional_jump_inst(*it,
+										new_label_address(std::string("L1"))));
 
 	///////////////////////////////////
 	// CONDITIONAL JUMP
@@ -222,7 +237,7 @@ void test_jump_translation(){
 	it = ir_code->begin();
 	assert(is_conditional_jump_inst(*it,
 							new_name_address(std::string("x")),
-							std::string("L1"),
+							new_label_address(std::string("L1")),
 							quad_oper::IFTRUE));
 
 	// iffalse unconditional jump
@@ -233,7 +248,7 @@ void test_jump_translation(){
 	it = ir_code->begin();
 	assert(is_conditional_jump_inst(*it,
 							new_name_address(std::string("x")),
-							std::string("L1"),
+							new_label_address(std::string("L1")),
 							quad_oper::IFFALSE));
 
 	///////////////////////////////////
@@ -250,7 +265,7 @@ void test_jump_translation(){
 							new_name_address(std::string("x")),
 							new_name_address(std::string("y")),
 							quad_oper::LESS,
-							std::string("L1")));
+							new_label_address(std::string("L1"))));
 
 	// less or equal than conditional jump.
 	translate_ir_code(std::string("if x <= y goto L1"));
@@ -262,7 +277,7 @@ void test_jump_translation(){
 							new_name_address(std::string("x")),
 							new_name_address(std::string("y")),
 							quad_oper::LESS_EQUAL,
-							std::string("L1")));
+							new_label_address(std::string("L1"))));
 
 	// greater than conditional jump.
 	translate_ir_code(std::string("if x > y goto L1"));
@@ -274,7 +289,7 @@ void test_jump_translation(){
 							new_name_address(std::string("x")),
 							new_name_address(std::string("y")),
 							quad_oper::GREATER,
-							std::string("L1")));
+							new_label_address(std::string("L1"))));
 
 	// greater or equal than conditional jump.
 	translate_ir_code(std::string("if x >= y goto L1"));
@@ -286,7 +301,7 @@ void test_jump_translation(){
 							new_name_address(std::string("x")),
 							new_name_address(std::string("y")),
 							quad_oper::GREATER_EQUAL,
-							std::string("L1")));
+							new_label_address(std::string("L1"))));
 
 	// equal conditional jump.
 	translate_ir_code(std::string("if x == y goto L1"));
@@ -298,7 +313,7 @@ void test_jump_translation(){
 							new_name_address(std::string("x")),
 							new_name_address(std::string("y")),
 							quad_oper::EQUAL,
-							std::string("L1")));
+							new_label_address(std::string("L1"))));
 
 	// distinct conditional jump.
 	translate_ir_code(std::string("if x != y goto L1"));
@@ -310,7 +325,7 @@ void test_jump_translation(){
 							new_name_address(std::string("x")),
 							new_name_address(std::string("y")),
 							quad_oper::DISTINCT,
-							std::string("L1")));
+							new_label_address(std::string("L1"))));
 
 	std::cout << "OK. " << std::endl;
 }

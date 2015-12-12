@@ -38,9 +38,12 @@ instructions_list *ir_code; // Pointer to the instructions' list.
 
 %type <inst_list> inst_list
 %type <instruction> instruction binary_assign unary_assign copy jump param call
-                    return label enter
-%type <arg> address
+                    return label_inst enter
+%type <l_str> name
+%type <arg> address label
 %type <relop> relop
+
+/* TODO: 4 shift/reduce conflicts, 27 reduce/reduce conflicts. */
 
 %start inst_list
 
@@ -69,7 +72,7 @@ instruction
     
     | return                    {$$ = $1;}
     
-    | label                    {$$ = $1;}
+    | label_inst                    {$$ = $1;}
     
     | enter                     {$$ = $1;}
     ;
@@ -79,55 +82,83 @@ instruction
 /* TODO: src/parser/parser_ir/parser_ir.y: warning: 4 shift/reduce conflicts [-Wconflicts-sr]
  */
 binary_assign
-    : address '=' address '+' address              {$$ = new quad_pointer(
-                                                        new_binary_assign(*$1, *$3, *$5, 
+    : name '=' address '+' address              {$$ = new quad_pointer(
+                                                        new_binary_assign(address_pointer(new_name_address(*$1)), 
+                                                                          *$3, 
+                                                                          *$5, 
                                                         quad_oper::PLUS));}
-    | address '=' address '-' address              {$$ = new quad_pointer(new_binary_assign(*$1, *$3, *$5, 
+    | name '=' address '-' address              {$$ = new quad_pointer(
+                                                        new_binary_assign(address_pointer(new_name_address(*$1)), 
+                                                        *$3, 
+                                                        *$5, 
                                                         quad_oper::MINUS));}
                                                         
-    | address '=' address '*' address              {$$ = new quad_pointer(new_binary_assign(*$1, *$3, *$5, 
+    | name '=' address '*' address              {$$ = new quad_pointer(
+                                                        new_binary_assign(address_pointer(new_name_address(*$1)), 
+                                                        *$3, 
+                                                        *$5, 
                                                         quad_oper::TIMES));}
                                                        
-    | address '=' address '/' address              {$$ = new quad_pointer(new_binary_assign(*$1, *$3, *$5, 
+    | name '=' address '/' address              {$$ = new quad_pointer(
+                                                        new_binary_assign(address_pointer(new_name_address(*$1)), 
+                                                        *$3, 
+                                                        *$5, 
                                                         quad_oper::DIVIDE));}
                                                         
-    | address '=' address '%' address              {$$ = new quad_pointer(new_binary_assign(*$1, *$3, *$5, 
+    | name '=' address '%' address              {$$ = new quad_pointer(
+                                                        new_binary_assign(address_pointer(new_name_address(*$1)), 
+                                                        *$3, 
+                                                        *$5, 
                                                     quad_oper::MOD));}
     ;
     
 unary_assign
-    : address '=' '-' address              {$$ = new quad_pointer(new_unary_assign(*$1, *$4,
-                                            quad_oper::NEGATIVE));}
+    : name '=' '-' address              {$$ = new quad_pointer(
+                                                new_unary_assign(
+                                                address_pointer(new_name_address(*$1)), 
+                                                *$4,
+                                                quad_oper::NEGATIVE));}
 
-    | address '=' NOT address              {$$ = new quad_pointer(new_unary_assign(*$1, *$4,
-                                            quad_oper::NEGATION));}
+    | name '=' NOT address              {$$ = new quad_pointer(
+                                                new_unary_assign(
+                                                address_pointer(
+                                                new_name_address(*$1)), 
+                                                *$4,
+                                                quad_oper::NEGATION));}
+                                                
+    | name '=' '*' address              {$$ = new quad_pointer(
+                                                new_unary_assign(
+                                                address_pointer(
+                                                new_name_address(*$1)), 
+                                                *$4,
+                                                quad_oper::ADDRESS_OF));}
     ;
     
 copy
-    : address '=' address              {$$ = new quad_pointer(new_copy(*$1, *$3));}
+    : name '=' address              {$$ = new quad_pointer(new_copy(address_pointer(new_name_address(*$1)), *$3));}
     
-    | address '[' address ']' '=' address   {$$ = new quad_pointer(
-                                            new_indexed_copy_to(*$1, *$3, *$6));}
+    | name '[' address ']' '=' address   {$$ = new quad_pointer(
+                                            new_indexed_copy_to(address_pointer(new_name_address(*$1)), *$3, *$6));}
     
-    | address '=' address '[' address ']'   {$$ = new quad_pointer(
-                                            new_indexed_copy_from(*$1, *$3, *$5));}
+    | name '=' address '[' address ']'   {$$ = new quad_pointer(
+                                            new_indexed_copy_from(address_pointer(new_name_address(*$1)), *$3, *$5));}
     ;
     
 jump
-    : GOTO ID                               {$$ = new quad_pointer(
+    : GOTO label                               {$$ = new quad_pointer(
                                             new_unconditional_jump_inst(*$2));} 
     
-    | IFTRUE address GOTO ID                {$$ = new quad_pointer(
+    | IFTRUE address GOTO label                {$$ = new quad_pointer(
                                             new_conditional_jump_inst(*$2, 
                                                                     *$4,
                                                                     quad_oper::IFTRUE));}
                                         
-    | IFFALSE address GOTO ID               {$$ = new quad_pointer(
+    | IFFALSE address GOTO label               {$$ = new quad_pointer(
                                             new_conditional_jump_inst(*$2, 
                                                                     *$4,
                                                                     quad_oper::IFFALSE));}
                                                                     
-    | IF address relop address GOTO ID      {$$ = new quad_pointer(
+    | IF address relop address GOTO label      {$$ = new quad_pointer(
                                                     new_relational_jump_inst(*$2, 
                                                                     *$4,
                                                                     $3,
@@ -138,36 +169,52 @@ param
                                             new_parameter_inst(*$2));}
                                             
 call
-    : CALL ID ',' address              {$$ = new quad_pointer(
+    : CALL label ',' address              {$$ = new quad_pointer(
                                             new_procedure_call_inst(
-                                            new_label_address(*$2), *$4));}
+                                                                    *$2, 
+                                                                    *$4));}
                                             
-    | address '=' CALL ID ',' address  {$$ = new quad_pointer(
-                                             new_function_call_inst(*$1, 
-                                                        new_label_address(*$4), 
-                                                        *$6));}
-                                                        
+    | name '=' CALL label ',' address  {$$ = new quad_pointer(
+                                             new_function_call_inst(address_pointer(new_name_address(*$1)), 
+                                                                    *$4, 
+                                                                    *$6));}
+
 return
     : RETURN                            {$$ = new quad_pointer(
                                             new_return_inst(nullptr));}
                                             
     | RETURN address                    {$$ = new quad_pointer(
                                             new_return_inst(*$2));}
-label
-    : ID ':'                         {$$ = new quad_pointer(new_label(*$1));}
+
+label_inst
+    : label ':'                         {$$ = new quad_pointer(
+                                            new_label_inst(*$1));}
     
 enter
     : ENTER L_INT                     {$$ = new quad_pointer(new_enter_procedure($2));}
 
 address
-    : ID                {$$ = new address_pointer(new_name_address(*$1));}
+    : name                {$$ = new address_pointer(new_name_address(*$1));}
     
     | L_INT             {$$ = new address_pointer(new_integer_constant($1));}
     
     | L_FLOAT             {$$ = new address_pointer(new_float_constant($1));}
     
     | L_BOOL             {$$ = new address_pointer(new_boolean_constant($1));}
+
+name
+    : ID                {$$ = $1;}
     
+    | ID '.' name       {$$ = new std::string(*$1 + '.' + *$3);}
+    
+    
+label
+    : ID '.' ID                  {$$ = new address_pointer(
+                                            new_method_label_address(*$3, *$1));}
+                                             
+    | ID                         {$$ = new address_pointer(
+                                            new_label_address(*$1));}
+
 relop
     : LESS                    {$$ = quad_oper::LESS;}
     

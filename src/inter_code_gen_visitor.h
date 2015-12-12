@@ -74,14 +74,13 @@ private:
 						   // expression is saved.
 
 
-	/* Translate an instance declaration into a sequence of code to
-	 * initialize each attribute.
-	 * PRE : {std::string argument is a valid class name}
-	 * POS : {instructions to initialize the corresponding attributes are
-	 * 		  pushed into the end of inst_list, and the corresponding new
-	 * 		  identifiers and offsets are calculated and added to s_table}
+	/* PRE : {id_class is an already registered class name}
+	 * POS : {instructions to initialize the attributes of id_instance are
+	 * 		  added, and the corresponding new identifiers and offsets are
+	 * 		  calculated and added to symbol's table}
 	 * */
-	std::string instance_initialization(std::string, std::string);
+	std::string instance_initialization(std::string id_class,
+										std::string id_instance);
 
 	unsigned int calculate_size(symtable_element::id_type);
 
@@ -91,6 +90,8 @@ private:
 							unsigned int array_size);
 
 	std::string obtain_methods_label(reference_list ids);
+
+	int get_attribute_offset(reference_list ids);
 
 };
 

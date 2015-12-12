@@ -19,7 +19,7 @@ std::string printable_field_id(reference_list ids);
 
 inter_code_gen_visitor::inter_code_gen_visitor() {
 	inst_list = new instructions_list();
-	offset = 0;
+	this->offset = 0;
 	into_method = false;
 	next_temp = 1;
 }
@@ -129,14 +129,15 @@ unsigned int inter_code_gen_visitor::calculate_size(symtable_element::id_type ty
 	return ret;
 }
 
+// TODO: no es variable declaration: es variable definition!
 /*	Translates a variable declaration, registers its information into the
  * 	table of symbols and updates the offset.
  * 	PRE : {the actual value of offset indicates where, the new variable,
- * 			is stored}
+ * 			must be stored}
  * */
 
 void inter_code_gen_visitor::translate_var_decl(symtable_element::id_type type,
-std::string id, std::string class_name, unsigned int array_size){
+std::string id, std::string class_name, unsigned int array_length){
 
 	// TODO: guardar el offset después de haberlo alterado: si x ocupa 4 bytes,
 	// y es la primer variable, entonces comienza en -4 y llega hasta 0. Deberiamos
@@ -145,7 +146,6 @@ std::string id, std::string class_name, unsigned int array_size){
 	address_pointer dest, constant = nullptr;
 
 	if(type == symtable_element::ID){
-		// TODO: por qué class_name tiene que pasarse por puntero?
 		std::string *class_name_aux = new std::string(class_name);
 		symtable_element variable(id, class_name_aux);
 		// TODO: notar que no le estamos pasando el último argumento. Se trata
@@ -153,34 +153,32 @@ std::string id, std::string class_name, unsigned int array_size){
 		#ifdef __DEBUG
 			t_results pair = s_table.put_obj(variable,
 											id,
-											offset,
+											this->offset,
 											*class_name_aux,
 											std::string(""));
 			assert(std::get<0>(pair) == ID_PUT);
 		#else
-			s_table.put_var(variable, id, offset);
+			s_table.put_var(variable, id, this->offset);
 		#endif
 		instance_initialization(class_name, id);
 		// After instance_initialization, offset had been updated correctly.
 	}
 	else{
-		if (array_size > 0){
-			// Array
-			// TODO: cómo inicializamos un arreglo?
+		if (array_length > 0){
+			// Array.
+			// Register the variable into the symbol's table.
+			symtable_element variable(id, type, array_length);
+			t_results pair = s_table.put_var(variable, id, this->offset);
 
-			symtable_element variable(id, type, array_size);
-			t_results pair = s_table.put_var(variable, id, offset);
-			offset += calculate_size(type)*array_size;
 			#ifdef __DEBUG
 				assert(std::get<0>(pair) == ID_PUT);
 			#endif
 
-			dest = new_name_address(id);
-			inst_list->push_back(new_copy(dest, constant));
-		}
-		else {
-			// {f->array_size <= 0}
-			// Basic type
+			// Initialize each position of the array with the corresponding
+			// initial value.
+			unsigned int arr_pos_width = this->calculate_size(type);
+			unsigned int arr_size =  arr_pos_width*array_length;
+
 			switch(type){
 				case symtable_element::INTEGER:
 					constant = new_integer_constant(integer_initial_value);
@@ -194,65 +192,185 @@ std::string id, std::string class_name, unsigned int array_size){
 					constant = new_boolean_constant(boolean_initial_value);
 			}
 
-			symtable_element variable(id, type);
-			t_results pair = s_table.put_var(variable, id, offset);
-			offset += calculate_size(type);
-			#ifdef __DEBUG
-				assert(std::get<0>(pair) == ID_PUT);
-			#endif
+			for(int arr_offset = 0;
+				arr_offset < arr_size;
+				arr_offset += arr_pos_width){
 
+				inst_list->push_back(
+						new_indexed_copy_to(dest,
+											new_integer_constant(arr_offset),
+											constant));
+			}
+
+			this->offset += arr_size;
+		}
+		else {
+			// {array_length <= 0}
+			// Basic type
+			switch(type){
+				case symtable_element::INTEGER:
+					constant = new_integer_constant(integer_initial_value);
+					break;
+
+				case symtable_element::FLOAT:
+					constant = new_float_constant(float_initial_value);
+					break;
+
+				case symtable_element::BOOLEAN:
+					constant = new_boolean_constant(boolean_initial_value);
+			}
 			dest = new_name_address(id);
-			inst_list->push_back(new_copy(dest, constant));
+			symtable_element variable(id, type);
+
+			if(class_name != std::string("")){
+				// Then it is an instance's attribute.
+				inst_list->push_back(new_indexed_copy_to(dest,
+									  new_integer_constant(this->offset),
+									  constant));
+			}
+			else{
+				// {class_name == std::string("")}
+				// The variable defined is not an attribute of an instance.
+
+				t_results pair = s_table.put_var(variable, id, this->offset);
+				#ifdef __DEBUG
+					assert(std::get<0>(pair) == ID_PUT);
+				#endif
+
+				inst_list->push_back(new_copy(dest, constant));
+			}
+			this->offset += calculate_size(type);
+
+
 		}
 	}
+}
+
+/* Returns the offset that corresponds to the object's attribute indicated by
+ * ids, with respect to the beginning of the object indicated by the first
+ * element in ids.
+ * PRE : {ids.size() > 1} */
+int inter_code_gen_visitor::get_attribute_offset(reference_list ids){
+	int at_offset = 0;
+
+	reference_list::iterator it = ids.begin();
+	reference_list::iterator it_end = ids.end();
+	// {it is the object}
+	symtable_element *object = s_table.get(*it);
+	symtable_element *element = nullptr;
+	std::string *class_name = object->get_class_type();
+	it++;
+
+	// INV : {class_name is the name of the class to which "it" is and
+	//			attribute of}
+	while(it != it_end){
+		// TODO: por que es un puntero?
+		at_offset += *s_table.get_offset(*it, *class_name);
+
+		element = s_table.get(*it);
+
+		if(element->get_class() == symtable_element::id_class::T_OBJ){
+			class_name = element->get_class_type();
+		}
+		it++;
+	}
+
+	return at_offset;
 }
 
 std::string inter_code_gen_visitor::instance_initialization(std::string id_class,
 std::string id_instance){
-	// Translate instance declaration into a sequence of code to
-	// initialize each attribute.
+
+	// Get information about the attributes of the instance.
 	symtable_element *class_object = s_table.get(id_class);
 	std::list<symtable_element> *fields = class_object->get_class_fields();
-	std::string first_field;
+	std::string first_field("");
+	// TODO: el último argumento a put_obj sería el id del primer
+	// parámetro del objeto.
+	// TODO: actualmente, no estaría haciendo falta usar first_field
+	// Directamente guardamos un puntero al primer atributo, al
+	// final de todos los atributos.
 
-	// TODO: así es como recuperamos los atributos de instancia:
-	// classA obj1;
-	/*[4:06:52 PM] Maico Leberle: classB {
-	    classA obj1;
-	}
-	[4:08:46 PM] Maico Leberle: classB obj2;
-	[4:08:57 PM] Maico Leberle: obj2.obj1.x  = 1;
-	[4:09:11 PM] Maico Leberle: get_id_rep(obj1);
-	[4:09:27 PM] Maico Leberle: get_list_attributes(get_owner_class(get_id_rep(obj1)))
-*/
+	// TODO: cambiar esto: el id de una instancia, debería apuntar al primer
+	// atributo del objeto, pero no debería hacer falta almacenar esa referencia.
+	// Sólo hay problemas cuando el objeto no tiene atributos: allí tenemos
+	// que pensar cuál es la forma más razonable de definir qué almacenaría
+	// el id del objeto.
+
+	// Reset the offset, to compute new offsets, with respect to the beginning
+	// of the instance.
+	unsigned int prev_offset = this->offset;
+	this->offset = 0;
+
 	// Extract the beginning
 	std::list<symtable_element>::iterator it = fields->begin();
-	first_field = id_instance + "." + (*it).get_key();
-	if((*it).get_class() == symtable_element::T_VAR){
+	if(it != fields->end() and (*it).get_class() == symtable_element::T_VAR){
+		first_field = id_instance + "." + (*it).get_key();
+		symtable_element variable(first_field, (*it).get_class_type());
+		t_results pair = s_table.put_var(variable, first_field, prev_offset);
+		#ifdef __DEBUG
+			assert(std::get<0>(pair) == ID_PUT);
+		#endif
 		// TODO: por ahora, no trabajamos con arreglos
-		translate_var_decl((*it).get_type(), first_field, id_class, 0);
+		translate_var_decl((*it).get_type(), id_instance, id_class, 0);
 		it++;
+	}
+	else{
+		// {it == fields->end() or (*it).get_class() != symtable_element::T_VAR}
+		// The class hasn't attributes.
+		// TODO: estamos solamente almacenando una referencia....
+		inst_list->push_back(new_unary_assign(new_name_address(id_instance),
+												new_name_address(id_instance),
+												quad_oper::ADDRESS_OF));
+		this->offset += reference_width;
 	}
 
 	for(; it != fields->end(); ++it){
 		if((*it).get_class() == symtable_element::T_VAR){
-			// TODO: actualmente estamos deinifiendo como addresses a cosas de la forma
-			// id_instance "." nombre de atributo
-			// TODO: por ahora, no trabajamos con arreglos
-			translate_var_decl((*it).get_type(), id_instance + "." + (*it).get_key(),
-			id_class, 0);
+			//translate_var_decl((*it).get_type(), id_instance + "." + (*it).get_key(),
+			//id_class, 0);
+			translate_var_decl((*it).get_type(), id_instance, id_class, 0);
 		}
 	}
+	inst_list->push_back(new_unary_assign(new_name_address(id_instance),
+											new_name_address(first_field),
+											quad_oper::ADDRESS_OF));
+	this->offset = prev_offset + this->offset;
+	// Update the symbol's table, with information about the instance.
+	// The identifier of the instance will "point" to the first attribute.
+	symtable_element id(id_instance, new std::string(id_class));
+	t_results pair = s_table.put_obj(id,
+									id_instance,
+									this->offset,
+									id_class,
+									first_field);
+	// TODO: al intentar recuperar el id del primer atributo,
+	// recordar que parecieran estar guardándose estos en el orden
+	// inverso a como uno los guarda en la tabla de símbolos.
+	#ifdef __DEBUG
+		assert(std::get<0>(pair) == ID_PUT);
+	#endif
+
+	this->offset += reference_width;
+	/*if(first_field != std::string("")){
+		// Save a pointer to the first attribute.
+		inst_list->push_back(new_unary_assign(new_name_address(id_instance),
+												new_name_address(first_field),
+												quad_oper::ADDRESS_OF));
+	}
+	else{
+		// {first_field == std::string("")}
+		// The object hasn't attributes.
+		inst_list->push_back(new_unary_assign(new_name_address(id_instance),
+												new_name_address(id_instance),
+												quad_oper::ADDRESS_OF));
+	}*/
 
 	return first_field;
 }
 
-/* _ Al calcular el offset de las variables locales, siempre tengo que recordar
- * que this esta al comienzo, para sumarle su offset.
- * _ TODO: cunado termino: ids_info* get_ids_info(void);
- * _ TODO: con este método std::string get_id_rep(std::string); recupero el id
+/* _ TODO: con este método std::string get_id_rep(std::string); recupero el id
  * unico para una variable, de acuerdo al scope.
- * _ Para traducir métodos, recordar la utilización de la referencia this
  * _ Recordar que la semántica de los operadores booleanos es short-circuit
  * (ver página 400 del dragon book)
  * */
@@ -295,22 +413,17 @@ void inter_code_gen_visitor::visit(node_class_decl& node) {
 	// Define a new scope
 	s_table.push_symtable();
 	#ifdef __DEBUG
-		// TODO: cambiar cuando tenga los typedef
-		t_class_results ret = s_table.put_class(new_class,
-																	new_class.get_key(),
-																	std::list<std::string>());
+		t_class_results ret = s_table.put_class(new_class, new_class.get_key());
 		assert(std::get<0>(ret) == CLASS_PUT);
 	#else
-		s_table.put_class(new_class,
-						  new_class.get_key(),
-						  std::list<std::string>());
+		s_table.put_class(new_class, new_class.get_key());
 	#endif
 
 	// Gather information about fields. Set relative addresses with respect to the
 	// beginning of this class definition.
 	// TODO: también al traducir la definición de los métodos?
-	int prev_offset = offset;
-	offset = 0;
+	int prev_offset = this->offset;
+	this->offset = 0;
 	into_method = false;
 
 	for(std::list<class_block_pointer>::iterator it = fields.begin();
@@ -331,7 +444,7 @@ void inter_code_gen_visitor::visit(node_class_decl& node) {
 			aux.accept(*this);
 	}
 	// Restore offset value.
-	offset = prev_offset;
+	this->offset = prev_offset;
 	s_table.finish_class_analysis();
 	//s_table.pop_symtable();
 }
@@ -349,42 +462,29 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 
 		// Translate each identifier. Add the identifier to the symbol table.
 		if (node.type.type == Type::ID){
+			// TODO: quizás haga falta agregar a las three-address un operador
+			// que obtenga la "dirección de memoria" de una variable, para
+			// indicar que almaceno un puntero a la instancia recién creada.
+
 			// Declaration of instances.
-			// TODO: sería cómodo un typedef para este tipo de par
-			//std::pair<symtables_stack::put_field_results, std::string*> pair =
-			//		put_obj_field(symtable_element&, std::string,
-			//		unsigned int, std::string);
-			// TODO: por qué el segundo argumento tiene que ser un puntero?
 			std::string *class_name = new std::string(node.type.id);
 			symtable_element id(f->id, class_name);
 
 			if(into_method){
-				// TODO: cambiar esto cuando se haga el typedef
-				// TODO: el último argumento a put_obj sería el id del primer
-				// parámetro del objeto, pero no tengo claro cómo definirlo, de
-				// forma tal que pueda reemplazar a futuro toda ocurrencia del
-				// id de este objeto, por el id de su primer atributo.
-				t_results pair =
-						s_table.put_obj(id, f->id, offset, node.type.id, std::string(""));
-				// TODO: al intentar recuperar el id del primer atributo, recordar
-				// que parecieran estar guardándose estos en el orden inverso
-				// a como uno los guarda en la tabla de símbolos.
-				#ifdef __DEBUG
-					assert(std::get<0>(pair) == ID_PUT);
-				#endif
-
 				// Insert code that initializes the attributes of the object.
-				std::string first_field = instance_initialization(node.type.id, f->id);
-				// TODO: cómo hago para guardar en s_table el dato first_field,
-				// ahora que ya he puesto la variable en la tabla?
+				std::string first_field = instance_initialization(node.type.id,
+																f->id);
 			}
 			else{
 				// {not into_method}
 				// It is an attribute declaration. We just save the corresponding
 				// data, for future uses.
-				// TODO: cambiar esto cuando se haga el typedef
 				t_field_results pair =
-						s_table.put_obj_field(id, f->id, offset, node.type.id, std::string(""));
+						s_table.put_obj_field(id,
+											f->id,
+											this->offset,
+											node.type.id,
+											std::string(""));
 				// TODO: el último argumento sería el id del primer parámetro del objeto,
 				// pero no tengo claro cómo definirlo, de forma tal que pueda reemplazar
 				// a futuro toda ocurrencia del id de este objeto, por el id de su primer
@@ -396,7 +496,7 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 					assert(std::get<0>(pair) == FIELD_PUT);
 				#endif
 			}
-			offset += calculate_size(determine_type(node.type.type));
+			this->offset += calculate_size(determine_type(node.type.type));
 		}
 		else{
 			// {node.type.type != Type::ID}
@@ -417,11 +517,11 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 					// TODO: cambiar esto cuando se haga el typedef
 					t_field_results pair = s_table.put_var_field(id,
 																f->id,
-																offset);
+																this->offset);
 					#ifdef __DEBUG
 						assert(std::get<0>(pair) == FIELD_PUT);
 					#endif
-					offset += calculate_size(determine_type(node.type.type))*f->array_size;
+					this->offset += calculate_size(determine_type(node.type.type))*f->array_size;
 				}
 			}
 			else{
@@ -440,13 +540,13 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 						// TODO: cambiar esto cuando se haga el typedef
 						t_field_results pair = s_table.put_var_field(id,
 																	f->id,
-																	offset);
+																	this->offset);
 						assert(std::get<0>(pair) == FIELD_PUT);
 					#else
-						s_table.put_var_field(id, f->id, offset);
+						s_table.put_var_field(id, f->id, this->offset);
 					#endif
 
-					offset += calculate_size(determine_type(node.type.type));
+					this->offset += calculate_size(determine_type(node.type.type));
 				}
 
 			}
@@ -472,7 +572,8 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 		std::cout << "Translating method " << node.id << std::endl;
 	#endif
 
-	symtable_element method(node.id, determine_type(node.type.type),
+	symtable_element method(node.id,
+							determine_type(node.type.type),
 							new std::list<symtable_element>());
 	#ifdef __DEBUG
 	    t_func_results pair =
@@ -486,10 +587,12 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 		s_table.put_func(method, node.id, 0, actual_class->get_key());
     #endif
 	// Generate code for the method declaration.
-	inst_list->push_back(new_label(actual_class->get_key()+"."+node.id));
+	std::string *class_name = new std::string(this->actual_class->get_key());
+	inst_list->push_back(new_label_inst(new_method_label_address(node.id,
+																*class_name)));
 
 	// Initialize offset.
-	unsigned int offset_prev = offset;
+	unsigned int offset_prev = this->offset;
 	// TODO: usar la referencia this, para mejorar la legibilidad del código!
 
 	// TODO: notar que la forma de modelar scope con código asm consiste:
@@ -502,35 +605,36 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 	//
 	//				_ finalmente, el procedimiento asume estos offsets, y va
 	//				a buscar ahí los parámetros.
-	offset = 0;
+	this->offset = 0;
 
 	// TODO: borrar esto!!!!!!!!!!!!!
-	if(node.id != std::string("main")){
-		// Add the "this" reference as first parameter.
-		std::string this_param("this");
-		std::string *class_name = new std::string(this->actual_class->get_key());
-		symtable_element obj_param(this_param, class_name);
+	// Add the "this" reference as first parameter.
+	std::string this_param("this");
+	symtable_element obj_param(this_param, class_name);
+	//if(node.id != std::string("main")){
+	#ifdef __DEBUG
+		t_param_results pair1 = s_table.put_obj_param(obj_param,
+													 this_param,
+													 this->offset,
+													 *class_name,
+													 std::string(""));
+		assert(std::get<0>(pair1) == PARAM_PUT);
+	#else
+		s_table.put_obj_param(obj_param, this_param, this->offset, *class_name,
+							 std::string(""));
+	#endif
+	//}
 
-		#ifdef __DEBUG
-			t_param_results pair1 = s_table.put_obj_param(obj_param,
-														 this_param,
-														 offset,
-														 *class_name,
-														 std::string(""));
-			assert(std::get<0>(pair1) == PARAM_PUT);
-		#else
-			s_table.put_obj_param(obj_param, this_param, offset, *class_name,
-								 std::string(""));
-		#endif
-
-		offset += reference_width;
-	}
+	this->offset += reference_width;
 
 	// Add the remaining parameters.
 	for(auto p : node.parameters) {
 		p->accept(*this);
 	}
-
+	// TODO: quizás estamos mezclando cuestiones de código asm aquí, pero
+	// para simplificar, reiniciamos el cálculo del offset, cuando
+	// vamos a analizar el cuerpo del método.
+	this->offset = 0;
 	into_method = true;
 	// Save inst_list
 	instructions_list *aux = inst_list;
@@ -538,14 +642,14 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 	node.body->accept(*this);
 	// Into offset we have the size of the sum of the local and temporal variables.
 	// We add the corresponding enter instruction at the beginning of the procedure.
-	aux->push_back(new_enter_procedure(offset));
+	aux->push_back(new_enter_procedure(this->offset));
 	for (instructions_list::iterator it = inst_list->begin();
 	it != inst_list->end(); ++it){
 			aux->push_back(*it);
 	}
 	// TODO: eliminar el contenido al que apunta inst_list
 	inst_list = aux;
-	offset = offset_prev;
+	this->offset = offset_prev;
 	s_table.finish_func_analysis();
 	#ifdef __DEBUG
 		// TODO: esta era la forma adecuada de utilizar put_func_field,
@@ -580,14 +684,14 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 				#ifdef __DEBUG
 					t_param_results pair1 = s_table.put_obj_param(obj_param,
 																 node.id,
-																 offset,
+																 this->offset,
 																 node.type.id,
 																 std::string(""));
 					assert(std::get<0>(pair1) == PARAM_PUT);
 				#else
 					s_table.put_obj_param(obj_param,
 										node.id,
-										offset,
+										this->offset,
 										node.type.id,
 										std::string(""));
 				#endif
@@ -601,12 +705,12 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 				#ifdef __DEBUG
 					t_param_results pair2 = s_table.put_var_param(var_param,
 																var_param.get_key(),
-																offset);
+																this->offset);
 					assert(std::get<0>(pair2) == PARAM_PUT);
 				#else
 					s_table.put_var_param(var_param,
 											var_param.get_key(),
-											offset);
+											this->offset);
 				#endif
 			}
 	}
@@ -618,7 +722,7 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 
 	// Update the offset so, outside this method, this data is used to
 	// calculate how much data is reserved into the stack.
-	offset += calculate_size(determine_type(node.type.type));
+	this->offset += calculate_size(determine_type(node.type.type));
 }
 
 void inter_code_gen_visitor::visit(node_body& node) {
@@ -658,34 +762,81 @@ void inter_code_gen_visitor::visit(node_assignment_statement& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating assignment statement." << std::endl;
 	#endif
-	// TODO: no llamar a acept para node.location, sino hacer aquí la visita
-	// para construir la instrucción copy adecuada. Notar que el problema
-	// de hacer la visita a node.location, es que no nos alcanza con devolver
-	// un address (en temp) desde ahí, para los casos en el que la location
-	// representa una posición en un vector
-	node.location->accept(*this);
-	address_pointer l_value = temp;
-	expr_call_appropriate_accept(node.expression);
+	expr_call_appropriate_accept(node.get_expression());
 	address_pointer r_value = temp;
-	// TODO: crear objeto instrucción apropiado. La visita a node.location
-	// y node.expression deberían guardar en un atributo de la instancia
-	// una representación de la location y una direccion en donde se
-	// guarda la expression, de forma que
-	// podamos disponer aquí de esa información, para construir la instrucción
-	// adecuada.
-	switch(node.oper){
-		case AssignOper::ASSIGN:
+	location_pointer location = node.get_location();
+
+	if(node.oper == AssignOper::ASSIGN){
+		if(location->is_object_field()){
+			reference_list ids = location->get_ids();
+			std::string object = ids[0];
+			unsigned int at_offset = this->get_attribute_offset(ids);
+
+			inst_list->push_back(
+					new_indexed_copy_to(new_name_address(object),
+										new_integer_constant(at_offset),
+										r_value));
+		}
+		else{
+			// {not location.is_object_field()}
+			location->accept(*this);
+			address_pointer l_value = temp;
 			inst_list->push_back(new_copy(l_value, r_value));
-			break;
+		}
+	}
+	else{
+		// {node.oper != AssignOper::ASSIGN}
+		quad_oper oper;
+		if(node.oper == AssignOper::PLUS_ASSIGN){
+			oper = quad_oper::PLUS;
+		}
+		else{
+			// {node.oper != AssignOper::PLUS_ASSIGN}
+			oper = quad_oper::MINUS;
+		}
 
-		case AssignOper::PLUS_ASSIGN:
-			inst_list->push_back(new_binary_assign(l_value, l_value, r_value,
-													quad_oper::PLUS));
-			break;
+		if(location->is_object_field()){
+			// The l-value denotes an instance's attribute.
+			reference_list ids = location->get_ids();
+			std::string object_name = ids[0];
+			address_pointer object_address = new_name_address(object_name);
+			unsigned int at_offset = this->get_attribute_offset(ids);
+			address_pointer at_offset_address = new_integer_constant(at_offset);
 
-		case AssignOper::MINUS_ASSIGN:
-			inst_list->push_back(new_binary_assign(l_value, l_value, r_value,
-													quad_oper::MINUS));
+			// Extract the value of the attribute, and save it into a
+			// temporal variable.
+			t_results pair =  s_table.new_temp(this->offset);
+			// Update the offset, taking into account the type of the
+			// instance's attribute.
+			this->offset += this->calculate_size(
+								this->determine_type(
+										(node.get_expression())->get_type().type));
+			address_pointer temp_field = new_name_address(*std::get<1>(pair));
+
+			inst_list->push_back(new_indexed_copy_from(temp_field,
+														object_address,
+														at_offset_address));
+
+			// Update the value saved into the temporal.
+			inst_list->push_back(new_binary_assign(temp_field,
+													temp_field,
+													r_value,
+													oper));
+
+			// Assign the result to the attribute.
+			inst_list->push_back(new_indexed_copy_to(object_address,
+													at_offset_address,
+													temp_field));
+		}
+		else{
+			// {not location.is_object_field()}
+			location->accept(*this);
+			address_pointer l_value = temp;
+			inst_list->push_back(new_binary_assign(l_value,
+													l_value,
+													r_value,
+													oper));
+		}
 	}
 }
 
@@ -694,9 +845,6 @@ void inter_code_gen_visitor::visit(node_location& node) {
 		std::cout << "Translating location expression" << std::endl;
 	#endif
 
-	// TODO: lo deberíamos convertir a algo de la forma offset(base,index,scale)?
-	// no está eso dependiendo de la arq. x86_64, siendo que no es la idea del
-	// código intermedio?: vamos generando las direcciones
 	// TODO: por ahora, convertimos la location en un address. Es correcto
 	// usar este nombre para la address?
 	// TODO: preguntar si estamos dentro de un método. En tal caso, averiguar
@@ -830,20 +978,23 @@ void inter_code_gen_visitor::visit(node_if_statement& node){
 	// TODO: leer página 410 del libro Dragón: backpatching, para ver el temita
 	// de cómo definir correctamente las etiquetas
 	std::string label_else("L1");
-	inst_list->push_back(new_conditional_jump_inst(temp, label_else, quad_oper::IFFALSE));
+	inst_list->push_back(new_conditional_jump_inst(temp,
+													new_label_address(label_else),
+													quad_oper::IFFALSE));
 	// Code for the "if" branch.
 	stm_call_appropriate_accept(node.then_statement);
 	// Unconditional jump to the final part of the translation.
 	std::string label_end("L2");
-	inst_list->push_back(new_unconditional_jump_inst(label_end));
+	inst_list->push_back(new_unconditional_jump_inst(
+												new_label_address(label_end)));
 
 	// Code for the "else" branch.
-	inst_list->push_back(new_label(label_else));
+	inst_list->push_back(new_label_inst(new_label_address(label_else)));
 	if(node.else_statement != nullptr) {
 		stm_call_appropriate_accept(node.else_statement);
 	}
 	// Ending.
-	inst_list->push_back(new_label(label_end));
+	inst_list->push_back(new_label_inst(new_label_address(label_end)));
 }
 
 void inter_code_gen_visitor::visit(node_for_statement& node){
@@ -861,7 +1012,7 @@ void inter_code_gen_visitor::visit(node_for_statement& node){
 
 	// TODO: L1 es una etiqueta a definir, de valor fijo.
 	std::string label_beginning("L1");
-	inst_list->push_back(new_label(label_beginning));
+	inst_list->push_back(new_label_inst(new_label_address(label_beginning)));
 
 	// TODO: lo siguiente no hace falta, ya que en nuestro three-address code,
 	// tenemos directamente una instrucción que realiza una comparación de orden
@@ -877,7 +1028,7 @@ void inter_code_gen_visitor::visit(node_for_statement& node){
 	expr_call_appropriate_accept(node.to);
 	// if temp < var goto label_ending
 	inst_list->push_back(new_relational_jump_inst(temp, var, quad_oper::LESS,
-						label_ending));
+						new_label_address(label_ending)));
 
 	// Body code.
 	stm_call_appropriate_accept(node.body);
@@ -887,10 +1038,11 @@ void inter_code_gen_visitor::visit(node_for_statement& node){
 	inst_list->push_back(new_binary_assign(var, var, inc, quad_oper::PLUS));
 
 	// Return to the beginning
-	inst_list->push_back(new_unconditional_jump_inst(label_beginning));
+	inst_list->push_back(new_unconditional_jump_inst(
+											new_label_address(label_beginning)));
 
 	// Ending.
-	inst_list->push_back(new_label(label_ending));
+	inst_list->push_back(new_label_inst(new_label_address(label_ending)));
 }
 
 void inter_code_gen_visitor::visit(node_while_statement& node) {
@@ -905,24 +1057,26 @@ void inter_code_gen_visitor::visit(node_while_statement& node) {
 	// intermedio que nos inventamos.
 	// TODO: el valor de esta etiqueta podría cambiar
 	std::string label_beginning("L1");
-	inst_list->push_back(new_label(label_beginning));
+	inst_list->push_back(new_label_inst(new_label_address(label_beginning)));
 
 	// Evaluate the guard. Its value is in temp.
 	expr_call_appropriate_accept(node.expression);
 
 	// If the guard is false, jump to the end of the code.
 	std::string label_ending("L2");
-	inst_list->push_back(new_conditional_jump_inst(temp, label_ending,
+	inst_list->push_back(new_conditional_jump_inst(temp,
+										new_label_address(label_ending),
 										quad_oper::IFFALSE));
 
 	// Body.
 	stm_call_appropriate_accept(node.body);
 
 	// Return to the beginning.
-	inst_list->push_back(new_unconditional_jump_inst(label_beginning));
+	inst_list->push_back(new_unconditional_jump_inst(
+										new_label_address(label_beginning)));
 
 	// The end of the loop.
-	inst_list->push_back(new_label(label_ending));
+	inst_list->push_back(new_label_inst(new_label_address(label_ending)));
 }
 
 void inter_code_gen_visitor::visit(node_return_statement& node) {
@@ -942,7 +1096,8 @@ void inter_code_gen_visitor::visit(node_break_statement& node) {
 	#endif
 
 	// Break is translated as an unconditional jump to the end of the loop.
-	inst_list->push_back(new_unconditional_jump_inst(std::string("L2")));
+	inst_list->push_back(new_unconditional_jump_inst(
+										new_label_address(std::string("L2"))));
 }
 
 void inter_code_gen_visitor::visit(node_continue_statement& node) {
@@ -950,7 +1105,8 @@ void inter_code_gen_visitor::visit(node_continue_statement& node) {
 		std::cout << "Translating continue statement" << std::endl;
 	#endif
 	// Continue is translated as an unconditional jump to the beginning of the loop.
-	inst_list->push_back(new_unconditional_jump_inst(std::string("L1")));
+	inst_list->push_back(new_unconditional_jump_inst(
+										new_label_address(std::string("L1"))));
 }
 
 void inter_code_gen_visitor::visit(node_skip_statement& node) {
@@ -977,7 +1133,7 @@ void inter_code_gen_visitor::visit(node_binary_operation_expr& node) {
 	right_operand = temp;
 
 	// New temporal for the result.
-	t_results pair =  s_table.new_temp(offset);
+	t_results pair =  s_table.new_temp(this->offset);
 	// TODO: chequear put_results
 	// TODO: no estoy usando new_temp_address
 	// TODO: notar que aquí habría ayudado que semantic_analysis guarde en el node
@@ -1056,14 +1212,14 @@ void inter_code_gen_visitor::visit(node_negate_expr& node) {
 	expr_call_appropriate_accept(node.expression);
 
 	// New temporal for the result.
-	t_results pair =  s_table.new_temp(offset);
+	t_results pair =  s_table.new_temp(this->offset);
 	// TODO: chequear put_results
 	// TODO: no estoy usando new_temp_address
 	dest = new_name_address(*std::get<1>(pair));
 	inst_list->push_back(new_unary_assign(dest, temp, quad_oper::NEGATION));
 
 	// Update offset.
-	offset += boolean_width;
+	this->offset += boolean_width;
 
 	temp = dest;
 }
@@ -1078,7 +1234,7 @@ void inter_code_gen_visitor::visit(node_negative_expr& node) {
 	expr_call_appropriate_accept(node.expression);
 
 	// New temporal for the result.
-	t_results pair =  s_table.new_temp(offset);
+	t_results pair =  s_table.new_temp(this->offset);
 	// TODO: chequear put_results
 	// TODO: no estoy usando new_temp_address
 	dest = new_name_address(*std::get<1>(pair));

@@ -150,7 +150,11 @@ private:
 	register_id last_reg_used; // Last register used for integer parameters.
 	bool using_registers;
 	int params_in_registers; // Quantity of integer parameters put into registers.
+	std::string actual_method_name; // Name of the method being translated, and
+	std::string actual_class_name; // the class it belongs to.
+	t_attributes actual_class_attributes;
 	std::string last_label;
+
 
 	operand_pointer get_address(address_pointer address);
 	void translate_binary_op(const quad_pointer&);
@@ -266,6 +270,8 @@ private:
 	register_id get_next_reg_av(register_id);
 
 	void allocate_integer_param(const operand_pointer& val, bool pass_address);
+
+	bool is_attribute(std::string var_name);
 };
 
 #endif

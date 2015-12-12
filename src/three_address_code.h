@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <cassert>
 
 // Macro to convert booleans into strings (because std::to_string does it
 // wrong...). Taken from
@@ -40,7 +41,11 @@ struct address {
 		} constant; // Constant, formed by type and a value. For the moment no string
 					// as type.
 		unsigned int temp; // Compiler-generated temporary.
-		std::string *label; // In case the address is a label.
+		struct{
+			std::string *val; // In case the address is a label.
+			std::string *class_name; // In case the label is a method's name.
+			std::string *method_name;
+		} label;
 	} value;
 };
 
@@ -69,6 +74,7 @@ enum class quad_type {
 };
 
 enum class quad_oper {
+	ADDRESS_OF,
 	IFTRUE,
 	IFFALSE,
 	NEGATIVE,
@@ -108,259 +114,312 @@ class instructions_list : public std::vector<quad_pointer> {};
 // debe recibir un address de un tipo en particular. Ejemplo: functional call
 // recibe algo que necesariamente va a ser un label (y, por lo tanto, bastaría
 // con recibir sólo un std::string)
-quad_pointer new_label(const std::string&);
 
-quad_pointer new_copy(const address_pointer& dest,
-						const address_pointer& orig);
 
-quad_pointer new_indexed_copy_to(const address_pointer& dest,
-								  const address_pointer& index,
-								  const address_pointer& orig);
-
-quad_pointer new_indexed_copy_from(const address_pointer& dest,
-								  const address_pointer& orig,
-								  const address_pointer& index);
-
-quad_pointer new_enter_procedure(unsigned int);
-
-quad_pointer new_binary_assign(const address_pointer& dest,
-							   const address_pointer& arg1,
-							   const address_pointer& arg2,
-							   quad_oper op);
-
-quad_pointer new_unary_assign(const address_pointer& dest,
-							   const address_pointer& arg,
-							   quad_oper op);
-
-quad_pointer new_parameter_inst(const address_pointer& param);
-
-quad_pointer new_function_call_inst(const address_pointer& dest,
-									const address_pointer& func_label,
-									const address_pointer& param_quantity);
-
-quad_pointer new_procedure_call_inst(const address_pointer& proc_label,
-									const address_pointer& param_quantity);
-
-quad_pointer new_conditional_jump_inst(const address_pointer& guard,
-									const std::string& label,
-									quad_oper op);
-
-quad_pointer new_unconditional_jump_inst(const std::string& label);
-
-quad_pointer new_return_inst(const address_pointer&);
-
-// if x relop y goto label
-quad_pointer new_relational_jump_inst(const address_pointer& x,
-									const address_pointer& y,
-									quad_oper relop,
-									const std::string& label);
-
-// Constructors of specific type of addresses
-// TODO: cambiarles el nombre, para que quede claro que construyen addresses
-address_pointer new_integer_constant(int value);
-
-address_pointer new_float_constant(float value);
-
-address_pointer new_boolean_constant(bool value);
-
-address_pointer new_name_address(const std::string& name);
-
-address_pointer new_label_address(const std::string& label);
-
-// Getters
+/////////////////////////
+// @QUAD
+/////////////////////////
 quad_oper get_inst_op(const quad_pointer&);
 
 quad_type get_inst_type(const quad_pointer&);
-
-address_pointer get_inst_result(const quad_pointer&);
-
-address_pointer get_inst_arg1(const quad_pointer&);
-
-address_pointer get_inst_arg2(const quad_pointer&);
-
-/* PRE : {quad->type == quad_type::LABEL} */
-std::string get_label(const quad_pointer&);
-
-/* PRE : {quad->type == quad_type::RELATIONAL_JUMP} */
-std::string get_relational_jmp_label(const quad_pointer&);
-
-address_type get_address_type(const address_pointer&);
-
-/* PRE : {address->type == address_type::ADDRESS_NAME} */
-std::string get_address_name(const address_pointer&);
-
-/* PRE : {address->type == address_type::ADDRESS_CONSTANT} */
-value_type get_constant_address_type(const address_pointer&);
-
-/* PRE : {address->type == address_type::ADDRESS_LABEL} */
-std::string get_label_address_value(const address_pointer&);
-
-// Procedures for debugging.
-// TODO: quizás debería recibir un address_pointer
-bool is_label(const quad_pointer& instruction,
-				const std::string& label);
-
-// TODO: no hace falta todas estas is_plus_oper, etc: basta con is_binary_assignment
-// x = y + z
-bool is_plus_oper(const quad_pointer& instruction,
-					const std::string& x,
-					const std::string& y,
-					const std::string& z);
-
-// x = y * z
-bool is_times_oper(const quad_pointer& instruction,
-					const std::string& x,
-					const std::string& y,
-					const std::string& z);
-
-// x = y / z
-bool is_divide_oper(const quad_pointer& instruction,
-					const std::string& x,
-					const std::string& y,
-					const std::string& z);
-
-// x = y % z
-bool is_mod_oper(const quad_pointer& instruction,
-				const std::string& x,
-				const std::string& y,
-				const std::string& z);
-
-// x = y - z
-bool is_minus_oper(const quad_pointer& instruction,
-					const std::string& x,
-					const std::string& y,
-					const std::string& z);
-
-// x = y < z
-bool is_less_oper(const quad_pointer& instruction,
-					const std::string& x,
-					const std::string& y,
-					const std::string& z);
-
-// x = y <= z
-bool is_less_equal_oper(const quad_pointer& instruction,
-					const std::string& x,
-					const std::string& y,
-					const std::string& z);
-
-// x = y > z
-bool is_greater_oper(const quad_pointer& instruction,
-					const std::string& x,
-					const std::string& y,
-					const std::string& z);
-
-// x = y >= z
-bool is_greater_equal_oper(const quad_pointer& instruction,
-							const std::string& x,
-							const std::string& y,
-							const std::string& z);
-// x = y == z
-bool is_equal_oper(const quad_pointer& instruction,
-					const std::string& x,
-					const std::string& y,
-					const std::string& z);
-
-// x = y != z
-bool is_distinct_oper(const quad_pointer& instruction,
-					const std::string& x,
-					const std::string& y,
-					const std::string& z);
-
-// x = y and z
-bool is_and_oper(const quad_pointer& instruction,
-					const std::string& x,
-					const std::string& y,
-					const std::string& z);
-
-// x = y or z
-bool is_or_oper(const quad_pointer& instruction,
-					const std::string& x,
-					const std::string& y,
-					const std::string& z);
-
-// x = - y
-bool is_negative_oper(const quad_pointer& instruction,
-					const std::string& x,
-					const std::string& y);
-
-// x = not y
-bool is_negation_oper(const quad_pointer& instruction,
-					const std::string& x,
-					const std::string& y);
-
-// x = y
-bool is_copy(const quad_pointer& instruction,
-			const address_pointer& dest,
-			const address_pointer& orig);
-
-// x[i] = y
-bool is_indexed_copy_to(const quad_pointer& instruction,
-						const address_pointer& dest,
-						const address_pointer& index,
-						const address_pointer& orig);
-
-// x = y op z
-bool is_binary_assignment(const quad_pointer& instruction,
-						 const address_pointer& dest,
-						 const address_pointer& arg1,
-						 const address_pointer& arg2,
-						 quad_oper op);
-
-bool is_unary_assignment(const quad_pointer& instruction,
-						 const address_pointer& dest,
-						 const address_pointer& arg,
-						 quad_oper op);
-
-// x[i] = y
-bool is_indexed_copy_to(const quad_pointer& instruction,
-						const address_pointer& dest,
-						const address_pointer& index,
-						const address_pointer& orig);
-
-// x = y[i]
-bool is_indexed_copy_from(const quad_pointer& instruction,
-						const address_pointer& dest,
-						const address_pointer& orig,
-						const address_pointer& index);
-
-bool is_enter_procedure(const quad_pointer& instruction, unsigned int bytes);
-
-bool is_procedure_call(const quad_pointer& instruction,
-						const address_pointer& proc_label,
-						int param_quantity);
-
-bool is_function_call(const quad_pointer& instruction,
-						const address_pointer& dest,
-						const address_pointer& func_label,
-						const address_pointer& param_quantity);
-
-bool is_parameter_inst(const quad_pointer& instruction,
-						const address_pointer& param);
-
-bool is_conditional_jump_inst(const quad_pointer& instruction,
-								const address_pointer& guard,
-								const std::string& label,
-								quad_oper op);
-
-bool is_unconditional_jump_inst(const quad_pointer& instruction,
-								const std::string& label);
-
-bool is_return_inst(const quad_pointer& instruction,
-					const address_pointer& ret_value);
-
-bool is_relational_jump_inst(const quad_pointer& instruction,
-							const address_pointer& x,
-							const address_pointer& y,
-							quad_oper relop,
-							const std::string& label);
-
-bool are_equal_address_pointers(const address_pointer&, const address_pointer&);
 
 bool are_equal_quad_pointers(const quad_pointer&, const quad_pointer&);
 
 bool are_equal_instructions_list(const instructions_list& x,
 								const instructions_list& y);
 
-std::string instructions_list_to_string(const instructions_list& x);
+std::string print_instructions_list(const instructions_list&);
+
+
+/////////////////////////
+// @LABEL INSTRUCTION
+/////////////////////////
+//quad_pointer new_label_inst(const std::string&);
+
+quad_pointer new_label_inst(const address_pointer& label);
+
+//quad_pointer new_method_label_inst(const std::string& method_name,
+//								   const std::string& class_name);
+
+/* PRE : {quad->type == quad_type::LABEL} */
+std::string get_label_inst_label(const quad_pointer&);
+
+/* PRE : {quad->type == quad_type::LABEL} */
+std::string get_label_inst_method_name(const quad_pointer&);
+
+/* PRE : {quad->type == quad_type::LABEL} */
+std::string get_label_inst_class_name(const quad_pointer&);
+
+bool is_label(const quad_pointer& instruction,
+				const std::string& label);
+
+/////////////////////////
+// @COPY
+/////////////////////////
+quad_pointer new_copy(const address_pointer& dest,
+						const address_pointer& orig);
+
+/* PRE : {quad->type == quad_type::COPY} */
+address_pointer get_copy_inst_dest(const quad_pointer&);
+
+/* PRE : {quad->type == quad_type::COPY} */
+address_pointer get_copy_inst_orig(const quad_pointer&);
+
+bool is_copy(const quad_pointer& instruction,
+			const address_pointer& dest,
+			const address_pointer& orig);
+
+
+/////////////////////////
+// @INDEXED COPY TO
+/////////////////////////
+quad_pointer new_indexed_copy_to(const address_pointer& dest,
+								  const address_pointer& index,
+								  const address_pointer& orig);
+
+/* PRE : {quad->type == quad_type::INDEXED_COPY_TO} */
+address_pointer get_indexed_copy_to_dest(const quad_pointer&);
+
+/* PRE : {quad->type == quad_type::INDEXED_COPY_TO} */
+address_pointer get_indexed_copy_to_index(const quad_pointer&);
+
+/* PRE : {quad->type == quad_type::INDEXED_COPY_TO} */
+address_pointer get_indexed_copy_to_src(const quad_pointer&);
+
+bool is_indexed_copy_to(const quad_pointer& instruction,
+						const address_pointer& dest,
+						const address_pointer& index,
+						const address_pointer& orig);
+
+
+/////////////////////////
+// @INDEXED COPY FROM
+/////////////////////////
+quad_pointer new_indexed_copy_from(const address_pointer& dest,
+								  const address_pointer& orig,
+								  const address_pointer& index);
+
+/* PRE : {quad->type == quad_type::INDEXED_COPY_FROM} */
+address_pointer get_indexed_copy_from_dest(const quad_pointer&);
+
+/* PRE : {quad->type == quad_type::INDEXED_COPY_FROM} */
+address_pointer get_indexed_copy_from_index(const quad_pointer&);
+
+/* PRE : {quad->type == quad_type::INDEXED_COPY_FROM} */
+address_pointer get_indexed_copy_from_orig(const quad_pointer&);
+
+bool is_indexed_copy_from(const quad_pointer& instruction,
+						const address_pointer& dest,
+						const address_pointer& orig,
+						const address_pointer& index);
+
+
+/////////////////////////
+// @ENTER PROCEDURE
+/////////////////////////
+quad_pointer new_enter_procedure(unsigned int);
+
+/* PRE : {quad->type == quad_type::ENTER} */
+int get_enter_inst_bytes(const quad_pointer&);
+
+bool is_enter_procedure(const quad_pointer& instruction, unsigned int bytes);
+
+
+/////////////////////////
+// @BINARY ASSIGN
+/////////////////////////
+quad_pointer new_binary_assign(const address_pointer& dest,
+							   const address_pointer& arg1,
+							   const address_pointer& arg2,
+							   quad_oper op);
+
+bool is_binary_assignment(const quad_pointer& instruction,
+						 const address_pointer& dest,
+						 const address_pointer& arg1,
+						 const address_pointer& arg2,
+						 quad_oper op);
+
+
+/////////////////////////
+// @UNARY ASSIGN
+/////////////////////////
+quad_pointer new_unary_assign(const address_pointer& dest,
+							   const address_pointer& arg,
+							   quad_oper op);
+
+/* PRE : {quad->type == quad_type::UNARY_ASSIGN} */
+address_pointer get_unary_assign_dest(const quad_pointer&);
+
+/* PRE : {quad->type == quad_type::UNARY_ASSIGN} */
+address_pointer get_unary_assign_src(const quad_pointer&);
+
+bool is_unary_assignment(const quad_pointer& instruction,
+						 const address_pointer& dest,
+						 const address_pointer& arg,
+						 quad_oper op);
+
+
+/////////////////////////
+// @PARAM
+/////////////////////////
+quad_pointer new_parameter_inst(const address_pointer& param);
+
+bool is_parameter_inst(const quad_pointer& instruction,
+						const address_pointer& param);
+
+address_pointer get_param_inst_param(const quad_pointer&);
+
+
+/////////////////////////
+// @FUNCTION CALL
+/////////////////////////
+quad_pointer new_function_call_inst(const address_pointer& dest,
+									const address_pointer& func_label,
+									const address_pointer& param_quantity);
+
+bool is_function_call(const quad_pointer& instruction,
+						const address_pointer& dest,
+						const address_pointer& func_label,
+						const address_pointer& param_quantity);
+
+
+/////////////////////////
+// @PROCEDURE CALL
+/////////////////////////
+quad_pointer new_procedure_call_inst(const address_pointer& proc_label,
+									const address_pointer& param_quantity);
+
+bool is_procedure_call(const quad_pointer& instruction,
+						const address_pointer& proc_label,
+						int param_quantity);
+
+
+/////////////////////////
+// @CONDITIONAL JUMP
+/////////////////////////
+quad_pointer new_conditional_jump_inst(const address_pointer& guard,
+									const address_pointer& label,
+									quad_oper op);
+
+/* PRE : {quad->type == quad_type::CONDITIONAL_JUMP} */
+std::string get_conditional_jmp_label(const quad_pointer&);
+
+/* PRE : {quad->type == quad_type::CONDITIONAL_JUMP} */
+address_pointer get_conditional_jmp_guard(const quad_pointer&);
+
+bool is_conditional_jump_inst(const quad_pointer& instruction,
+								const address_pointer& guard,
+								const address_pointer& label,
+								quad_oper op);
+
+
+/////////////////////////
+// @UNCONDITIONAL JUMP
+/////////////////////////
+quad_pointer new_unconditional_jump_inst(const address_pointer& label);
+
+/* PRE : {quad->type == quad_type::UNCONDITIONAL_JUMP} */
+std::string get_unconditional_jmp_label(const quad_pointer&);
+
+bool is_unconditional_jump_inst(const quad_pointer& instruction,
+								const address_pointer& label);
+
+
+/////////////////////////
+// RELATIONAL JUMP
+/////////////////////////
+quad_pointer new_relational_jump_inst(const address_pointer& x,
+									const address_pointer& y,
+									quad_oper relop,
+									const address_pointer& label);
+
+/* PRE : {quad->type == quad_type::RELATIONAL_JUMP} */
+std::string get_relational_jmp_label(const quad_pointer&);
+
+bool is_relational_jump_inst(const quad_pointer& instruction,
+							const address_pointer& x,
+							const address_pointer& y,
+							quad_oper relop,
+							const address_pointer& label);
+
+
+/////////////////////////
+// RETURN
+/////////////////////////
+quad_pointer new_return_inst(const address_pointer&);
+
+bool is_return_inst(const quad_pointer& instruction,
+					const address_pointer& ret_value);
+
+
+/////////////////////////
+// @ADDRESS
+/////////////////////////
+/* PRE : {address->type == address_type::ADDRESS_CONSTANT} */
+value_type get_constant_address_type(const address_pointer&);
+
+address_type get_address_type(const address_pointer&);
+
+bool are_equal_address_pointers(const address_pointer&, const address_pointer&);
+
+
+/////////////////////////
+// INTEGER ADDRESS
+/////////////////////////
+// TODO: cambiarles el nombre, para que quede claro que construyen addresses
+address_pointer new_integer_constant(int value);
+
+/* PRE : {address->type == address_type::ADDRESS_CONSTANT and
+ * 			get_constant_address_type(address) == INTEGER} */
+int get_constant_address_integer_value(const address_pointer&);
+
+
+
+/////////////////////////
+// FLOAT ADDRESS
+/////////////////////////
+address_pointer new_float_constant(float value);
+
+/* PRE : {address->type == address_type::ADDRESS_CONSTANT and
+ * 			get_constant_address_type(address) == FLOAT} */
+float get_constant_address_float_value(const address_pointer&);
+
+
+/////////////////////////
+// BOOLEAN ADDRESS
+/////////////////////////
+address_pointer new_boolean_constant(bool value);
+
+/* PRE : {address->type == address_type::ADDRESS_CONSTANT and
+ * 			get_constant_address_type(address) == BOOLEAN} */
+bool get_constant_address_boolean_value(const address_pointer&);
+
+
+/////////////////////////
+// NAME ADDRESS
+/////////////////////////
+address_pointer new_name_address(const std::string& name);
+
+/* PRE : {address->type == address_type::ADDRESS_NAME} */
+std::string get_address_name(const address_pointer&);
+
+
+/////////////////////////
+// @LABEL ADDRESS
+/////////////////////////
+address_pointer new_label_address(const std::string& label);
+
+address_pointer new_method_label_address(const std::string& method_name,
+											const std::string& class_name);
+
+/* PRE : {address->type == address_type::ADDRESS_LABEL} */
+std::string get_label_address_value(const address_pointer&);
+
+/* PRE : {address->type == address_type::ADDRESS_LABEL} */
+std::string get_label_address_class_name(const address_pointer&);
+
+/* PRE : {address->type == address_type::ADDRESS_LABEL} */
+std::string get_label_address_method_name(const address_pointer&);
+
 
 #endif // THREE_ADDRESS_CODE_H_

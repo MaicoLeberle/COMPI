@@ -118,6 +118,10 @@ public:
 		type_expr.type = Type::_Type::ID;
 		type_expr.id = id;
 	}
+
+	Type get_type(void){
+		return this->type_expr;
+	}
 };
 
 class node_literal : public node_expr {};
@@ -419,6 +423,14 @@ public:
     statement type_of_statement(void) {
     	return assignment_statement;
     }
+
+    location_pointer get_location(void){
+    	return this->location;
+    }
+
+    expr_pointer get_expression(void){
+		return this->expression;
+	}
 
     template<typename visitor>
 	void accept(visitor& v) {
@@ -769,6 +781,14 @@ public:
 
     expression type_of_expression(void) {
     	return location;
+    }
+
+    bool is_object_field(void){
+    	return this->ids.size() > 1;
+    }
+
+    reference_list get_ids(void){
+    	return this->ids;
     }
 
     template<typename visitor>

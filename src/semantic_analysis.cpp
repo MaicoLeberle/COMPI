@@ -536,7 +536,7 @@ void semantic_analysis::visit(node_location& node) {
 		type_id = aux->get_type();
 		class_id = aux->get_class();
 		if (node.array_idx_expr != nullptr){
-			// The location represents an field from an array.
+			// The location represents a field from an array.
 			if (class_id != symtable_element::T_ARRAY){
 				// Rule 11: if the location is an array position,
 				// the corresponding id must point to an array, and the

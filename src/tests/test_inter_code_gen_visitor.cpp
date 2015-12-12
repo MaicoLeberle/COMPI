@@ -50,7 +50,7 @@ void test_class_decl(){
 
 	// One empty class declaration...
 	std::string test_program = "class Program {}"
-								"class main {\n"
+								"class Main {\n"
 									"void main(){\n"
 									"}\n"
 								"}\0\0";
@@ -60,7 +60,7 @@ void test_class_decl(){
 
 	instructions_list *translation = v1.get_inst_list();
 
-	std::string ir_program = "main.main:\n"
+	std::string ir_program = "Main.main:\n"
 							 "enter 0";
 
 	translate_ir_code(ir_program);
@@ -73,7 +73,7 @@ void test_class_decl(){
 	assert(symtable->get(std::string("Program"))->get_class() ==
 		   symtable_element::T_CLASS);
 
-	assert(symtable->get(std::string("main"))->get_class() ==
+	assert(symtable->get(std::string("Main"))->get_class() ==
 			   symtable_element::T_CLASS);
 
 	std::cout << "OK. " << std::endl;
@@ -87,7 +87,7 @@ void test_field_decl(){
 								"				float x;"
 								"				boolean b;}"
 								"class class2 { class1 obj; }"
-								"class main {\n"
+								"class Main {\n"
 									"void main(){\n"
 									"}\n"
 								"}\0\0";
@@ -98,7 +98,7 @@ void test_field_decl(){
 	instructions_list *translation = v1.get_inst_list();
 
 	// Check ir code.
-	std::string ir_program = "main.main:\n"
+	std::string ir_program = "Main.main:\n"
 							 "enter 0";
 
 	translate_ir_code(ir_program);
@@ -173,7 +173,7 @@ void test_field_decl(){
 										"class1 obj;"
 									"}\n"
 					"}"
-					"class main {\n"
+					"class Main {\n"
 						"void main(){\n"
 						"}\n"
 					"}\0\0";
@@ -182,20 +182,53 @@ void test_field_decl(){
 
 	translate(v2, test_program);
 
+	// TODO: estoy hay que cambiarlo: la tabla de símbolos me tiene que
+	// devolver los atributos en el orden que corresponden!
 	translation = v2.get_inst_list();
 	ir_program = "class2.method:\n"
-				 "enter "+std::to_string(reference_width +
-						 	 	 	 	 integer_width*2 + float_width*2 +
-						 	 	 	 	 boolean_width*2)+"\n"
+				 "enter " + std::to_string(integer_width*2 +
+						 	 	 	 	 	 float_width*2 +
+						 	 	 	 	 	 boolean_width*2) + "\n"
 				 "n = "+std::to_string(integer_initial_value)+"\n"
 				 "x = "+std::to_string(float_initial_value)+"\n"
 				 "b = "+BOOL_STR(boolean_initial_value)+"\n"
-				 "obj.b2 = "+BOOL_STR(boolean_initial_value)+"\n"
-				 "obj.y = "+std::to_string(float_initial_value)+"\n"
-				 "obj.m = "+std::to_string(integer_initial_value)+"\n"
-				 "main.main:\n"
+				 "obj[0] = "+BOOL_STR(boolean_initial_value)+"\n"
+				 "obj[" + std::to_string(boolean_width) + "] = " +
+				 	 	 	 	 	 	std::to_string(float_initial_value)+"\n"
+				 "obj[" + std::to_string(float_width +
+	 	 	 	 	 	 boolean_width) + "] = " +
+	 	 	 	 	 	 	 	 	 std::to_string(integer_initial_value)+"\n"
+				 "obj = *obj.b2\n"
+				 "Main.main:\n"
 				 "enter 0";
 
+
+	translate_ir_code(ir_program);
+
+	assert(are_equal_instructions_list(*translation, *ir_code));
+
+	// Referencing attributes.
+	test_program = 	"class class1 { int n;"
+
+									"void method() {"
+										"n += 1;"
+									"}\n"
+					"}"
+					"class Main {\n"
+						"void main(){\n"
+						"}\n"
+					"}\0\0";
+
+	inter_code_gen_visitor v3;
+
+	translate(v3, test_program);
+
+	translation = v3.get_inst_list();
+	ir_program = "class1.method:\n"
+				 "enter 0\n"
+				 "n = n + 1\n"
+				 "Main.main:\n"
+				 "enter 0";
 
 	translate_ir_code(ir_program);
 
@@ -216,7 +249,7 @@ void test_method_decl(){
 													"float x;"
 												"}\n"
 								"}"
-								"class main {\n"
+								"class Main {\n"
 									"void main(){\n"
 									"}\n"
 								"}\0\0";
@@ -227,12 +260,11 @@ void test_method_decl(){
 	instructions_list *translation = v1.get_inst_list();
 
 	std::string ir_program = "class2.method:\n"
-				"enter " + std::to_string(reference_width + integer_width +
-									integer_width +
-									float_width) + "\n" +
+				"enter " + std::to_string(integer_width +
+										float_width) + "\n" +
 				"n = " + std::to_string(integer_initial_value) +
 				"x = " + std::to_string(float_initial_value) +
-				"main.main:\n" +
+				"Main.main:\n" +
 				"enter 0";
 
 
@@ -289,7 +321,7 @@ void test_assignment_stm(){
 													"n -= 1;"
 												"}\n"
 								"}"
-								"class main {\n"
+								"class Main {\n"
 									"void main(){\n"
 									"}\n"
 								"}\0\0";
@@ -300,12 +332,12 @@ void test_assignment_stm(){
 	instructions_list *translation = v1.get_inst_list();
 
 	std::string ir_program = "class1.method:\n"
-							"enter "+std::to_string(reference_width + integer_width) + "\n"
+							"enter "+std::to_string(integer_width) + "\n"
 							"n = " + std::to_string(integer_initial_value) + "\n"
 							"n = 1\n"
 							"n = n + 1\n"
 							"n = n - 1"
-							"main.main:"
+							"Main.main:"
 							"enter 0";
 
 
@@ -331,7 +363,7 @@ void test_method_call_statement(){
 													"obj.method2(x, y);"
 												"}\n"
 											"}"
-								"class main {\n"
+								"class Main {\n"
 									"void main(){\n"
 									"}\n"
 								"}\0\0";
@@ -341,20 +373,22 @@ void test_method_call_statement(){
 
 	instructions_list *translation = v1.get_inst_list();
 	std::string ir_program = "class1.method1:\n"
-							"enter "+std::to_string(reference_width) + "\n"
+							"enter 0\n"
 							"class1.method2:\n"
-							"enter " + std::to_string(reference_width + 2*integer_width) + "\n"
+							"enter 0\n"
 							"param this\n"
 							"call class1.method1,1\n"
 							"class2.method3:\n"
-							"enter " + std::to_string(reference_width + 2*integer_width) + "\n"
+							"enter " + std::to_string(reference_width +
+														2*integer_width) + "\n"
+							"obj = *obj\n"
 							"x = "+std::to_string(integer_initial_value) + "\n"
 							"y = "+std::to_string(integer_initial_value) + "\n"
 							"param obj\n"
 							"param x\n"
 							"param y\n"
-							"call class1.method2,3\n"
-							"main.main:\n"
+							"call class1.method2, 3\n"
+							"Main.main:\n"
 							"enter 0";
 
 	translate_ir_code(ir_program);
@@ -372,7 +406,7 @@ void test_if_statement(){
 													"if (true) x = 1; else x = 2;"
 												"}\n"
 								"}"
-								"class main {\n"
+								"class Main {\n"
 									"void main(){\n"
 									"}\n"
 								"}\0\0";
@@ -384,7 +418,7 @@ void test_if_statement(){
 
 	std::string ir_program = "class1.method1:\n"
 							"enter " +
-								std::to_string(reference_width + integer_width) + "\n"
+								std::to_string(integer_width) + "\n"
 							"x = " + std::to_string(integer_initial_value) + "\n"
 							"ifFalse true goto L1\n"
 							"x = 1\n"
@@ -392,7 +426,7 @@ void test_if_statement(){
 							"L1:\n"
 							"x = 2\n"
 							"L2:\n"
-							"main.main:\n"
+							"Main.main:\n"
 							"enter 0";
 
 	translate_ir_code(ir_program);
@@ -410,7 +444,7 @@ void test_for_statement(){
 													"for x = 1 , 2 y += 1;"
 												"}\n"
 								"}"
-								"class main {\n"
+								"class Main {\n"
 									"void main(){\n"
 									"}\n"
 								"}\0\0";
@@ -421,8 +455,7 @@ void test_for_statement(){
 	instructions_list *translation = v1.get_inst_list();
 
 	std::string ir_program = "class1.method1:\n"
-							"enter " +
-							std::to_string(reference_width + integer_width) + "\n"
+							"enter 0\n"
 							"y = 1\n"
 							"x = 1\n"
 							"L1:\n"
@@ -431,7 +464,7 @@ void test_for_statement(){
 							"x = x + 1\n"
 							"goto L1\n"
 							"L2:\n"
-							"main.main:\n"
+							"Main.main:\n"
 							"enter 0";
 
 	translate_ir_code(ir_program);
@@ -449,7 +482,7 @@ void test_while_statement(){
 													"while true y += 1;"
 												"}\n"
 								"}"
-								"class main {\n"
+								"class Main {\n"
 									"void main(){\n"
 									"}\n"
 								"}\0\0";
@@ -460,15 +493,14 @@ void test_while_statement(){
 	instructions_list *translation = v1.get_inst_list();
 
 	std::string ir_program = "class1.method1:\n"
-							"enter " +
-								std::to_string(reference_width + integer_width) + "\n"
+							"enter 0\n"
 							"y = 1\n"
 							"L1:\n"
 							"ifFalse true goto L2\n"
 							"y = y + 1\n"
 							"goto L1\n"
 							"L2:\n"
-							"main.main:\n"
+							"Main.main:\n"
 							"enter 0";
 
 	translate_ir_code(ir_program);
@@ -485,7 +517,7 @@ void test_return_statement(){
 													"return 1;"
 												"}\n"
 								"}"
-								"class main {\n"
+								"class Main {\n"
 									"void main(){\n"
 									"}\n"
 								"}\0\0";
@@ -496,9 +528,9 @@ void test_return_statement(){
 	instructions_list *translation = v1.get_inst_list();
 
 	std::string ir_program = "class1.method1:\n"
-								"enter " + std::to_string(reference_width) + "\n"
+								"enter 0\n"
 								"return 1\n"
-								"main.main:\n"
+								"Main.main:\n"
 								"enter 0";
 
 	translate_ir_code(ir_program);
@@ -515,7 +547,7 @@ void test_break_statement(){
 													"while true break;"
 												"}\n"
 								"}"
-								"class main {\n"
+								"class Main {\n"
 									"void main(){\n"
 									"}\n"
 								"}\0\0";
@@ -526,13 +558,13 @@ void test_break_statement(){
 	instructions_list *translation = v1.get_inst_list();
 
 	std::string ir_program = "class1.method1:\n"
-							"enter " + std::to_string(reference_width) + "\n"
+							"enter 0\n"
 							"L1:\n"
 							"ifFalse true goto L2\n"
 							"goto L2\n"
 							"goto L1\n"
 							"L2:\n"
-							"main.main:\n"
+							"Main.main:\n"
 							"enter 0";
 
 	translate_ir_code(ir_program);
@@ -549,7 +581,7 @@ void test_continue_statement(){
 													"while true continue;"
 												"}\n"
 								"}"
-								"class main {\n"
+								"class Main {\n"
 									"void main(){\n"
 									"}\n"
 								"}\0\0";
@@ -560,13 +592,13 @@ void test_continue_statement(){
 	instructions_list *translation = v1.get_inst_list();
 
 	std::string ir_program = "class1.method1:\n"
-							"enter " + std::to_string(reference_width) + "\n"
+							"enter 0\n"
 							"L1:\n"
 							"ifFalse true goto L2\n"
 							"goto L1\n"
 							"goto L1\n"
 							"L2:\n"
-							"main.main:\n"
+							"Main.main:\n"
 							"enter 0";
 
 	translate_ir_code(ir_program);
@@ -583,7 +615,7 @@ void test_skip_statement(){
 													"while true {; continue;}"
 												"}\n"
 								"}"
-								"class main {\n"
+								"class Main {\n"
 									"void main(){\n"
 									"}\n"
 								"}\0\0";
@@ -592,15 +624,16 @@ void test_skip_statement(){
 	translate(v1, test_program);
 
 	instructions_list *translation = v1.get_inst_list();
-
+	// TODO: esto no está mal? no debería guardar en una temporal la guarda
+	// del while?
 	std::string ir_program = "class1.method1:\n"
-							"enter " + std::to_string(reference_width) + "\n"
+							"enter 0\n"
 							"L1:\n"
 							"ifFalse true goto L2\n"
 							"goto L1\n"
 							"goto L1\n"
 							"L2:\n"
-							"main.main:\n"
+							"Main.main:\n"
 							"enter 0";
 
 	translate_ir_code(ir_program);
@@ -633,8 +666,10 @@ void test_binary_operation_expr(){
 	// t-0 se presta a confusión. Como tenemos que tener un espacio de nombres
 	// privado, quizás podríamos emplear algún símbolo especial para identificarlas
 	// como $?
+	// TODO: el nombre interno de las temporales ya ha sido cambiado:
+	// @t0
 	std::string ir_program = "class1.method1:\n"
-							"enter " + std::to_string(reference_width + integer_width) + "\n"
+							"enter 0\n"
 							"t-0 = 1 + 2\n"
 							"x = t-0\n"
 							"main.main:\n"

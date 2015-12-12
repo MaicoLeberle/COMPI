@@ -56,8 +56,6 @@ ret                          return RET;
 cmpl                         return CMPL;
 enter                        return ENTER;
 pushq                       return PUSHQ;
-{alpha}+({alpha_num}|\.|\_|\$)*\: {asmlval.label_id = new std::string(asmtext, asmleng-1);
-                                return LABEL;}
 rax                         {asmlval.register_val = register_id::RAX; 
                             return REGISTER;}
 rbx                         {asmlval.register_val = register_id::RBX;
@@ -130,6 +128,8 @@ r14b                        {asmlval.register_val = register_id::R14B;
                             return REGISTER;}
 r15b                        {asmlval.register_val = register_id::R15B;
                             return REGISTER;}
+{alpha}+({alpha_num}|\.|\_|\$)*\: {asmlval.label_id = new std::string(asmtext, asmleng-1);
+                                return LABEL;}
 \$                          return '$';
 \*                          return '*';
 %                           return '%';
