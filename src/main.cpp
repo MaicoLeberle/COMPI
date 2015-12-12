@@ -58,7 +58,7 @@ int main(int argc, const char* argv[]) {
     FILE* output_file = NULL;
     enum target stage;
     bool debugging;
-    parseArguments(argv, argv+argc, input_file, output_file, stage, debugging);
+    parseArguments((char**)argv, (char**)argv + argc, input_file, output_file, stage, debugging);
 
     /*  Set flex to read from it instead of defaulting to STDIN.             */
     yyin = input_file;
