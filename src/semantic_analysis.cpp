@@ -98,7 +98,8 @@ symtable_element::id_type semantic_analysis::determine_symtable_type(Type::_Type
 	return ret;
 }
 
-Type::_Type semantic_analysis::determine_node_type(symtable_element::id_type type_symtable){
+Type::_Type semantic_analysis::determine_node_type(symtable_element::id_type
+													type_symtable){
 	Type::_Type ret;
 
 	switch(type_symtable){
@@ -236,9 +237,10 @@ void semantic_analysis::visit(node_program& node) {
 	// {there must be 1 or 0 symbol tables in s_tables}
 
 	// Rule 3: Every program has one class with name "main".
+	// TODO: cambiar esto: debería ser main.
 	if(node.classes.size() == 0 ||
-	s_table.get(std::string("main"))->get_class() == symtable_element::NOT_FOUND){
-		register_error(std::string("No \"main\" class declared."), ERROR_3);
+	s_table.get(std::string("Main"))->get_class() == symtable_element::NOT_FOUND){
+		register_error(std::string("No \"Main\" class declared."), ERROR_3);
 	}
 
 	if(errors == 0){
@@ -436,8 +438,19 @@ void semantic_analysis::visit(node_parameter_identifier& node) {
 			register_error(std::string("Parameter's identifier and method's name "
 					"coincide:" + node.id), ERROR_23);
 		}
-		symtable_element param(node.id, determine_symtable_type(node.type.type));
-		s_table.put_func_param(node.id, param);
+		else{
+			if(node.type.type != Type::ID){
+				// The parameter has a basic type.
+				symtable_element param(node.id, determine_symtable_type(node.type.type));
+				s_table.put_func_param(node.id, param);
+			}
+			else{
+				// {node.type.type == Type::ID}
+				symtable_element param(node.id, new std::string(node.type.id));
+				s_table.put_func_param(node.id, param);
+			}
+		}
+
 	}
 }
 
@@ -619,11 +632,11 @@ void semantic_analysis::visit(node_method_call_expr& node) {
 
 	// We set the type of the expression.
 	if(type_l_expr == symtable_element::ID){
-		node.set_type(class_name_l_expr);
+		node.set_type(this->class_name_l_expr);
 	}
 	else{
 		// {type_l_expr != Type::ID}
-		node.set_type(determine_node_type(type_l_expr));
+		node.set_type(determine_node_type(this->type_l_expr));
 	}
 }
 
@@ -833,13 +846,13 @@ void semantic_analysis::visit(node_binary_operation_expr& node) {
 
 	expr_call_appropriate_accept(node.left);
 	if(well_formed){
-		l_op_type = type_l_expr;
-		l_op_class = class_l_expr;
-		well_formed = false;
+		l_op_type = this->type_l_expr;
+		l_op_class = this->class_l_expr;
+		this->well_formed = false;
 		expr_call_appropriate_accept(node.right);
 		if(well_formed){
-			r_op_type = type_l_expr;
-			r_op_class = class_l_expr;
+			r_op_type = this->type_l_expr;
+			r_op_class = this->class_l_expr;
 
 			// Rule 13: operands of arithmetic and relational operations,
 			// must have type int or float.
@@ -851,21 +864,22 @@ void semantic_analysis::visit(node_binary_operation_expr& node) {
 				(r_op_type == symtable_element::INTEGER ||
 				r_op_type == symtable_element::FLOAT)){
 
-					well_formed = true;
+					this->well_formed = true;
 					// TODO: hay conversión implícita de tipos?
 					// TODO: determinar el tipo a retornar
 					if (node.oper == Oper::LESS || node.oper == Oper::GREATER ||
 					node.oper == Oper::LESS_EQUAL || node.oper == Oper::GREATER_EQUAL){
-						type_l_expr = symtable_element::BOOLEAN;
+						this->type_l_expr = symtable_element::BOOLEAN;
 					}
 					else{
-						type_l_expr = get_wider_type(l_op_type, r_op_type);
+						this->type_l_expr = get_wider_type(l_op_type,
+														r_op_type);
 					}
 				}
 				else{
 					register_error(std::string("Non-numeric operands of "
 							"arithmetic or relational operation."), ERROR_13);
-					well_formed = false;
+					this->well_formed = false;
 				}
 			}
 			else{
@@ -881,11 +895,11 @@ void semantic_analysis::visit(node_binary_operation_expr& node) {
 
 						register_error(std::string("eq_op operands with "
 								"different or wrong types."), ERROR_14);
-						well_formed = false;
+						this->well_formed = false;
 					}
 					else{
-						well_formed = true;
-						type_l_expr = symtable_element::BOOLEAN;
+						this->well_formed = true;
+						this->type_l_expr = symtable_element::BOOLEAN;
 					}
 				}
 				else{
@@ -894,16 +908,19 @@ void semantic_analysis::visit(node_binary_operation_expr& node) {
 					if (l_op_type != r_op_type || l_op_type != symtable_element::BOOLEAN){
 						register_error(std::string("cond_op operands must "
 								"evaluate to boolean."), ERROR_15);
-						well_formed = false;
+						this->well_formed = false;
 					}
 					else{
-						well_formed = true;
-						type_l_expr = symtable_element::BOOLEAN;
+						this->well_formed = true;
+						this->type_l_expr = symtable_element::BOOLEAN;
 					}
 				}
 			}
 		}
 	}
+
+	// Set the type of the expression.
+	node.set_type(determine_node_type(this->type_l_expr));
 }
 
 void semantic_analysis::visit(node_negate_expr& node) {
@@ -912,14 +929,16 @@ void semantic_analysis::visit(node_negate_expr& node) {
 #endif
 
 	expr_call_appropriate_accept(node.expression);
-	if(well_formed){
+	if(this->well_formed){
 		// Rule 15: cond_op and ! operands, must evaluate to a boolean.
 		if (type_l_expr != symtable_element::BOOLEAN){
 			register_error(std::string("! operand must evaluate to boolean."),
 					ERROR_15);
-			well_formed = false;
+			this->well_formed = false;
 		}
 	}
+	// Set the type of the expression.
+	node.set_type(determine_node_type(this->type_l_expr));
 }
 
 void semantic_analysis::visit(node_negative_expr& node) {
@@ -928,14 +947,17 @@ void semantic_analysis::visit(node_negative_expr& node) {
 	#endif
 	expr_call_appropriate_accept(node.expression);
 
-	if (well_formed && type_l_expr != symtable_element::INTEGER &&
-	type_l_expr != symtable_element::FLOAT){
+	if (this->well_formed && this->type_l_expr != symtable_element::INTEGER &&
+	this->type_l_expr != symtable_element::FLOAT){
 		// Rule 13: operands of arithmetic and relational operations,
 		// must have type int or float
 		register_error(std::string("Non-numeric operand for an arithmetic "
 								"negation operation."), ERROR_13);
-		well_formed = false;
+		this->well_formed = false;
 	}
+
+	// Set the type of the expression.
+	node.set_type(determine_node_type(this->type_l_expr));
 }
 
 void semantic_analysis::visit(node_parentheses_expr& node) {
@@ -944,4 +966,7 @@ void semantic_analysis::visit(node_parentheses_expr& node) {
 #endif
 
 	expr_call_appropriate_accept(node.expression);
+
+	// Set the type of the expression.
+	node.set_type(determine_node_type(this->type_l_expr));
 }

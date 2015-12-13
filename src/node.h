@@ -813,6 +813,10 @@ public:
     	return negate_expr;
     }
 
+    Type get_type(void){
+    	return this->expression->get_type();
+    }
+
     template<typename visitor>
 	void accept(visitor& v) {
     	v.visit(*this);
