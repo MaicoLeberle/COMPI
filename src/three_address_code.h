@@ -42,10 +42,10 @@ struct address {
 					// as type.
 		unsigned int temp; // Compiler-generated temporary.
 		struct{
-			std::string *val; // In case the address is a label.
+			std::string *val;
 			std::string *class_name; // In case the label is a method's name.
 			std::string *method_name;
-		} label;
+		} label; // In case the address is a label.
 	} value;
 };
 
@@ -277,6 +277,9 @@ quad_pointer new_function_call_inst(const address_pointer& dest,
 									const address_pointer& func_label,
 									const address_pointer& param_quantity);
 
+/* PRE : {quad->type == quad_type::FUNCTION_CALL} */
+address_pointer get_function_call_dest(const quad_pointer&);
+
 bool is_function_call(const quad_pointer& instruction,
 						const address_pointer& dest,
 						const address_pointer& func_label,
@@ -288,6 +291,10 @@ bool is_function_call(const quad_pointer& instruction,
 /////////////////////////
 quad_pointer new_procedure_call_inst(const address_pointer& proc_label,
 									const address_pointer& param_quantity);
+
+/* PRE : {quad->type == quad_type::PROCEDURE_CALL or
+ * 			quad->type == quad_type::FUNCTION_CALL} */
+std::string get_procedure_or_function_call_label(const quad_pointer&);
 
 bool is_procedure_call(const quad_pointer& instruction,
 						const address_pointer& proc_label,

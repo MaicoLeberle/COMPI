@@ -130,7 +130,7 @@ void test_unary_assignment_translation(){
 	////////////////////////
 	// ADDRESS OF
 	////////////////////////
-	translate_ir_code(std::string("X = * Y"));
+	translate_ir_code(std::string("X = & Y"));
 
 	// TODO: borrar todo lo que estoy metiendo en el heap.
 	assert(ir_code->size() == 1);

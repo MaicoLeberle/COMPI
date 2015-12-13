@@ -126,7 +126,7 @@ unary_assign
                                                 *$4,
                                                 quad_oper::NEGATION));}
                                                 
-    | name '=' '*' address              {$$ = new quad_pointer(
+    | name '=' '&' address              {$$ = new quad_pointer(
                                                 new_unary_assign(
                                                 address_pointer(
                                                 new_name_address(*$1)), 
@@ -207,7 +207,8 @@ name
     
     | ID '.' name       {$$ = new std::string(*$1 + '.' + *$3);}
     
-    
+    | '@' ID            {$$ = new std::string('@' + *$2);}
+
 label
     : ID '.' ID                  {$$ = new address_pointer(
                                             new_method_label_address(*$3, *$1));}

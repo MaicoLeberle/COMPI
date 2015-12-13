@@ -54,6 +54,8 @@ return                      return RETURN;
 \<=                         return LESS_EQUAL;
 \>=                         return GREATER_EQUAL;
 &&                          return AND;
+&                           return '&';
+@                           return '@';
 \|\|                        return OR;
 not                         return NOT;
 \[                          return '[';

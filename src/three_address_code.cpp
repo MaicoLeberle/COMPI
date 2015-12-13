@@ -842,7 +842,7 @@ bool is_indexed_copy_from(const quad_pointer& instruction,
 
 
 /////////////////////////
-// ENTER PROCEDURE
+// @ENTER PROCEDURE
 /////////////////////////
 quad_pointer new_enter_procedure(unsigned int nmbr){
 	quad_pointer instruction = quad_pointer(new quad);
@@ -983,7 +983,7 @@ address_pointer get_param_inst_param(const quad_pointer& instruction){
 }
 
 /////////////////////////
-// FUNCTION CALL
+// @FUNCTION CALL
 /////////////////////////
 quad_pointer new_function_call_inst(const address_pointer& dest,
 									const address_pointer& func_label,
@@ -997,6 +997,15 @@ quad_pointer new_function_call_inst(const address_pointer& dest,
 	instruction->arg2 = param_quantity;
 
 	return instruction;
+}
+
+address_pointer get_function_call_dest(const quad_pointer& instruction){
+	// PRE
+	#ifdef __DEBUG
+		assert(instruction->type == quad_type::FUNCTION_CALL);
+	#endif
+
+	return instruction->result;
 }
 
 bool is_function_call(const quad_pointer& instruction,
@@ -1013,7 +1022,7 @@ bool is_function_call(const quad_pointer& instruction,
 
 
 /////////////////////////
-// PROCEDURE CALL
+// @PROCEDURE CALL
 /////////////////////////
 quad_pointer new_procedure_call_inst(const address_pointer& proc_label,
 									const address_pointer& param_quantity){
@@ -1025,6 +1034,17 @@ quad_pointer new_procedure_call_inst(const address_pointer& proc_label,
 	instruction->arg2 = param_quantity;
 
 	return instruction;
+}
+
+std::string get_procedure_or_function_call_label(const quad_pointer&
+													instruction){
+	// PRE
+	#ifdef __DEBUG
+		assert(instruction->type == quad_type::PROCEDURE_CALL or
+				instruction->type == quad_type::FUNCTION_CALL);
+	#endif
+
+	return get_label_address_value(instruction->arg1);
 }
 
 bool is_procedure_call(const quad_pointer& instruction,

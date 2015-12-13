@@ -15,11 +15,19 @@
  * de C: qué label utilizamos?
  *
  * TODO: agregar al Makefile la dependendencia de las unidades de compilación
- * con respecto a los archivos de header. */
+ * con respecto a los archivos de header.
+ *
+ * TODO: agregar el chequeo en tiempo de compilación de los índices con los que
+ * se accede al vector.*/
 
 asm_code_generator::asm_code_generator(instructions_list *_ir,
 										ids_info *_s_table) :
 ir(_ir), s_table(_s_table) {
+
+	// PRE
+	#ifdef __DEBUG
+		assert(_s_table != nullptr);
+	#endif
 
 	translation = new asm_instructions_list();
 	stack_params = nullptr;
@@ -477,8 +485,9 @@ void asm_code_generator::translate_unconditional_jump(
 											const quad_pointer& instruction){
 	// UNCONDITIONAL_JUMP,	// goto L
 	// jmp L
-	translation->push_back(new_jmp_instruction(get_label_inst_label(
-																instruction)));
+	translation->push_back(
+					new_jmp_instruction(
+							get_unconditional_jmp_label(instruction)));
 }
 
 void asm_code_generator::translate_conditional_jump(const quad_pointer& instruction){
@@ -702,8 +711,9 @@ void asm_code_generator::translate_procedure_call(const quad_pointer& instructio
 												data_type::L));
 
 	// Save EIP and jump to the called procedure.
-	translation->push_back(new_call_instruction(get_label_inst_label(
-																instruction)));
+	translation->push_back(
+					new_call_instruction(
+						get_procedure_or_function_call_label(instruction)));
 
 	// Reset the state of attributes used to manage the passing of parameters.
 	last_reg_used = register_id::NONE;
@@ -734,7 +744,7 @@ void asm_code_generator::translate_label(const quad_pointer& instruction){
 	// this strings are not used, so their actual values are of no interest.
 	this->actual_method_name = get_label_inst_method_name(instruction);
 	this->actual_class_name = get_label_inst_class_name(instruction);
-	this->actual_class_attributes = s_table->get_list_attributes(
+	this->actual_class_attributes = this->s_table->get_list_attributes(
 													this->actual_class_name);
 	this->last_label = get_label_inst_label(instruction);
 

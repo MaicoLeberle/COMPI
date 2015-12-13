@@ -285,17 +285,6 @@ std::string id_instance){
 	symtable_element *class_object = s_table.get(id_class);
 	std::list<symtable_element> *fields = class_object->get_class_fields();
 	std::string first_field("");
-	// TODO: el último argumento a put_obj sería el id del primer
-	// parámetro del objeto.
-	// TODO: actualmente, no estaría haciendo falta usar first_field
-	// Directamente guardamos un puntero al primer atributo, al
-	// final de todos los atributos.
-
-	// TODO: cambiar esto: el id de una instancia, debería apuntar al primer
-	// atributo del objeto, pero no debería hacer falta almacenar esa referencia.
-	// Sólo hay problemas cuando el objeto no tiene atributos: allí tenemos
-	// que pensar cuál es la forma más razonable de definir qué almacenaría
-	// el id del objeto.
 
 	// Reset the offset, to compute new offsets, with respect to the beginning
 	// of the instance.
@@ -304,40 +293,41 @@ std::string id_instance){
 
 	// Extract the beginning
 	std::list<symtable_element>::iterator it = fields->begin();
-	if(it != fields->end() and (*it).get_class() == symtable_element::T_VAR){
+
+	if(it != fields->end() and
+	(*it).get_class() != symtable_element::T_FUNCTION){
+		// Register the first attribute.
 		first_field = id_instance + "." + (*it).get_key();
 		symtable_element variable(first_field, (*it).get_class_type());
 		t_results pair = s_table.put_var(variable, first_field, prev_offset);
 		#ifdef __DEBUG
 			assert(std::get<0>(pair) == ID_PUT);
 		#endif
-		// TODO: por ahora, no trabajamos con arreglos
-		translate_var_decl((*it).get_type(), id_instance, id_class, 0);
-		it++;
 	}
 	else{
-		// {it == fields->end() or (*it).get_class() != symtable_element::T_VAR}
+		// {it == fields->end() or
+		// 	(*it).get_class() == symtable_element::T_FUNCTION}
+
 		// The class hasn't attributes.
-		// TODO: estamos solamente almacenando una referencia....
-		inst_list->push_back(new_unary_assign(new_name_address(id_instance),
-												new_name_address(id_instance),
-												quad_oper::ADDRESS_OF));
-		this->offset += reference_width;
+		// TODO: cómo hacemos con esto?
+		first_field = id_instance;
 	}
 
 	for(; it != fields->end(); ++it){
-		if((*it).get_class() == symtable_element::T_VAR){
-			//translate_var_decl((*it).get_type(), id_instance + "." + (*it).get_key(),
-			//id_class, 0);
+		if((*it).get_class() != symtable_element::T_FUNCTION){
 			translate_var_decl((*it).get_type(), id_instance, id_class, 0);
 		}
 	}
+
+	// Save the address of the first attribute, into a pointer.
 	inst_list->push_back(new_unary_assign(new_name_address(id_instance),
 											new_name_address(first_field),
 											quad_oper::ADDRESS_OF));
-	this->offset = prev_offset + this->offset;
+
 	// Update the symbol's table, with information about the instance.
 	// The identifier of the instance will "point" to the first attribute.
+	// It is placed after all the attributes. Update the offset properly.
+	this->offset = prev_offset + this->offset;
 	symtable_element id(id_instance, new std::string(id_class));
 	t_results pair = s_table.put_obj(id,
 									id_instance,
@@ -352,26 +342,11 @@ std::string id_instance){
 	#endif
 
 	this->offset += reference_width;
-	/*if(first_field != std::string("")){
-		// Save a pointer to the first attribute.
-		inst_list->push_back(new_unary_assign(new_name_address(id_instance),
-												new_name_address(first_field),
-												quad_oper::ADDRESS_OF));
-	}
-	else{
-		// {first_field == std::string("")}
-		// The object hasn't attributes.
-		inst_list->push_back(new_unary_assign(new_name_address(id_instance),
-												new_name_address(id_instance),
-												quad_oper::ADDRESS_OF));
-	}*/
 
 	return first_field;
 }
 
-/* _ TODO: con este método std::string get_id_rep(std::string); recupero el id
- * unico para una variable, de acuerdo al scope.
- * _ Recordar que la semántica de los operadores booleanos es short-circuit
+/* _ TODO: Recordar que la semántica de los operadores booleanos es short-circuit
  * (ver página 400 del dragon book)
  * */
 void inter_code_gen_visitor::visit(node_program& node){
@@ -690,10 +665,10 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 					assert(std::get<0>(pair1) == PARAM_PUT);
 				#else
 					s_table.put_obj_param(obj_param,
-										node.id,
-										this->offset,
-										node.type.id,
-										std::string(""));
+											node.id,
+											this->offset,
+											node.type.id,
+											std::string(""));
 				#endif
 			}
 			break;
@@ -1053,8 +1028,6 @@ void inter_code_gen_visitor::visit(node_while_statement& node) {
 	 *  LABEL L1, (EXPRESSION CODE, it returns t1), IFFALSE t1 L2, (BODY CODE),
 	 *  GOTO L1, LABEL L2
 	 * */
-	// TODO: podríamos colocar como comentarios de todos los métodos el código
-	// intermedio que nos inventamos.
 	// TODO: el valor de esta etiqueta podría cambiar
 	std::string label_beginning("L1");
 	inst_list->push_back(new_label_inst(new_label_address(label_beginning)));
@@ -1134,12 +1107,16 @@ void inter_code_gen_visitor::visit(node_binary_operation_expr& node) {
 
 	// New temporal for the result.
 	t_results pair =  s_table.new_temp(this->offset);
-	// TODO: chequear put_results
-	// TODO: no estoy usando new_temp_address
-	// TODO: notar que aquí habría ayudado que semantic_analysis guarde en el node
-	// el tipo que le asigno a la expresión, para actualizar el offset
-	// como corresponde.
+
+	#ifdef __DEBUG
+		assert(std::get<0>(pair) == put_results::ID_PUT);
+	#endif
+
 	dest = new_name_address(*std::get<1>(pair));
+
+	// Update offset.
+	this->offset += this->calculate_size(
+			this->determine_type(node.get_type().type));
 
 	switch(node.oper){
 		case Oper::TIMES:
@@ -1213,8 +1190,11 @@ void inter_code_gen_visitor::visit(node_negate_expr& node) {
 
 	// New temporal for the result.
 	t_results pair =  s_table.new_temp(this->offset);
-	// TODO: chequear put_results
-	// TODO: no estoy usando new_temp_address
+
+	#ifdef __DEBUG
+		assert(std::get<0>(pair) == put_results::ID_PUT);
+	#endif
+
 	dest = new_name_address(*std::get<1>(pair));
 	inst_list->push_back(new_unary_assign(dest, temp, quad_oper::NEGATION));
 
@@ -1235,14 +1215,17 @@ void inter_code_gen_visitor::visit(node_negative_expr& node) {
 
 	// New temporal for the result.
 	t_results pair =  s_table.new_temp(this->offset);
-	// TODO: chequear put_results
-	// TODO: no estoy usando new_temp_address
+
+	#ifdef __DEBUG
+		assert(std::get<0>(pair) == put_results::ID_PUT);
+	#endif
+
 	dest = new_name_address(*std::get<1>(pair));
 	inst_list->push_back(new_unary_assign(dest, temp, quad_oper::NEGATIVE));
 
 	// Update offset.
-	// TODO: aquí haría falta que el analizador semántico me indique el tipo
-	// de la expresión.
+	this->offset += this->calculate_size(
+						this->determine_type(node.get_type().type));
 
 	temp = dest;
 }
@@ -1253,24 +1236,18 @@ void inter_code_gen_visitor::visit(node_parentheses_expr& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating parentheses expression" << std::endl;
 	#endif
-
-	// TODO: no debemos hacer nada?. Ya en el análisis sintáctico, al momento
-	// de reconocer las expresiones parentizadas, se impone el orden adecuado
-	// de evaluación.
 	expr_call_appropriate_accept(node.expression);
-
 	/*// New temporal for the result.
-	t_results pair =  s_table.new_temp(offset);
-	// TODO: chequear put_results
-	// TODO: no estoy usando new_temp_address
+	t_results pair =  s_table.new_temp(this->offset);
+
+	#ifdef __DEBUG
+		assert(std::get<0>(pair) == put_results::ID_PUT);
+	#endif
+
 	dest = new_name_address(*std::get<1>(pair));
-
 	inst_list->push_back(new_copy(dest, temp));
-
-	temp = dest;
-
 	// Update offset.
-	// TODO: aquí haría falta que el analizador semántico me indique el tipo
-	// de la expresión.*/
+	this->offset += this->calculate_size(
+			this->determine_type(node.get_type().type));*/
 }
 

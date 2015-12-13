@@ -9,11 +9,16 @@ extern void yy_switch_to_buffer(YY_BUFFER_STATE buffer);
 extern void yy_delete_buffer(YY_BUFFER_STATE buffer);
 
 void translate(inter_code_gen_visitor& v, std::string program){
+	semantic_analysis sem_an_v;
 	YY_BUFFER_STATE program_buffer = yy_scan_string(program.c_str());
 	yy_switch_to_buffer(program_buffer);
 
 	yyparse();
 
+	// Semantic analysis.
+	ast->accept(sem_an_v);
+
+	// IR code generation.
 	ast->accept(v);
 
 	yy_delete_buffer(program_buffer);
@@ -186,7 +191,8 @@ void test_field_decl(){
 	// devolver los atributos en el orden que corresponden!
 	translation = v2.get_inst_list();
 	ir_program = "class2.method:\n"
-				 "enter " + std::to_string(integer_width*2 +
+				 "enter " + std::to_string(reference_width +
+						 	 	 	 	 	 integer_width*2 +
 						 	 	 	 	 	 float_width*2 +
 						 	 	 	 	 	 boolean_width*2) + "\n"
 				 "n = "+std::to_string(integer_initial_value)+"\n"
@@ -198,7 +204,7 @@ void test_field_decl(){
 				 "obj[" + std::to_string(float_width +
 	 	 	 	 	 	 boolean_width) + "] = " +
 	 	 	 	 	 	 	 	 	 std::to_string(integer_initial_value)+"\n"
-				 "obj = *obj.b2\n"
+				 "obj = &obj.b2\n"
 				 "Main.main:\n"
 				 "enter 0";
 
@@ -381,7 +387,7 @@ void test_method_call_statement(){
 							"class2.method3:\n"
 							"enter " + std::to_string(reference_width +
 														2*integer_width) + "\n"
-							"obj = *obj\n"
+							"obj = &obj\n"
 							"x = "+std::to_string(integer_initial_value) + "\n"
 							"y = "+std::to_string(integer_initial_value) + "\n"
 							"param obj\n"
@@ -643,7 +649,7 @@ void test_skip_statement(){
 	std::cout << "OK. " << std::endl;
 }
 
-void test_binary_operation_expr(){
+void test_binary_operation(){
 	std::cout << "14) Binary operations:";
 
 	/////////////////////////////////
@@ -653,7 +659,7 @@ void test_binary_operation_expr(){
 													"x = 1 + 2;"
 												"}\n"
 								"}"
-								"class main {\n"
+								"class Main {\n"
 									"void main(){\n"
 									"}\n"
 								"}\0\0";
@@ -662,17 +668,11 @@ void test_binary_operation_expr(){
 	translate(v1, test_program);
 
 	instructions_list *translation = v1.get_inst_list();
-	// TODO: hay que pedir que el nombre de las temporales sea otro, ya que
-	// t-0 se presta a confusión. Como tenemos que tener un espacio de nombres
-	// privado, quizás podríamos emplear algún símbolo especial para identificarlas
-	// como $?
-	// TODO: el nombre interno de las temporales ya ha sido cambiado:
-	// @t0
 	std::string ir_program = "class1.method1:\n"
-							"enter 0\n"
-							"t-0 = 1 + 2\n"
-							"x = t-0\n"
-							"main.main:\n"
+							"enter 4\n"
+							"@t0 = 1 + 2\n"
+							"x = @t0\n"
+							"Main.main:\n"
 							"enter 0";
 
 
@@ -680,113 +680,60 @@ void test_binary_operation_expr(){
 
 	assert(are_equal_instructions_list(*translation, *ir_code));
 
-	/*assert(translation->size() == 6);
-
-	// Class 1.
-
-	// Method1's label.
-	instructions_list::iterator it = translation->begin();
-
-	// Enter procedure.
-	it++;
-
-	// Binary assignment: because we don't know the temporal variable created to
-	// hold the result, we refer to the one in *it.
-	it++;
-	address_pointer left_operand = new_integer_constant(1);
-	address_pointer right_operand = new_integer_constant(2);
-	address_pointer temporal = (*it)->result;
-	assert(is_binary_assignment(*it, temporal,
-								left_operand,
-								right_operand,
-								quad_oper::PLUS));
-
-	// Copy.
-	it++;
-	address_pointer dest = new_name_address(std::string("x"));
-	assert(is_copy(*it, dest, temporal));*/
-
 	/////////////////////////////////
 	// MINUS
 	/////////////////////////////////
-	/*test_program = "class class1 { void method1(int x) {"
+	test_program = "class class1 { void method1(int x) {"
 										"x = 1 - 2;"
 									"}\n"
-					"}"
-					"class main {\n"
-						"void main(){\n"
-						"}\n"
-					"}\0\0";
-
+								"}"
+					"class Main {\n"
+									"void main(){\n"
+									"}\n"
+								"}\0\0";
 	inter_code_gen_visitor v2;
 
 	translate(v2, test_program);
 
 	translation = v2.get_inst_list();
+	ir_program = "class1.method1:\n"
+							"enter 4\n"
+							"@t0 = 1 - 2\n"
+							"x = @t0\n"
+							"Main.main:\n"
+							"enter 0";
 
-	assert(translation->size() == 6);
 
-	// Class 1.
+	translate_ir_code(ir_program);
 
-	// Method1's label.
-	it = translation->begin();
-
-	// Enter procedure.
-	it++;
-
-	// Binary assignment: because we don't know the temporal variable created to
-	// hold the result, we refer to the one in *it.
-	it++;
-	temporal = (*it)->result;
-	assert(is_binary_assignment(*it, temporal,
-								left_operand,
-								right_operand,
-								quad_oper::MINUS));
-
-	// Copy.
-	it++;
-	assert(is_copy(*it, dest, temporal));
-
+	assert(are_equal_instructions_list(*translation, *ir_code));
 	/////////////////////////////////
 	// TIMES
 	/////////////////////////////////
 	test_program = "class class1 { void method1(int x) {"
 										"x = 1 * 2;"
 									"}\n"
-					"}"
-					"class main {\n"
-						"void main(){\n"
-						"}\n"
-					"}\0\0";
-
+								"}"
+					"class Main {\n"
+									"void main(){\n"
+									"}\n"
+								"}\0\0";
 	inter_code_gen_visitor v3;
 
 	translate(v3, test_program);
 
 	translation = v3.get_inst_list();
+	ir_program = "class1.method1:\n"
+							"enter 4\n"
+							"@t0 = 1 * 2\n"
+							"x = @t0\n"
+							"Main.main:\n"
+							"enter 0";
 
-	assert(translation->size() == 6);
 
-	// Class 1.
+	translate_ir_code(ir_program);
 
-	// Method1's label.
-	it = translation->begin();
-
-	// Enter procedure.
-	it++;
-
-	// Binary assignment: because we don't know the temporal variable created to
-	// hold the result, we refer to the one in *it.
-	it++;
-	temporal = (*it)->result;
-	assert(is_binary_assignment(*it, temporal,
-								left_operand,
-								right_operand,
-								quad_oper::TIMES));
-
-	// Copy.
-	it++;
-	assert(is_copy(*it, dest, temporal));
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	/////////////////////////////////
 	// DIVIDE
@@ -794,40 +741,27 @@ void test_binary_operation_expr(){
 	test_program = "class class1 { void method1(int x) {"
 										"x = 1 / 2;"
 									"}\n"
-					"}"
-					"class main {\n"
-						"void main(){\n"
-						"}\n"
-					"}\0\0";
-
+								"}"
+					"class Main {\n"
+									"void main(){\n"
+									"}\n"
+								"}\0\0";
 	inter_code_gen_visitor v4;
 
 	translate(v4, test_program);
 
 	translation = v4.get_inst_list();
+	ir_program = "class1.method1:\n"
+							"enter 4\n"
+							"@t0 = 1 / 2\n"
+							"x = @t0\n"
+							"Main.main:\n"
+							"enter 0";
 
-	assert(translation->size() == 6);
 
-	// Class 1.
+	translate_ir_code(ir_program);
 
-	// Method1's label.
-	it = translation->begin();
-
-	// Enter procedure.
-	it++;
-
-	// Binary assignment: because we don't know the temporal variable created to
-	// hold the result, we refer to the one in *it.
-	it++;
-	temporal = (*it)->result;
-	assert(is_binary_assignment(*it, temporal,
-								left_operand,
-								right_operand,
-								quad_oper::DIVIDE));
-
-	// Copy.
-	it++;
-	assert(is_copy(*it, dest, temporal));
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	/////////////////////////////////
 	// MOD
@@ -835,298 +769,42 @@ void test_binary_operation_expr(){
 	test_program = "class class1 { void method1(int x) {"
 										"x = 1 % 2;"
 									"}\n"
-					"}"
-					"class main {\n"
-						"void main(){\n"
-						"}\n"
-					"}\0\0";
-
+								"}"
+					"class Main {\n"
+									"void main(){\n"
+									"}\n"
+								"}\0\0";
 	inter_code_gen_visitor v5;
 
 	translate(v5, test_program);
 
 	translation = v5.get_inst_list();
+	ir_program = "class1.method1:\n"
+							"enter 4\n"
+							"@t0 = 1 % 2\n"
+							"x = @t0\n"
+							"Main.main:\n"
+							"enter 0";
 
-	assert(translation->size() == 6);
 
-	// Class 1.
+	translate_ir_code(ir_program);
 
-	// Method1's label.
-	it = translation->begin();
-
-	// Enter procedure.
-	it++;
-
-	// Binary assignment: because we don't know the temporal variable created to
-	// hold the result, we refer to the one in *it.
-	it++;
-	temporal = (*it)->result;
-	assert(is_binary_assignment(*it, temporal,
-								left_operand,
-								right_operand,
-								quad_oper::MOD));
-
-	// Copy.
-	it++;
-	assert(is_copy(*it, dest, temporal));
-
-	/////////////////////////////////
-	// LESS
-	/////////////////////////////////
-	test_program = "class class1 { void method1(int x) {"
-										"x = 1 < 2;"
-									"}\n"
-					"}"
-					"class main {\n"
-						"void main(){\n"
-						"}\n"
-					"}\0\0";
-
-	inter_code_gen_visitor v6;
-
-	translate(v6, test_program);
-
-	translation = v6.get_inst_list();
-
-	assert(translation->size() == 6);
-
-	// Class 1.
-
-	// Method1's label.
-	it = translation->begin();
-
-	// Enter procedure.
-	it++;
-
-	// Binary assignment: because we don't know the temporal variable created to
-	// hold the result, we refer to the one in *it.
-	it++;
-	temporal = (*it)->result;
-	assert(is_binary_assignment(*it, temporal,
-								left_operand,
-								right_operand,
-								quad_oper::LESS));
-
-	// Copy.
-	it++;
-	assert(is_copy(*it, dest, temporal));
-
-	/////////////////////////////////
-	// LESS EQUAL
-	/////////////////////////////////
-	test_program = "class class1 { void method1(int x) {"
-										"x = 1 <= 2;"
-									"}\n"
-					"}"
-					"class main {\n"
-						"void main(){\n"
-						"}\n"
-					"}\0\0";
-
-	inter_code_gen_visitor v7;
-
-	translate(v7, test_program);
-
-	translation = v7.get_inst_list();
-
-	assert(translation->size() == 6);
-
-	// Class 1.
-
-	// Method1's label.
-	it = translation->begin();
-
-	// Enter procedure.
-	it++;
-
-	// Binary assignment: because we don't know the temporal variable created to
-	// hold the result, we refer to the one in *it.
-	it++;
-	temporal = (*it)->result;
-	assert(is_binary_assignment(*it, temporal,
-								left_operand,
-								right_operand,
-								quad_oper::LESS_EQUAL));
-
-	// Copy.
-	it++;
-	assert(is_copy(*it, dest, temporal));
-
-	/////////////////////////////////
-	// GREATER
-	/////////////////////////////////
-	test_program = "class class1 { void method1(int x) {"
-										"x = 1 > 2;"
-									"}\n"
-					"}"
-					"class main {\n"
-						"void main(){\n"
-						"}\n"
-					"}\0\0";
-
-	inter_code_gen_visitor v8;
-
-	translate(v8, test_program);
-
-	translation = v8.get_inst_list();
-
-	assert(translation->size() == 6);
-
-	// Class 1.
-
-	// Method1's label.
-	it = translation->begin();
-
-	// Enter procedure.
-	it++;
-
-	// Binary assignment: because we don't know the temporal variable created to
-	// hold the result, we refer to the one in *it.
-	it++;
-	temporal = (*it)->result;
-	assert(is_binary_assignment(*it, temporal,
-								left_operand,
-								right_operand,
-								quad_oper::GREATER));
-
-	// Copy.
-	it++;
-	assert(is_copy(*it, dest, temporal));
-
-	/////////////////////////////////
-	// GREATER OR EQUAL
-	/////////////////////////////////
-	test_program = "class class1 { void method1(int x) {"
-										"x = 1 >= 2;"
-									"}\n"
-					"}"
-					"class main {\n"
-						"void main(){\n"
-						"}\n"
-					"}\0\0";
-
-	inter_code_gen_visitor v9;
-
-	translate(v9, test_program);
-
-	translation = v9.get_inst_list();
-
-	assert(translation->size() == 6);
-
-	// Class 1.
-
-	// Method1's label.
-	it = translation->begin();
-
-	// Enter procedure.
-	it++;
-
-	// Binary assignment: because we don't know the temporal variable created to
-	// hold the result, we refer to the one in *it.
-	it++;
-	temporal = (*it)->result;
-	assert(is_binary_assignment(*it, temporal,
-								left_operand,
-								right_operand,
-								quad_oper::GREATER_EQUAL));
-
-	// Copy.
-	it++;
-	assert(is_copy(*it, dest, temporal));
-
-	/////////////////////////////////
-	// EQUAL
-	/////////////////////////////////
-	test_program = "class class1 { void method1(int x) {"
-										"x = 1 == 2;"
-									"}\n"
-					"}"
-					"class main {\n"
-						"void main(){\n"
-						"}\n"
-					"}\0\0";
-
-	inter_code_gen_visitor v10;
-
-	translate(v10, test_program);
-
-	translation = v10.get_inst_list();
-
-	assert(translation->size() == 6);
-
-	// Class 1.
-
-	// Method1's label.
-	it = translation->begin();
-
-	// Enter procedure.
-	it++;
-
-	// Binary assignment: because we don't know the temporal variable created to
-	// hold the result, we refer to the one in *it.
-	it++;
-	temporal = (*it)->result;
-	assert(is_binary_assignment(*it, temporal,
-								left_operand,
-								right_operand,
-								quad_oper::EQUAL));
-
-	// Copy.
-	it++;
-	assert(is_copy(*it, dest, temporal));
-
-	/////////////////////////////////
-	// DISTINCT
-	/////////////////////////////////
-	test_program = "class class1 { void method1(int x) {"
-										"x = 1 != 2;"
-									"}\n"
-					"}"
-					"class main {\n"
-						"void main(){\n"
-						"}\n"
-					"}\0\0";
-
-	inter_code_gen_visitor v11;
-
-	translate(v11, test_program);
-
-	translation = v11.get_inst_list();
-
-	assert(translation->size() == 6);
-
-	// Class 1.
-
-	// Method1's label.
-	it = translation->begin();
-
-	// Enter procedure.
-	it++;
-
-	// Binary assignment: because we don't know the temporal variable created to
-	// hold the result, we refer to the one in *it.
-	it++;
-	temporal = (*it)->result;
-	assert(is_binary_assignment(*it, temporal,
-								left_operand,
-								right_operand,
-								quad_oper::DISTINCT));
-
-	// Copy.
-	it++;
-	assert(is_copy(*it, dest, temporal));*/
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	std::cout << "OK. " << std::endl;
 }
 
-void test_negate_expr(){
-	std::cout << "15) Logic negation:";
+void test_unary_operation(){
+	std::cout << "15) Unary operations:";
 
+	/////////////////////////////////
+	// NEGATION
+	/////////////////////////////////
 	std::string test_program = "class class1 { void method1(bool x) {"
 													"x = ! true;"
 												"}\n"
 								"}"
-								"class main {\n"
+								"class Main {\n"
 									"void main(){\n"
 									"}\n"
 								"}\0\0";
@@ -1135,80 +813,58 @@ void test_negate_expr(){
 	translate(v1, test_program);
 
 	instructions_list *translation = v1.get_inst_list();
+	std::string ir_program = "class1.method1:\n"
+							"enter 4\n"
+							"@t0 = not true\n"
+							"x = @t0\n"
+							"Main.main:\n"
+							"enter 0";
 
-	assert(translation->size() == 6);
 
-	// Class 1.
+	translate_ir_code(ir_program);
 
-	// Method1's label.
-	instructions_list::iterator it = translation->begin();
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
-	// Enter procedure.
-	it++;
-
-	// Negate expr.
-	it++;
-	address_pointer boolean = new_boolean_constant(true);
-	address_pointer temporal = (*it)->result;
-	assert(is_unary_assignment(*it, temporal, boolean, quad_oper::NEGATION));
-
-	// Copy.
-	it++;
-	address_pointer dest = new_name_address(std::string("x"));
-	assert(is_copy(*it, dest, temporal));
-
-	std::cout << "OK. " << std::endl;
-}
-
-void test_negative_expr(){
-	std::cout << "16) Negative:";
-
-	std::string test_program = "class class1 { void method1(int x) {"
-													"x = -1;"
-												"}\n"
-								"}"
-								"class main {\n"
-									"void main(){\n"
+	/////////////////////////////////
+	// NEGATIVE
+	/////////////////////////////////
+	test_program = "class class1 { void method1(int x) {"
+										"x = -1;"
 									"}\n"
-								"}\0\0";
-	inter_code_gen_visitor v1;
+					"}"
+					"class Main {\n"
+						"void main(){\n"
+						"}\n"
+					"}\0\0";
+	inter_code_gen_visitor v2;
 
-	translate(v1, test_program);
+	translate(v2, test_program);
 
-	instructions_list *translation = v1.get_inst_list();
+	translation = v2.get_inst_list();
+	ir_program = "class1.method1:\n"
+							"enter 4\n"
+							"@t0 = -1\n"
+							"x = @t0\n"
+							"Main.main:\n"
+							"enter 0";
 
-	assert(translation->size() == 6);
 
-	// Class 1.
+	translate_ir_code(ir_program);
 
-	// Method1's label.
-	instructions_list::iterator it = translation->begin();
-
-	// Enter procedure.
-	it++;
-
-	// Negate expr.
-	it++;
-	address_pointer constant = new_integer_constant(1);
-	address_pointer temporal = (*it)->result;
-	assert(is_unary_assignment(*it, temporal, constant, quad_oper::NEGATIVE));
-
-	// Copy.
-	it++;
-	address_pointer dest = new_name_address(std::string("x"));
-	assert(is_copy(*it, dest, temporal));
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	std::cout << "OK. " << std::endl;
 }
 
 void test_parentheses_expr(){
-	std::cout << "17) Expressions between parentheses:";
+	std::cout << "16) Expressions between parentheses:";
 
+	// Two sub-expressions.
 	std::string test_program = "class class1 { void method1(int x) {"
 													"x = (1 + 2) + 3;"
 												"}\n"
 								"}"
-								"class main {\n"
+								"class Main {\n"
 									"void main(){\n"
 									"}\n"
 								"}\0\0";
@@ -1217,40 +873,47 @@ void test_parentheses_expr(){
 	translate(v1, test_program);
 
 	instructions_list *translation = v1.get_inst_list();
+	std::string ir_program = "class1.method1:\n"
+						"enter 8\n"
+						"@t0 = 1 + 2\n"
+						"@t1 = @t0 + 3\n"
+						"x = @t1\n"
+						"Main.main:\n"
+						"enter 0";
 
-	assert(translation->size() == 7);
 
-	// Class 1.
+	translate_ir_code(ir_program);
 
-	// Method1's label.
-	instructions_list::iterator it = translation->begin();
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
-	// Enter procedure.
-	it++;
+	// More than 2 sub-expressions
+	test_program = "class class1 { void method1(int x) {"
+										"x = ((((1 - 2) + 3) * 4) / 5);"
+									"}\n"
+					"}"
+					"class Main {\n"
+						"void main(){\n"
+						"}\n"
+					"}\0\0";
+	inter_code_gen_visitor v2;
 
-	// Expression between parentheses.
-	it++;
-	address_pointer first_operand = new_integer_constant(1);
-	address_pointer second_operand = new_integer_constant(2);
-	address_pointer first_temporal = (*it)->result;
-	assert(is_binary_assignment(*it, first_temporal,
-								first_operand,
-								second_operand,
-								quad_oper::PLUS));
+	translate(v2, test_program);
 
-	// Second addition.
-	it++;
-	address_pointer third_operand = new_integer_constant(3);
-	address_pointer second_temporal = (*it)->result;
-	assert(is_binary_assignment(*it, second_temporal,
-								first_temporal,
-								third_operand,
-								quad_oper::PLUS));
+	translation = v2.get_inst_list();
+	ir_program = "class1.method1:\n"
+						"enter 16\n"
+						"@t0 = 1 - 2\n"
+						"@t1 = @t0 + 3\n"
+						"@t2 = @t1 * 4\n"
+						"@t3 = @t2 / 5\n"
+						"x = @t3\n"
+						"Main.main:\n"
+						"enter 0";
 
-	// Copy.
-	it++;
-	address_pointer dest = new_name_address(std::string("x"));
-	assert(is_copy(*it, dest, second_temporal));
+
+	translate_ir_code(ir_program);
+
+	assert(are_equal_instructions_list(*translation, *ir_code));
 
 	std::cout << "OK. " << std::endl;
 }
@@ -1271,8 +934,8 @@ void test_inter_code_gen_visitor(){
 	test_break_statement();
 	test_continue_statement();
 	test_skip_statement();
-	/*test_binary_operation_expr();
-	test_negate_expr();
-	test_negative_expr();
-	test_parentheses_expr();*/
+	test_binary_operation();
+	test_unary_operation();
+	test_parentheses_expr();
 }
+
