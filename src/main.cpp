@@ -102,6 +102,8 @@ int main(int argc, const char* argv[]) {
 
     } else exit(EXIT_SUCCESS);
 
+    std::cout << std::endl << "COMPILATION FINISHED SUCCESFULLY." << std::endl;
+
     return 0;
 }
 
@@ -156,15 +158,17 @@ void parseArguments(char** beginIt, char** endIt, FILE*& input_file, FILE*& outp
         } else if (std::string("-debug").compare(*itr) == 0) {
             debugging = true;
         } else {
-            input_file = fopen(*itr, "r");
             if((*itr)[0] == '-') {
                 std::cout << "Invalid option." << std::endl;
                 exit(EXIT_SUCCESS);
             }
 
+            input_file = fopen(*itr, "r");
             if(!input_file) {
-                std::cout << "Unopenable file." << std::endl;
+                std::cout << "Unopenable file (" << *itr << ")." << std::endl;
                 exit(EXIT_SUCCESS);
+            } else {
+                std::cout << std::endl << "COMPILING FILE " << *itr << "." << std::endl;
             }
 
             if(!endsWith(std::string(*itr), std::string(".compi"))) {

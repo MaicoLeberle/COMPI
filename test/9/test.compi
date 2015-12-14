@@ -1,0 +1,81 @@
+class Main {
+    int x;
+    
+    int y;
+    
+    boolean b;
+    
+    void set_x (int z) {
+        x = z;
+    }
+
+    void set_y (int z) {
+        y = z;
+    }
+
+    void set_b (boolean c) {
+        b = c;
+    }
+
+    int plus_x (int z) {
+        return (x + z);
+    }
+
+    int plus_y (int z) {
+        return (y + z);
+    }
+
+    boolean and_b (boolean c) {
+        return (b && c);
+    }
+
+    boolean or_b (boolean c) {
+        return (b || c);
+    }
+
+    int return_x () {
+        return x;
+    }
+
+    int return_y () {
+        return y;
+    }
+
+    boolean return_b () {
+        return b;
+    }
+
+    void inc_if () {
+        if (b) 
+            x = x + 1;
+        else 
+            y = y + 1;
+    }
+
+    int read_int() extern;
+
+    void print_string(string s) extern;
+
+    void print_int(int z) extern;
+
+    void main() {
+        set_y(read_int());
+        while (return_y() != 1) {
+            print_string("y != 1\t(y == ");
+            print_int(read_int());
+            print_string(")\n");
+            set_y(read_int());
+        }
+        print_string("y == 1\n");
+        int z;
+        for z = 1 , 15 {
+            if (!(z == 5 && z == 7))
+                continue;
+            if (-z == -10)
+                break;
+            print_string("z == ");
+            print_int(z);
+            print_string("\n");
+        }
+    }
+}

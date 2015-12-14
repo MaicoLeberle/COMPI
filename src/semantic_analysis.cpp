@@ -665,7 +665,7 @@ void semantic_analysis::analyze_method_call(method_call& data) {
 
 			if(func_params->size() != data.parameters.size()){
 				register_error(std::string("Method call with less parameters"
-										"than expected."), ERROR_5);
+										" than expected."), ERROR_5);
 				well_formed = false;
 			}
 			else{
@@ -736,7 +736,9 @@ void semantic_analysis::visit(node_if_statement& node){
 void semantic_analysis::visit(node_for_statement& node){
 	symtable_element::id_type type_expr;
 
+#ifdef __DEBUG
 	std::cout << "Accessing for statement" << std::endl;
+#endif
 
 	// Rule 18: from and to expression must evaluate to integers.
 	expr_call_appropriate_accept(node.from);

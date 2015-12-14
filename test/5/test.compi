@@ -1,0 +1,29 @@
+class Main {
+	boolean b;
+
+	void set_b(boolean c) {
+		b = c;
+	}
+
+	boolean return_b() {
+		return b;
+	}
+
+	void print_string(string s) extern;
+
+	void print_int(int x) extern;
+
+	void main() {
+		set_b(true);
+		if (b) {
+			int z;
+			for z = 1, 10 {
+				if (z == 2)
+					continue;
+				print_string("z == ");
+				print_int(z);
+				print_string("\n");
+			}
+		}
+	}
+}
