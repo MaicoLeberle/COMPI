@@ -1,19 +1,15 @@
 #include "inter_code_gen_visitor.h"
 
 /* TODO: cosas que faltan:
- 	 	 _ no estoy pudiendo escribir código intermedio en los casos de test
- 	 	 de este visitor, ya que no puedo escribir a mano nombre de temporales:
- 	 	 ahora las temp son de la forma @tn
- 	 	 _ ver rutina de llamada a procedimiento: The contents of the rIP are
- 	 	 not directly readable by software. However, the rIP is pushed onto the
- 	 	 stack by a call instruction (página 21 del pdf. del manual de amd).
- 	 	 _ punteros en assembly?
+
  	 	 _ definir una nueva instrucción de 3-direcciones que me indique
  	 	 que tengo que generar código para declarar un string.
  	 	 _ Agregar el tipo de las variables, al registrarlas en la tabla
  	 	 de símbolos, para que, cuando genero el código assembly, pueda saber
  	 	 si tengo o no un parametro integer, cosa de ponerlo en los registros,
  	 	 antes que en la pila.
+ 	 	 _ Al generar las instrucciones, reemplazar los identificadores por
+ 	 	 quellos identificadores únicos que me genera la tabla de símbolos.
 */
 std::string printable_field_id(reference_list ids);
 
@@ -74,11 +70,6 @@ symtable_element::id_type inter_code_gen_visitor::determine_type(Type::_Type typ
 	return ret;
 }
 
-/* Returns the label that identifies the beginning of the method's translation
- * (in the intermediate code generated).
- * PARAM: ids: a reference_list that represents the identifier used for the call.
- * RETURNS: a std::string representing the label's content.
- * */
 std::string inter_code_gen_visitor::obtain_methods_label(reference_list ids){
 	std::string method_name = ids[ids.size()-1];
 	std::string class_name;
@@ -102,31 +93,49 @@ std::string inter_code_gen_visitor::obtain_methods_label(reference_list ids){
 /*	Determines the width of variable of a given type, being it a basic type
  *  or an instance.
  * */
-unsigned int inter_code_gen_visitor::calculate_size(symtable_element::id_type type){
-	unsigned int ret = 0;
+unsigned int inter_code_gen_visitor::calculate_size(
+symtable_element::id_type type, std::string class_name){
+	unsigned int size = 0;
 
 	switch(type){
 		case symtable_element::INTEGER:
-			ret = integer_width;
+			size = integer_width;
 			break;
 
 		case symtable_element::FLOAT:
-			ret = float_width;
+			size = float_width;
 			break;
 
 		case symtable_element::BOOLEAN:
-			ret = boolean_width;
+			size = boolean_width;
 			break;
 
 		case symtable_element::ID:
-			// TODO: indexar la tabla de símbolos con el id, y extraer su tamaño.
-			// TODO: notar que para este caso, sí es útil ir calculando un
-			// offset de los atributos de una instancia, y guardar esa información
-			// junto con la clase, para saber el tamaño que ocupa una instancia.
+			// TODO: esta información se tendría que almacenar directamente
+			// en la tabla de símbolos.
+			symtable_element *class_elem = s_table.get(class_name);
+			std::list<symtable_element> *fields = class_elem->get_class_fields();
+
+			for(std::list<symtable_element>::iterator it = fields->begin();
+			it != fields->end(); it++){
+
+				if((*it).get_class() != symtable_element::id_class::T_FUNCTION){
+					if((*it).get_class_type() != nullptr){
+						size += this->calculate_size((*it).get_type(),
+													*(*it).get_class_type());
+					}
+					else{
+						// {(*it).get_class_type() == nullptr}
+						size += this->calculate_size((*it).get_type(),
+													std::string(""));
+					}
+				}
+			}
+
 			break;
 	}
 
-	return ret;
+	return size;
 }
 
 void inter_code_gen_visitor::array_initialization(
@@ -143,7 +152,7 @@ symtable_element::id_type type, std::string id, unsigned int array_length){
 
 	// Initialize each position of the array with the corresponding
 	// initial value.
-	unsigned int arr_pos_width = this->calculate_size(type);
+	unsigned int arr_pos_width = this->calculate_size(type, std::string(""));
 	unsigned int arr_size =  arr_pos_width*array_length;
 
 	switch(type){
@@ -184,7 +193,7 @@ symtable_element::id_type type, std::string id, unsigned int array_length){
  * 			must be stored}
  * */
 
-void inter_code_gen_visitor::translate_var_decl(symtable_element::id_type type,
+void inter_code_gen_visitor::translate_var_def(symtable_element::id_type type,
 std::string id, std::string class_name, unsigned int array_length){
 
 	// TODO: guardar el offset después de haberlo alterado: si x ocupa 4 bytes,
@@ -194,7 +203,7 @@ std::string id, std::string class_name, unsigned int array_length){
 	address_pointer dest, constant = nullptr;
 
 	if(type == symtable_element::ID){
-		instance_initialization(class_name, id);
+		this->instance_initialization(class_name, id);
 		// After instance_initialization, offset had been updated correctly.
 	}
 	else{
@@ -236,9 +245,7 @@ std::string id, std::string class_name, unsigned int array_length){
 
 				inst_list->push_back(new_copy(dest, constant));
 			}
-			this->offset += calculate_size(type);
-
-
+			this->offset += calculate_size(type, std::string(""));
 		}
 	}
 }
@@ -312,7 +319,7 @@ std::string id_instance){
 
 	for(; it != fields->end(); ++it){
 		if((*it).get_class() != symtable_element::T_FUNCTION){
-			translate_var_decl((*it).get_type(), id_instance, id_class, 0);
+			translate_var_def((*it).get_type(), id_instance, id_class, 0);
 		}
 	}
 
@@ -393,7 +400,6 @@ void inter_code_gen_visitor::visit(node_class_decl& node) {
 
 	// Gather information about fields. Set relative addresses with respect to the
 	// beginning of this class definition.
-	// TODO: también al traducir la definición de los métodos?
 	int prev_offset = this->offset;
 	this->offset = 0;
 	into_method = false;
@@ -422,7 +428,6 @@ void inter_code_gen_visitor::visit(node_class_decl& node) {
 }
 
 void inter_code_gen_visitor::visit(node_field_decl& node) {
-	// TODO: podríamos utilizar Symbolic Type Widths (pagina 386, libro dragon)
 	#ifdef __DEBUG
 		std::cout << "Translating field declaration." << std::endl;
 	#endif
@@ -434,10 +439,6 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 
 		// Translate each identifier. Add the identifier to the symbol table.
 		if (node.type.type == Type::ID){
-			// TODO: quizás haga falta agregar a las three-address un operador
-			// que obtenga la "dirección de memoria" de una variable, para
-			// indicar que almaceno un puntero a la instancia recién creada.
-
 			// Declaration of instances.
 			std::string *class_name = new std::string(node.type.id);
 			symtable_element id(f->id, class_name);
@@ -457,18 +458,16 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 											this->offset,
 											node.type.id,
 											std::string(""));
-				// TODO: el último argumento sería el id del primer parámetro del objeto,
-				// pero no tengo claro cómo definirlo, de forma tal que pueda reemplazar
-				// a futuro toda ocurrencia del id de este objeto, por el id de su primer
-				// atributo.
 				// TODO: al intentar recuperar el id del primer atributo, recordar
 				// que parecieran estar guardándose estos en el orden inverso
 				// a como uno los guarda en la tabla de símbolos.
 				#ifdef __DEBUG
 					assert(std::get<0>(pair) == FIELD_PUT);
 				#endif
+
+				this->offset += calculate_size(determine_type(node.type.type),
+															node.type.id);
 			}
-			this->offset += calculate_size(determine_type(node.type.type));
 		}
 		else{
 			// {node.type.type != Type::ID}
@@ -477,7 +476,7 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 				// Array
 				if(into_method){
 					// TODO: este tercer argumento es medio fulero...
-					translate_var_decl(determine_type(node.type.type), f->id,
+					translate_var_def(determine_type(node.type.type), f->id,
 					std::string(""), f->array_size);
 				}
 				else{
@@ -486,14 +485,15 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 					symtable_element id(f->id,
 										determine_type(node.type.type),
 										f->array_size);
-					// TODO: cambiar esto cuando se haga el typedef
 					t_field_results pair = s_table.put_var_field(id,
 																f->id,
 																this->offset);
 					#ifdef __DEBUG
 						assert(std::get<0>(pair) == FIELD_PUT);
 					#endif
-					this->offset += calculate_size(determine_type(node.type.type))*f->array_size;
+					this->offset += calculate_size(
+								determine_type(node.type.type), std::string(""))
+								* f->array_size;
 				}
 			}
 			else{
@@ -501,24 +501,23 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 				// Basic type
 				if(into_method){
 					// TODO: este tercer argumento es medio fulero...
-					translate_var_decl(determine_type(node.type.type), f->id,
+					translate_var_def(determine_type(node.type.type), f->id,
 										std::string(""), 0);
 				}
 				else{
 					// {not into_method}
 					symtable_element id(f->id, determine_type(node.type.type));
+					t_field_results pair = s_table.put_var_field(id,
+																f->id,
+																this->offset);
 
 					#ifdef __DEBUG
-						// TODO: cambiar esto cuando se haga el typedef
-						t_field_results pair = s_table.put_var_field(id,
-																	f->id,
-																	this->offset);
 						assert(std::get<0>(pair) == FIELD_PUT);
-					#else
-						s_table.put_var_field(id, f->id, this->offset);
 					#endif
 
-					this->offset += calculate_size(determine_type(node.type.type));
+					this->offset += calculate_size(
+										determine_type(node.type.type),
+										std::string(""));
 				}
 
 			}
@@ -531,15 +530,6 @@ void inter_code_gen_visitor::visit(node_id& node) {
 }
 
 void inter_code_gen_visitor::visit(node_method_decl& node){
-	// TODO: el manejo de la referencia this, todavía no está definido cómo
-	// hacerlo. Aquí hay posibles soluciones planteadas:
-	//	* en la generación de código asm, los parámetros de las funciones
-	// los pasamos a la memoria (al ingresar a la función). Por lo tanto,
-	// mantenemos el offset de las variables.
-	// 	* aquí debería agregar la variable "this" a la tabla de símbolos?
-	// donde debería utilizar this en la traducción?
-	//  * tengo que agregar como parámetros en las llamadas, a los
-	// atributos del objeto para el cual se llama el método.
 	#ifdef __DEBUG
 		std::cout << "Translating method " << node.id << std::endl;
 	#endif
@@ -565,37 +555,19 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 
 	// Initialize offset.
 	unsigned int offset_prev = this->offset;
-	// TODO: usar la referencia this, para mejorar la legibilidad del código!
-
-	// TODO: notar que la forma de modelar scope con código asm consiste:
-	// 				_ en que aquí registremos parámetros, a los que le
-	//				asignamos un offset fijo en el stack frame;
-	//
-	//				_ luego, que el código de llamada ubique los
-	// 				parámetros en el stack en orden que se corresponda con este
-	//				offset.
-	//
-	//				_ finalmente, el procedimiento asume estos offsets, y va
-	//				a buscar ahí los parámetros.
 	this->offset = 0;
 
-	// TODO: borrar esto!!!!!!!!!!!!!
 	// Add the "this" reference as first parameter.
 	std::string this_param("this");
 	symtable_element obj_param(this_param, class_name);
-	//if(node.id != std::string("main")){
+	t_param_results pair1 = s_table.put_obj_param(obj_param,
+												 this_param,
+												 this->offset,
+												 *class_name,
+												 std::string(""));
 	#ifdef __DEBUG
-		t_param_results pair1 = s_table.put_obj_param(obj_param,
-													 this_param,
-													 this->offset,
-													 *class_name,
-													 std::string(""));
 		assert(std::get<0>(pair1) == PARAM_PUT);
-	#else
-		s_table.put_obj_param(obj_param, this_param, this->offset, *class_name,
-							 std::string(""));
 	#endif
-	//}
 
 	this->offset += reference_width;
 
@@ -603,6 +575,7 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 	for(auto p : node.parameters) {
 		p->accept(*this);
 	}
+
 	// TODO: quizás estamos mezclando cuestiones de código asm aquí, pero
 	// para simplificar, reiniciamos el cálculo del offset, cuando
 	// vamos a analizar el cuerpo del método.
@@ -615,32 +588,27 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 	// Into offset we have the size of the sum of the local and temporal variables.
 	// We add the corresponding enter instruction at the beginning of the procedure.
 	aux->push_back(new_enter_procedure(this->offset));
+
 	for (instructions_list::iterator it = inst_list->begin();
 	it != inst_list->end(); ++it){
 			aux->push_back(*it);
 	}
-	// TODO: eliminar el contenido al que apunta inst_list
+
+	delete(inst_list);
+
 	inst_list = aux;
 	this->offset = offset_prev;
 	s_table.finish_func_analysis();
+	t_field_results pair2 = s_table.put_func_field(method,
+												method.get_key(),
+												0,
+												actual_class->get_key());
 	#ifdef __DEBUG
-		// TODO: esta era la forma adecuada de utilizar put_func_field,
-		// aparentemente: primero put_func, agregamos los parametros de la misma
-		// y recorremos el cuerpo de la misa. Cuando esta todo listo,
-		// agregamos el metodo a la clase, con put_func_field
-
-		t_field_results pair2 = s_table.put_func_field(method,
-														method.get_key(),
-														0,
-														actual_class->get_key());
 		assert(std::get<0>(pair2) == FIELD_PUT);
-	#else
-		s_table.put_func_field(method, method.get_key(), 0, actual_class->get_key());
     #endif
 }
 
 void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
-	/* Paso por parámetro los atributos de la clase, prefijandoles "self.". */
 	#ifdef __DEBUG
 		std::cout << "Translating parameter " << node.id << std::endl;
 	#endif
@@ -661,6 +629,9 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 				#ifdef __DEBUG
 					assert(std::get<0>(pair1) == PARAM_PUT);
 				#endif
+				// Update the offset so, outside this method, this value is used to
+				// calculate how much data is reserved into the stack.
+				this->offset += reference_width;
 			}
 			break;
 
@@ -672,12 +643,12 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 				#ifdef __DEBUG
 					assert(std::get<0>(pair2) == PARAM_PUT);
 				#endif
+				// Update the offset so, outside this method, this value is used to
+				// calculate how much data is reserved into the stack.
+				this->offset += calculate_size(determine_type(node.type.type),
+												std::string(""));
 			}
 	}
-
-	// Update the offset so, outside this method, this value is used to
-	// calculate how much data is reserved into the stack.
-	this->offset += calculate_size(determine_type(node.type.type));
 }
 
 void inter_code_gen_visitor::visit(node_body& node) {
@@ -721,12 +692,14 @@ void inter_code_gen_visitor::visit(node_assignment_statement& node) {
 	address_pointer r_value = temp;
 	location_pointer location = node.get_location();
 
+	// TODO: acá estaría faltando el determinar cuando estamos asignando
+	// atributos del objeto actual. En tal caso, tenemos que traducir
+	// la asignación a algo de la forma this[offset] = valor.
 	if(node.oper == AssignOper::ASSIGN){
 		if(location->is_object_field()){
 			reference_list ids = location->get_ids();
 			std::string object = ids[0];
 			unsigned int at_offset = this->get_attribute_offset(ids);
-
 			inst_list->push_back(
 					new_indexed_copy_to(new_name_address(object),
 										new_integer_constant(at_offset),
@@ -761,11 +734,7 @@ void inter_code_gen_visitor::visit(node_assignment_statement& node) {
 			// Extract the value of the attribute, and save it into a
 			// temporal variable.
 			t_results pair =  s_table.new_temp(this->offset);
-			// Update the offset, taking into account the type of the
-			// instance's attribute.
-			this->offset += this->calculate_size(
-								this->determine_type(
-										(node.get_expression())->get_type().type));
+
 			address_pointer temp_field = new_name_address(*std::get<1>(pair));
 
 			inst_list->push_back(new_indexed_copy_from(temp_field,
@@ -814,16 +783,7 @@ void inter_code_gen_visitor::visit(node_int_literal& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating int literal with value " << node.value << std::endl;
 	#endif
-	// TODO: ver el código intermediate.c: no hace falta crear una temporal
-	// para almacenar la constante. Basta con crear un objeto struct
-	// address, que representa la cte (en este caso), o bien una dirección, o
-	// bien una etiqueta, o bien una temporal.
-	// TODO: deberían primero guardarse en una dirección temporal, para que, luego,
-	// desde afuera, utilicemos la misma?. Pensar en el caso de la generación
-	// de las instrucciones que las utilizan: si no se almacenara siempre en
-	// en una dirección, entonces tendría que distinguir, al crear una
-	// instrucción, si se trata de una constante o una dirección.
-	//last_expr = std::string("$"+node.value)
+
 	temp = new_integer_constant(node.value);
 }
 
@@ -831,7 +791,7 @@ void inter_code_gen_visitor::visit(node_bool_literal& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating bool literal with value " << node.value << std::endl;
 	#endif
-	// TODO: tengo que generar un address temporal, y ahí guardar este valor...
+
 	temp = new_boolean_constant(node.value);
 }
 
@@ -1096,7 +1056,8 @@ void inter_code_gen_visitor::visit(node_binary_operation_expr& node) {
 
 	// Update offset.
 	this->offset += this->calculate_size(
-			this->determine_type(node.get_type().type));
+			this->determine_type(node.get_type().type),
+			std::string(""));
 
 	switch(node.oper){
 		case Oper::TIMES:
@@ -1205,7 +1166,8 @@ void inter_code_gen_visitor::visit(node_negative_expr& node) {
 
 	// Update offset.
 	this->offset += this->calculate_size(
-						this->determine_type(node.get_type().type));
+						this->determine_type(node.get_type().type),
+						std::string(""));
 
 	temp = dest;
 }
@@ -1217,17 +1179,5 @@ void inter_code_gen_visitor::visit(node_parentheses_expr& node) {
 		std::cout << "Translating parentheses expression" << std::endl;
 	#endif
 	expr_call_appropriate_accept(node.expression);
-	/*// New temporal for the result.
-	t_results pair =  s_table.new_temp(this->offset);
-
-	#ifdef __DEBUG
-		assert(std::get<0>(pair) == put_results::ID_PUT);
-	#endif
-
-	dest = new_name_address(*std::get<1>(pair));
-	inst_list->push_back(new_copy(dest, temp));
-	// Update offset.
-	this->offset += this->calculate_size(
-			this->determine_type(node.get_type().type));*/
 }
 

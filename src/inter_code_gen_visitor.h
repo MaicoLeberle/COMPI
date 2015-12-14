@@ -86,13 +86,18 @@ private:
 							std::string id,
 							unsigned int array_length);
 
-	unsigned int calculate_size(symtable_element::id_type);
+	unsigned int calculate_size(symtable_element::id_type, std::string);
 
 	symtable_element::id_type determine_type(Type::_Type);
 
-	void translate_var_decl(symtable_element::id_type, std::string, std::string,
+	void translate_var_def(symtable_element::id_type, std::string, std::string,
 							unsigned int array_size);
 
+	/* Returns the label that identifies the beginning of the method's translation
+	 * (in the intermediate code generated).
+	 * PARAM: ids: a reference_list that represents the identifier used for the call.
+	 * RETURNS: a std::string representing the label's content.
+	 * */
 	std::string obtain_methods_label(reference_list ids);
 
 	int get_attribute_offset(reference_list ids);
