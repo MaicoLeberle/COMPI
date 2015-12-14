@@ -918,6 +918,36 @@ void test_parentheses_expr(){
 	std::cout << "OK. " << std::endl;
 }
 
+void test_array_decl(){
+	std::cout << "17) Declaration of arrays:";
+
+	std::string test_program = "class class1 { void method1() {"
+													"int a[2];"
+												"}\n"
+								"}"
+								"class Main {\n"
+									"void main(){\n"
+									"}\n"
+								"}\0\0";
+	inter_code_gen_visitor v1;
+
+	translate(v1, test_program);
+
+	instructions_list *translation = v1.get_inst_list();
+
+	std::string ir_program = "class1.method1:\n"
+								"enter 8\n"
+								"a[0] = 0\n"
+								"a[4] = 0\n"
+								"Main.main:\n"
+								"enter 0";
+
+	translate_ir_code(ir_program);
+
+	assert(are_equal_instructions_list(*translation, *ir_code));
+
+	std::cout << "OK. " << std::endl;
+}
 
 void test_inter_code_gen_visitor(){
 	std::cout << "\nTesting intermediate code generation:" << std::endl;
@@ -937,5 +967,6 @@ void test_inter_code_gen_visitor(){
 	test_binary_operation();
 	test_unary_operation();
 	test_parentheses_expr();
+	test_array_decl();
 }
 

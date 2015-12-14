@@ -284,16 +284,19 @@ std::string print_operand(const address_pointer& operand){
 		case address_type::ADDRESS_CONSTANT:
 			switch(operand->value.constant.type){
 				case value_type::BOOLEAN:
-					ret = BOOL_STR(operand->value.constant.val.bval);
+					ret = BOOL_STR(
+							get_constant_address_boolean_value(operand));
 					break;
 
 				case value_type::INTEGER:
-					ret = std::to_string(operand->value.constant.val.ival);
+					ret = std::to_string(
+							get_constant_address_integer_value(operand));
 					break;
 
 				default:
 					// {operand->value.constant.type == value_type::FLOAT}
-					ret = std::to_string(operand->value.constant.val.fval);
+					ret = std::to_string(
+							get_constant_address_float_value(operand));
 			}
 			break;
 
@@ -385,11 +388,12 @@ std::string print_copy_inst(const quad_pointer& inst){
 
 	switch(inst->type){
 		case quad_type::COPY:
-			ret = result + " = " + print_operand(inst->arg1);
+			ret = result + " = " + print_operand(get_copy_inst_orig(inst));
 			break;
 
 		case quad_type::INDEXED_COPY_TO:
-			ret = result + "[" + print_operand(get_indexed_copy_to_index(inst))
+			ret = result + "["
+				+ print_operand(get_indexed_copy_to_index(inst))
 							+ "] = " +
 				  print_operand(get_indexed_copy_to_src(inst));
 			break;
@@ -399,8 +403,10 @@ std::string print_copy_inst(const quad_pointer& inst){
 			#ifdef __DEBUG
 				assert(inst->type == quad_type::INDEXED_COPY_FROM);
 			#endif
-				ret = result + "= " + print_operand(inst->arg1) + "[" +
-						print_operand(inst->arg2) + "]";
+				ret = result + "= " +
+						print_operand(get_indexed_copy_from_src(inst)) +
+						"[" +
+						print_operand(get_indexed_copy_from_index(inst)) + "]";
 	}
 
 	return ret;
@@ -818,7 +824,7 @@ address_pointer get_indexed_copy_from_index(const quad_pointer& instruction){
 	return instruction->arg2;
 }
 
-address_pointer get_indexed_copy_from_orig(const quad_pointer& instruction){
+address_pointer get_indexed_copy_from_src(const quad_pointer& instruction){
 	// PRE
 	#ifdef __DEBUG
 		assert(instruction->type == quad_type::INDEXED_COPY_FROM);

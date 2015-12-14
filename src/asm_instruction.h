@@ -195,10 +195,23 @@ operand_pointer new_register_operand(register_id);
 operand_pointer new_immediate_integer_operand(int);
 operand_pointer new_immediate_float_operand(float);
 
+/////////////////////////////
+// @OPERAND
+/////////////////////////////
+operand_addressing get_operand_addressing(const operand_pointer&);
+
+
+/////////////////////////////
+// @MEMORY OPERAND
+/////////////////////////////
+
 operand_pointer new_memory_operand(int offset,
 								   register_id base,
 								   register_id index,
 								   unsigned int scale);
+
+/* PRE : {get_operand_type(operand) == operand_addressing::MEMORY} */
+int get_memory_operand_offset(const operand_pointer& operand);
 
 operand_pointer new_label_operand(std::string label);
 

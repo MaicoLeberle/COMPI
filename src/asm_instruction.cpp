@@ -3,6 +3,25 @@
 /******************************************************************
  * Constructors of special kinds of operands.
  ******************************************************************/
+/////////////////////////////
+// @OPERAND
+/////////////////////////////
+operand_addressing get_operand_addressing(const operand_pointer& operand){
+	return operand->op_addr;
+}
+
+/////////////////////////////
+// @MEMORY OPERAND
+/////////////////////////////
+
+int get_memory_operand_offset(const operand_pointer& operand){
+	// PRE
+	#ifdef __DEBUG
+		assert(get_operand_addressing(operand) == operand_addressing::MEMORY);
+	#endif
+
+	return operand->value.mem.offset;
+}
 
 operand_pointer new_register_operand(register_id reg){
 	operand_pointer op = operand_pointer(new operand);
@@ -861,6 +880,10 @@ std::string print_intel_syntax(const asm_instruction_pointer& instruction){
 			break;
 
 		case operation::MOV:
+			ret += "\t" + print_binary_op_intel_syntax(instruction) + "\n";
+			break;
+
+		case operation::LEA:
 			ret += "\t" + print_binary_op_intel_syntax(instruction) + "\n";
 			break;
 

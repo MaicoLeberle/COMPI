@@ -82,6 +82,10 @@ private:
 	std::string instance_initialization(std::string id_class,
 										std::string id_instance);
 
+	void array_initialization(symtable_element::id_type type,
+							std::string id,
+							unsigned int array_length);
+
 	unsigned int calculate_size(symtable_element::id_type);
 
 	symtable_element::id_type determine_type(Type::_Type);

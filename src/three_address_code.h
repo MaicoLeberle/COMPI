@@ -206,7 +206,7 @@ address_pointer get_indexed_copy_from_dest(const quad_pointer&);
 address_pointer get_indexed_copy_from_index(const quad_pointer&);
 
 /* PRE : {quad->type == quad_type::INDEXED_COPY_FROM} */
-address_pointer get_indexed_copy_from_orig(const quad_pointer&);
+address_pointer get_indexed_copy_from_src(const quad_pointer&);
 
 bool is_indexed_copy_from(const quad_pointer& instruction,
 						const address_pointer& dest,
@@ -371,7 +371,7 @@ bool are_equal_address_pointers(const address_pointer&, const address_pointer&);
 
 
 /////////////////////////
-// INTEGER ADDRESS
+// @INTEGER ADDRESS
 /////////////////////////
 // TODO: cambiarles el nombre, para que quede claro que construyen addresses
 address_pointer new_integer_constant(int value);
@@ -403,7 +403,7 @@ bool get_constant_address_boolean_value(const address_pointer&);
 
 
 /////////////////////////
-// NAME ADDRESS
+// @NAME ADDRESS
 /////////////////////////
 address_pointer new_name_address(const std::string& name);
 

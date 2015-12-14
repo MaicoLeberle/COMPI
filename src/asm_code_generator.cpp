@@ -399,8 +399,7 @@ void asm_code_generator::translate_unary_op(const quad_pointer& instruction){
 
 void asm_code_generator::translate_copy(const quad_pointer& instruction){
 	// COPY x = y:
-	// 		mov[b|w|l|q] y,x (move s to d; tendremos que ver el tipo de los operandos
-	// 		para determinar el tipo de instrucción?)
+	// 		mov[b|w|l|q] y,x
 	operand_pointer x = get_address(get_copy_inst_dest(instruction));
 	operand_pointer y = get_address(get_copy_inst_orig(instruction));
 
@@ -413,71 +412,115 @@ void asm_code_generator::translate_copy(const quad_pointer& instruction){
 	translation->push_back(new_mov_instruction(y, x, data_type::L));
 }
 
-void asm_code_generator::translate_indexed_copy_to(const quad_pointer& instruction){
+void asm_code_generator::translate_indexed_copy_to(const quad_pointer&
+														instruction){
 	// INDEXED_COPY_TO,	// x[i] = y
 	//		mov[b|w|l|q] y,x[i] (igual al anterior, solo que para representar x[i]
 	//		tenemos que recordar la notación offset(base,index,scale) que representa
 	//		la dirección (base + index × scale + offset) TODO: ver qué significa cada
 	//		componente)
-	// TODO: por ahora no hacemos arreglos
 
 	// TODO: que hay de la directiva PTR?
-	operand_pointer dest = get_address(get_indexed_copy_to_dest(instruction));
-	operand_pointer index = get_address(get_indexed_copy_to_index(instruction));
-	int offset = get_constant_address_integer_value(get_indexed_copy_to_index(instruction));
+	address_pointer dest_add = get_indexed_copy_to_dest(instruction);
+	operand_pointer dest = get_address(dest_add);
+
+	address_pointer index_add = get_indexed_copy_to_index(instruction);
+	//operand_pointer index = get_address(index);
+
+	int offset = get_constant_address_integer_value(index_add);
+
 	operand_pointer orig = get_address(get_indexed_copy_to_src(instruction));
 
 	#ifdef __DEBUG
-		address_type type = get_address_type(get_indexed_copy_to_dest(instruction));
-		assert(type == address_type::ADDRESS_NAME ||
-			   type == address_type::ADDRESS_TEMP);
+		assert(get_address_type(dest_add) == address_type::ADDRESS_NAME);
 	#endif
 
-	// TODO: esta bien este registro?
-	operand_pointer reg = new_register_operand(register_id::RDI);
-	operand_pointer pos = new_memory_operand(offset,
-											register_id::RDI,
-											register_id::NONE,
-											1);
+	// Determine if destination is an array position or an object's attribute.
+	std::string name = get_address_name(dest_add);
+	operand_pointer pos = nullptr;
+	if(s_table->get_kind(name) == id_kind::K_OBJECT){
+		// TODO: está bien este registro?
+		operand_pointer reg = new_register_operand(register_id::RDI);
 
-	translation->push_back(new_mov_instruction(dest, reg, data_type::L));
+		// Move the address of the object into register register_id::RDI.
+		translation->push_back(new_mov_instruction(dest, reg, data_type::L));
+
+		// TODO: quizás nos podamos ahorrar la instrucción que pasa el address
+		// a rdi, si interpretamos directamente el contenido de dest como
+		// un puntero al objeto?
+		// Define the position of the attribute, as an offset with respect
+		// to the initial address of the instance.
+		pos = new_memory_operand(offset,
+								register_id::RDI,
+								register_id::NONE,
+								1);
+	}
+	else{
+		// {s_table->get_kind(name) != id_kind::K_OBJECT}
+		// It is an array. Then, "dest" always refer to a position into the
+		// actual stack frame.
+		// TODO: pedir que id_kind también tengo un valor para representar
+		// arrays.
+		pos = new_memory_operand(offset + get_memory_operand_offset(dest),
+								register_id::RBP,
+								register_id::NONE,
+								1);
+	}
+
+	// Move the desired value to the defined position into the instance.
 	translation->push_back(new_mov_instruction(orig, pos, data_type::L));
-
 }
 
 void asm_code_generator::translate_indexed_copy_from(const quad_pointer& instruction){
 	// INDEXED_COPY_FROM,	// x = y[i]
 	// 		mov[b|w|l|q] y[i], x (idem caso anterior)
-	// TODO: por ahora no hacemos arreglos
-	/*
-	// TODO: de donde saco offset, base, etc?
-	operand_pointer y = new_memory_operand(offset, base, index, scale);
-	operand_pointer x = get_address(instruction->result);
-	data_type ops_type; // TODO: cómo determino el tipo de los operandos?
-	// We use a new register to ensure that the second operand can be
-	// the destination of the product.
-	// TODO: en la generación de código intermedio, no nos aseguramos de
-	// esto?
-	translation->push_back(new_mov_instruction(y, x, ops_type));*/
+	// TODO: que hay de la directiva PTR?
 	operand_pointer dest = get_address(get_indexed_copy_from_dest(instruction));
-	operand_pointer index = get_address(get_indexed_copy_from_index(instruction));
-	int offset = get_constant_address_integer_value(get_indexed_copy_from_index(instruction));
-	operand_pointer orig = get_address(get_indexed_copy_from_orig(instruction));
+
+	address_pointer index_add = get_indexed_copy_from_index(instruction);
+
+	int offset = get_constant_address_integer_value(index_add);
+
+	address_pointer orig_add = get_indexed_copy_from_src(instruction);
+	operand_pointer orig = get_address(orig_add);
 
 	#ifdef __DEBUG
-		address_type type = get_address_type(get_indexed_copy_from_dest(instruction));
-		assert(type == address_type::ADDRESS_NAME ||
-			   type == address_type::ADDRESS_TEMP);
+		assert(get_address_type(orig_add) == address_type::ADDRESS_NAME);
 	#endif
 
-	// TODO: esta bien este registro?
-	operand_pointer reg = new_register_operand(register_id::RDI);
-	operand_pointer pos = new_memory_operand(offset,
-											register_id::RDI,
-											register_id::NONE,
-											1);
+	// Determine if the source is an array position or an object's attribute.
+	std::string name = get_address_name(orig_add);
+	operand_pointer pos = nullptr;
+	if(s_table->get_kind(name) == id_kind::K_OBJECT){
+		// TODO: está bien este registro?
+		operand_pointer reg = new_register_operand(register_id::RDI);
 
-	translation->push_back(new_mov_instruction(orig, reg, data_type::L));
+		// Move the address of the object into register register_id::RDI.
+		translation->push_back(new_mov_instruction(orig, reg, data_type::L));
+
+		// TODO: quizás nos podamos ahorrar la instrucción que pasa el address
+		// a rdi, si interpretamos directamente el contenido de dest como
+		// un puntero al objeto?
+		// Define the position of the attribute, as an offset with respect
+		// to the initial address of the instance.
+		pos = new_memory_operand(offset,
+								register_id::RDI,
+								register_id::NONE,
+								1);
+	}
+	else{
+		// {s_table->get_kind(name) != id_kind::K_OBJECT}
+		// It is an array. Then, "orig" always refer to a position into the
+		// actual stack frame.
+		// TODO: pedir que id_kind también tengo un valor para representar
+		// arrays.
+		pos = new_memory_operand(offset + get_memory_operand_offset(orig),
+								register_id::RBP,
+								register_id::NONE,
+								1);
+	}
+
+	// Move the desired value to the defined position.
 	translation->push_back(new_mov_instruction(pos, dest, data_type::L));
 }
 

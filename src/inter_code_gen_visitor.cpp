@@ -129,6 +129,54 @@ unsigned int inter_code_gen_visitor::calculate_size(symtable_element::id_type ty
 	return ret;
 }
 
+void inter_code_gen_visitor::array_initialization(
+symtable_element::id_type type, std::string id, unsigned int array_length){
+
+	address_pointer dest, constant = nullptr;
+	// Register the array's identifier into the symbol's table.
+	symtable_element variable(id, type, array_length);
+	t_results pair = s_table.put_var(variable, id, this->offset);
+
+	#ifdef __DEBUG
+		assert(std::get<0>(pair) == ID_PUT);
+	#endif
+
+	// Initialize each position of the array with the corresponding
+	// initial value.
+	unsigned int arr_pos_width = this->calculate_size(type);
+	unsigned int arr_size =  arr_pos_width*array_length;
+
+	switch(type){
+		case symtable_element::INTEGER:
+			constant = new_integer_constant(integer_initial_value);
+			break;
+
+		case symtable_element::FLOAT:
+			constant = new_float_constant(float_initial_value);
+			break;
+
+		case symtable_element::BOOLEAN:
+			constant = new_boolean_constant(boolean_initial_value);
+
+		#ifdef __DEBUG
+			default:
+				assert(false);
+		#endif
+	}
+
+	dest = new_name_address(id);
+	for(int arr_offset = 0;
+		arr_offset < arr_size;
+		arr_offset += arr_pos_width){
+
+		inst_list->push_back(
+				new_indexed_copy_to(dest,
+									new_integer_constant(arr_offset),
+									constant));
+	}
+	this->offset += arr_size;
+}
+
 // TODO: no es variable declaration: es variable definition!
 /*	Translates a variable declaration, registers its information into the
  * 	table of symbols and updates the offset.
@@ -146,63 +194,12 @@ std::string id, std::string class_name, unsigned int array_length){
 	address_pointer dest, constant = nullptr;
 
 	if(type == symtable_element::ID){
-		std::string *class_name_aux = new std::string(class_name);
-		symtable_element variable(id, class_name_aux);
-		// TODO: notar que no le estamos pasando el último argumento. Se trata
-		// supuestamente, del nombre del primer atributo.
-		#ifdef __DEBUG
-			t_results pair = s_table.put_obj(variable,
-											id,
-											this->offset,
-											*class_name_aux,
-											std::string(""));
-			assert(std::get<0>(pair) == ID_PUT);
-		#else
-			s_table.put_var(variable, id, this->offset);
-		#endif
 		instance_initialization(class_name, id);
 		// After instance_initialization, offset had been updated correctly.
 	}
 	else{
 		if (array_length > 0){
-			// Array.
-			// Register the variable into the symbol's table.
-			symtable_element variable(id, type, array_length);
-			t_results pair = s_table.put_var(variable, id, this->offset);
-
-			#ifdef __DEBUG
-				assert(std::get<0>(pair) == ID_PUT);
-			#endif
-
-			// Initialize each position of the array with the corresponding
-			// initial value.
-			unsigned int arr_pos_width = this->calculate_size(type);
-			unsigned int arr_size =  arr_pos_width*array_length;
-
-			switch(type){
-				case symtable_element::INTEGER:
-					constant = new_integer_constant(integer_initial_value);
-					break;
-
-				case symtable_element::FLOAT:
-					constant = new_float_constant(float_initial_value);
-					break;
-
-				case symtable_element::BOOLEAN:
-					constant = new_boolean_constant(boolean_initial_value);
-			}
-
-			for(int arr_offset = 0;
-				arr_offset < arr_size;
-				arr_offset += arr_pos_width){
-
-				inst_list->push_back(
-						new_indexed_copy_to(dest,
-											new_integer_constant(arr_offset),
-											constant));
-			}
-
-			this->offset += arr_size;
+			this->array_initialization(type, id, array_length);
 		}
 		else {
 			// {array_length <= 0}
@@ -651,51 +648,34 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 	switch(node.type.type){
 		case Type::ID:{
 				std::string *class_name = new std::string(node.type.id);
-				// TODO: la tabla de símbolos hace una copia de obj_param?
 				// TODO: el último parámetro debería ser un string de la forma
 				// node.id "." nombre del primer atributo de la clase
 				symtable_element obj_param(node.id, class_name);
 
+				t_param_results pair1 = s_table.put_obj_param(obj_param,
+															 node.id,
+															 this->offset,
+															 node.type.id,
+															 std::string(""));
+
 				#ifdef __DEBUG
-					t_param_results pair1 = s_table.put_obj_param(obj_param,
-																 node.id,
-																 this->offset,
-																 node.type.id,
-																 std::string(""));
 					assert(std::get<0>(pair1) == PARAM_PUT);
-				#else
-					s_table.put_obj_param(obj_param,
-											node.id,
-											this->offset,
-											node.type.id,
-											std::string(""));
 				#endif
 			}
 			break;
 
 		default:{
-				// TODO: estoy asumiendo que un parámetro o bien es un objeto o bien
-				// un tipo básico.
 				symtable_element var_param(node.id, determine_type(node.type.type));
+				t_param_results pair2 = s_table.put_var_param(var_param,
+															var_param.get_key(),
+															this->offset);
 				#ifdef __DEBUG
-					t_param_results pair2 = s_table.put_var_param(var_param,
-																var_param.get_key(),
-																this->offset);
 					assert(std::get<0>(pair2) == PARAM_PUT);
-				#else
-					s_table.put_var_param(var_param,
-											var_param.get_key(),
-											this->offset);
 				#endif
 			}
 	}
-	// TODO: en la arquitectura x86_64, es el método el que construye
-	// el stack frame?: "The following enter instruction
-	// sets up the stack frame" (de "x86-64-architecture-guide"). Pero es quien
-	// lo llama quien coloca los parametros en los registros. Debemos contabilizar
-	// el tamaño de los parámetros?
 
-	// Update the offset so, outside this method, this data is used to
+	// Update the offset so, outside this method, this value is used to
 	// calculate how much data is reserved into the stack.
 	this->offset += calculate_size(determine_type(node.type.type));
 }

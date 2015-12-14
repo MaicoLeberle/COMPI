@@ -31,12 +31,21 @@ void set_symbol_table(){
 
 	// Register information about "method" and "class".
 	std::string method("method");
-	std::string param("param");
+	std::string param("param1");
 	s_table->register_class(std::string("class"), t_attributes());
 	s_table->register_method(method, 0, std::string("class"));
+
 	// "method" has an integer parameter.
 	s_table->get_list_params(method).push_back(param);
-	s_table->register_var(param, 0, T_INT);
+	s_table->register_var(param, -4, T_INT);
+
+	// Register information about an instance "obj".
+	s_table->register_obj(std::string("obj"),
+							8,
+							std::string("class"),
+							std::string("obj.att1"));
+
+	s_table->register_var(std::string("obj.att1"), 0, id_type::T_INT);
 }
 
 void test_binary_assign(){
@@ -511,6 +520,37 @@ void test_return(){
 	std::cout << "OK. " << std::endl;
 }
 
+void test_objects_and_arrays(){
+	std::cout << "8) Translation of objects and arrays: ";
+
+	// return x
+	translate_ir_code(std::string("class.method:"
+									"obj[0] = 0\n"
+									"obj[4] = 0\n"
+									"obj = &obj.att1\n"
+									"param1 = obj[0]"));
+
+	asm_code_generator g(ir_code, s_table);
+	g.translate_ir();
+
+	asm_instructions_list *translation = g.get_translation();
+
+	std::string asm_program_text = "class.method:\n"
+									"movl 8(%rbp) , %rdi\n"
+									"movl $0 , 0(%rdi)\n"
+									"movl 8(%rbp) , %rdi\n"
+									"movl $0 , 4(%rdi)\n"
+									"leal 0(%rbp) , 8(%rbp)\n"
+									"movl 8(%rbp) , %rdi\n"
+									"movl 0(%rdi) , -4(%rbp)\n";
+
+	translate_asm_code(asm_program_text);
+
+	assert(are_equal_instructions_list(*translation, *asm_code));
+
+	std::cout << "OK. " << std::endl;
+}
+
 void test_asm_code_generator(){
 	std::cout << "\nTesting assembly code generation:" << std::endl;
 	set_symbol_table();
@@ -521,4 +561,5 @@ void test_asm_code_generator(){
 	test_parameter_and_call();
 	test_enter();
 	test_return();
+	test_objects_and_arrays();
 }
