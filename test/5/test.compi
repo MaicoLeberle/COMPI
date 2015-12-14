@@ -1,11 +1,11 @@
 class Main {
-	bool b;
+	boolean b;
 
-	void set_b(bool c) {
+	void set_b(boolean c) {
 		b = c;
 	}
 
-	bool return_b() {
+	boolean return_b() {
 		return b;
 	}
 
@@ -16,6 +16,7 @@ class Main {
 	void main() {
 		set_b(true);
 		if (b) {
+			int z;
 			for z = 1, 10 {
 				if (z == 2)
 					continue;

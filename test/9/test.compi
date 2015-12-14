@@ -3,7 +3,7 @@ class Main {
     
     int y;
     
-    bool b;
+    boolean b;
     
     void set_x (int z) {
         x = z;
@@ -13,35 +13,35 @@ class Main {
         y = z;
     }
 
-    void set_b (bool c) {
+    void set_b (boolean c) {
         b = c;
     }
 
-    void plus_x (int z) {
+    int plus_x (int z) {
         return (x + z);
     }
 
-    void plus_y (int z) {
+    int plus_y (int z) {
         return (y + z);
     }
 
-    void and_b (bool c) {
+    boolean and_b (boolean c) {
         return (b && c);
     }
 
-    void or_b (bool c) {
+    boolean or_b (boolean c) {
         return (b || c);
     }
 
-    void return_x () {
+    int return_x () {
         return x;
     }
 
-    void return_y () {
+    int return_y () {
         return y;
     }
 
-    void return_b () {
+    boolean return_b () {
         return b;
     }
 
@@ -61,12 +61,13 @@ class Main {
     void main() {
         set_y(read_int());
         while (return_y() != 1) {
-            print_string("y != 1\t(y == ")
-            print_int(return_int())
-            print_string(")\n")
+            print_string("y != 1\t(y == ");
+            print_int(read_int());
+            print_string(")\n");
             set_y(read_int());
         }
         print_string("y == 1\n");
+        int z;
         for z = 1 , 15 {
             if (!(z == 5 && z == 7))
                 continue;

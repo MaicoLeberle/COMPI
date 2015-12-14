@@ -2,11 +2,11 @@ class Main {
 	
 	int z;
 	
-	bool c;
+	boolean c;
 	
 	void main() {
 		int x;
-		bool b;
+		boolean b;
 		int y;
 	}
 }

@@ -19,7 +19,7 @@ class Main {
 			set_x(read_int());
 			if (return_x() == 5) 
 				break;
-			if (return_x() <= 6 || return_ex() >= 71) {
+			if (return_x() <= 6 || return_x() >= 71) {
 				print_string("x not in interval (6, 70).\n");
 				continue;
 			}
