@@ -53,9 +53,15 @@ std::string ids_info::register_var(std::string key
 id_type ids_info::get_type(std::string key) {
     assert((this->info_map).find(key) != (this->info_map).end());
     assert((this->get_kind(key) == K_TEMP) || 
-           (this->get_kind(key) == K_VAR));
-
-    return ((((this->info_map).find(key))->second).entry_type);
+           (this->get_kind(key) == K_VAR)  ||
+           (this->get_kind(key) == K_OBJECT));
+    if (this->get_kind(key) == K_TEMP || (this->get_kind(key) == K_VAR)) {
+        return ((((this->info_map).find(key))->second).entry_type);
+    } else {
+        /*  For objects, return T_UNDEFINED; user of the library should then
+            call ids_info::get_owner_class.*/
+        return (T_UNDEFINED);
+    }
 }
 
 void ids_info::set_type(std::string key

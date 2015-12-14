@@ -163,7 +163,7 @@ public:
     unsigned int get_local_vars(std::string);
 
     /*  Precondition: the id has been registered, and it is of kind K_METHOD or
-        K_OBJ.
+        K_OBJECT.
         Returns: the class name this object or method belongs to.             */
     std::string get_owner_class(std::string);
 

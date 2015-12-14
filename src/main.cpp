@@ -60,6 +60,10 @@ int main(int argc, const char* argv[]) {
     bool debugging;
     parseArguments((char**)argv, (char**)argv + argc, input_file, output_file, stage, debugging);
 
+    if (debugging) {
+        #define __DEBUG
+    }
+
     /*  Set flex to read from it instead of defaulting to STDIN.             */
     yyin = input_file;
 
@@ -157,6 +161,7 @@ void parseArguments(char** beginIt, char** endIt, FILE*& input_file, FILE*& outp
             stage_done = true;
         } else if (std::string("-debug").compare(*itr) == 0) {
             debugging = true;
+            #define __DEBUG
         } else {
             if((*itr)[0] == '-') {
                 std::cout << "Invalid option." << std::endl;

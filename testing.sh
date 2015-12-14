@@ -10,8 +10,8 @@ for test_case in $(ls test); do
 	> "test/${test_case}/execution/output"
 
 	# Next, compile source file to assembly, with debugging information.
-	bin/compi "test/${test_case}/test.compi" -target assembly -o "test/${test_case}/execution/prelinking.s"
+	bin/compi "test/${test_case}/test.compi" -target assembly -debug -o "test/${test_case}/execution/prelinking.s"
 
 	# Finally, link prelinking.s with every COMPI library available (via GCC).
-	gcc "test/${test_case}/execution/prelinking.s" "src/include/"*".s" -o "test/${test_case}/execution/bin"
+	g++ "test/${test_case}/execution/prelinking.s" src/include/*.s -o "test/${test_case}/execution/bin"
 done
