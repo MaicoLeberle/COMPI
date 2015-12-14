@@ -53,7 +53,7 @@ public:
     symtable_element(std::string, std::string*, unsigned int);
 
     /*  Function.                                                            */
-    symtable_element(std::string, id_type, std::list<symtable_element>*); 
+    symtable_element(std::string, id_type, std::list<symtable_element>*, bool);
 
     /*  Class.                                                               */
     symtable_element(std::string*, std::list<symtable_element>*);
@@ -77,6 +77,9 @@ public:
 
     /*  Returns list of function formal parameters identifiers.              */
     std::list<symtable_element>* get_func_params (void);
+
+    /*  Returns whether function was declared extern.                        */
+    bool is_func_extern(void);
 
     /*  Appends (to the end of the list) a new symtable_element to the list 
         of function parameters.
@@ -113,6 +116,8 @@ private:
         table element is a function). Note that every element in the list 
         should be of a basic type.                                           */
     std::list<symtable_element>* func_params;
+
+    bool is_extern = false;
 
     /*  List of attributes and methods identifiers (meant for when the 
         symbols table element is a class).                                   */

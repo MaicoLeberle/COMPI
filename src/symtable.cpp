@@ -8,28 +8,49 @@
 /*  START OF CONSTRUCTORS.   */
 
 symtable_element::symtable_element(id_class not_found_class) : 
-    c_id(not_found_class), dim(0), func_params(NULL), class_fields(NULL), class_type(NULL) {
+    c_id(not_found_class), dim(0), func_params(NULL), class_fields(NULL), class_type(NULL), is_extern(false) {
         assert(not_found_class == NOT_FOUND);
 }
 
 symtable_element::symtable_element(std::string k, id_type t) : 
-    key(k), c_id(T_VAR), t_id(t), dim(0), func_params(NULL), class_fields(NULL), class_type(NULL) {
+    key(k), c_id(T_VAR), t_id(t), dim(0), func_params(NULL), class_fields(NULL), class_type(NULL), is_extern(false) {
     assert((t != symtable_element::VOID) && (t != symtable_element::ID));
 }
 
 symtable_element::symtable_element(std::string k, id_type t, unsigned int d) : 
-    key(k), c_id(T_ARRAY), t_id(t), dim(d), func_params(NULL), class_fields(NULL), class_type(NULL)  { }
+    key(k), c_id(T_ARRAY), t_id(t), dim(d), func_params(NULL), class_fields(NULL), class_type(NULL), is_extern(false)  { }
 
 symtable_element::symtable_element(std::string k, std::string* s) : 
-    key(k), c_id(T_OBJ), t_id(ID), class_type(s), dim(0), func_params(NULL), class_fields(NULL)  { }  
+      key(k)
+    , c_id(T_OBJ)
+    , t_id(ID)
+    , class_type(s)
+    , dim(0)
+    , func_params(NULL)
+    , class_fields(NULL)
+    , is_extern(false)  { }  
 
 symtable_element::symtable_element(std::string k, std::string* s, unsigned int d) :
-    key(k), c_id(T_OBJ_ARRAY), t_id(ID), class_type(s), dim(d), func_params(NULL), class_fields(NULL)  { 
+      key(k)
+    , c_id(T_OBJ_ARRAY)
+    , t_id(ID)
+    , class_type(s)
+    , dim(d)
+    , func_params(NULL)
+    , class_fields(NULL)
+    , is_extern(false)  { 
         assert(d != 0);
 }
 
-symtable_element::symtable_element(std::string k, id_type t, std::list<symtable_element>* f) :
-    key(k), c_id(T_FUNCTION), t_id(t), func_params(f), dim(0), class_fields(NULL), class_type(NULL)  { } 
+symtable_element::symtable_element(std::string k, id_type t, std::list<symtable_element>* f, bool b) :
+      key(k)
+    , c_id(T_FUNCTION)
+    , t_id(t)
+    , func_params(f)
+    , dim(0)
+    , class_fields(NULL)
+    , class_type(NULL)
+    , is_extern(b)  { } 
 
 symtable_element::symtable_element(std::string* k, std::list<symtable_element>* f) :
     key(*k), c_id(T_CLASS), t_id(ID), class_fields(f), class_type(k), dim(0), func_params(NULL) { 
@@ -63,6 +84,10 @@ unsigned int symtable_element::get_dimension () {
 std::list<symtable_element>* symtable_element::get_func_params () {
     assert(this->c_id == T_FUNCTION); 
     return (this->func_params); 
+}
+
+bool symtable_element::is_func_extern(void) {
+    return (this->is_extern);
 }
 
 std::list<symtable_element>* symtable_element::get_class_fields () {
