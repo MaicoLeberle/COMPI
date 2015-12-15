@@ -49,7 +49,7 @@ program_pointer ast; // Pointer to the AST
 
 %token <token> CLASS VOID EXTERN
 %token <token> IF ELSE FOR WHILE RETURN BREAK CONTINUE
-%token <type> INT FLOAT BOOLEAN
+%token <type> INT FLOAT BOOLEAN STRING
 %token <oper> LESS_EQUAL GREATER_EQUAL EQUAL DISTINCT AND OR
 %token <assign> '=' PLUS_ASSIGN MINUS_ASSIGN
 
@@ -136,6 +136,7 @@ type
     : INT                              {$$ = new Type(Type::INTEGER);}
     | FLOAT                            {$$ = new Type(Type::FLOAT);}
     | BOOLEAN                          {$$ = new Type(Type::BOOLEAN);}
+    | STRING                           {$$ = new Type(Type::STRING);}
     | ID                               {$$ = new Type(Type::ID, *$1); delete $1;}
     ;
 

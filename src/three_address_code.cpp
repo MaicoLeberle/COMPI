@@ -114,7 +114,7 @@ float get_constant_address_float_value(const address_pointer& address){
 
 
 /////////////////////////
-// BOOLEAN ADDRESS
+// @BOOLEAN ADDRESS
 /////////////////////////
 address_pointer new_boolean_constant(bool value){
 	address_pointer addr = address_pointer(new address);
@@ -135,9 +135,33 @@ bool get_constant_address_boolean_value(const address_pointer& address){
 	return address->value.constant.val.bval;
 }
 
+/////////////////////////
+// @STRING CONSTANT
+/////////////////////////
+address_pointer new_string_constant(std::string value){
+	address_pointer addr = address_pointer(new address);
+	addr->type = address_type::ADDRESS_CONSTANT;
+	addr->value.constant.val.sval = new std::string(value);
+	addr->value.constant.type = value_type::STRING;
+
+	return addr;
+}
+
+/* PRE : {address->type == address_type::ADDRESS_CONSTANT and
+ * 			get_constant_address_type(address) == STRING} */
+std::string get_constant_address_string_value(const address_pointer& address){
+	// PRE
+	#ifdef __DEBUG
+		assert(address->type == address_type::ADDRESS_CONSTANT and
+				get_constant_address_type(address) == value_type::STRING);
+	#endif
+
+	return *address->value.constant.val.sval;
+}
+
 
 /////////////////////////
-// NAME ADDRESS
+// @NAME ADDRESS
 /////////////////////////
 address_pointer new_name_address(const std::string& name){
 	address_pointer addr = address_pointer(new address);

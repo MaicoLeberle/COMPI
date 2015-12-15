@@ -1,26 +1,25 @@
 #include "semantic_analysis.h"
 
 semantic_analysis::semantic_analysis () {
-	errors = 0;
-	into_for_or_while = false;
-	into_method = false;
-	actual_method = nullptr;
-	well_formed = false;
-	analysis_successful = false;
+	this->errors = 0;
+	this->last_error = error_id::NONE;
+	this->into_for_or_while = false;
+	this->into_method = false;
+	this->actual_method = nullptr;
+	this->well_formed = false;
+	this->analysis_successful = false;
 }
 
 // TODO: actualmente no podemos tener definiciones de funciones mutuamente
 // recursivas.
-// TODO: tenemos que hacer las "librerías estandar" de COMPI, en donde
-// definimos los métodos print_bool y print_int
 
 void semantic_analysis::register_error(std::string error, error_id error_encountered){
 	std::cerr << "\n" << error << std::endl;
 	// The process is not interrupted. We just count the error.
-	errors += 1;
+	this->errors += 1;
 	// TODO: en el lexer definimos una variable line_num. Se puede utilizar
 	// aca?
-	last_error = error_encountered;
+	this->last_error = error_encountered;
 }
 
 semantic_analysis::error_id semantic_analysis::get_last_error(){
@@ -85,9 +84,9 @@ symtable_element::id_type semantic_analysis::determine_symtable_type(Type::_Type
 			ret = symtable_element::ID;
 			break;
 
-		/*case Type::STRING:
+		case Type::STRING:
 			ret = symtable_element::STRING;
-			break;*/
+			break;
 
 		#ifdef __DEBUG
 		default:
@@ -123,9 +122,9 @@ Type::_Type semantic_analysis::determine_node_type(symtable_element::id_type
 			ret = Type::ID;
 			break;
 
-		/*case symtable_element::STRING:
+		case symtable_element::STRING:
 			ret = Type::STRING;
-			break;*/
+			break;
 
 		#ifdef __DEBUG
 		default:
@@ -240,7 +239,7 @@ void semantic_analysis::visit(node_program& node) {
 	// TODO: cambiar esto: debería ser main.
 	if(node.classes.size() == 0 ||
 	s_table.get(std::string("Main"))->get_class() == symtable_element::NOT_FOUND){
-		register_error(std::string("No \"Main\" class declared."), ERROR_3);
+		register_error(std::string("No \"main\" class declared."), ERROR_3);
 	}
 
 	if(errors == 0){
@@ -394,8 +393,10 @@ void semantic_analysis::visit(node_method_decl& node){
 	#ifdef __DEBUG
 		std::cout << "Accessing method " << node.id << std::endl;
 	#endif
-	symtable_element method(node.id, determine_symtable_type(node.type.type),
-							new std::list<symtable_element>());
+	symtable_element method(node.id,
+							determine_symtable_type(node.type.type),
+							new std::list<symtable_element>(),
+							node.body->is_extern);
 	into_method = true;
 	actual_method = &method;
 	// Add to the symbol table, define a new scope
@@ -441,8 +442,21 @@ void semantic_analysis::visit(node_parameter_identifier& node) {
 		else{
 			if(node.type.type != Type::ID){
 				// The parameter has a basic type.
-				symtable_element param(node.id, determine_symtable_type(node.type.type));
-				s_table.put_func_param(node.id, param);
+
+				// Rule 7: string literals only with extern methods.
+				if(node.type.type == Type::STRING
+				and not this->actual_method->is_func_extern()){
+					register_error(std::string("String literals can only be "
+					"used as parameters of extern methods."), ERROR_7);
+					this->well_formed = false;
+				}
+				else{
+					// {node.type.type != Type::STRING
+					// or this->actual_method->is_func_extern()}
+					symtable_element param(node.id,
+									determine_symtable_type(node.type.type));
+					s_table.put_func_param(node.id, param);
+				}
 			}
 			else{
 				// {node.type.type == Type::ID}
@@ -539,15 +553,14 @@ void semantic_analysis::visit(node_assignment_statement& node) {
 void semantic_analysis::visit(node_location& node) {
 	symtable_element::id_type type_index, type_id;
 	symtable_element::id_class class_id;
-	symtable_element *aux = nullptr;
+	symtable_element *location = dereference(node.ids);
 	#ifdef __DEBUG
 		std::cout << "Accessing location expression" << std::endl;
 	#endif
 
-	aux = dereference(node.ids);
 	if(well_formed){
-		type_id = aux->get_type();
-		class_id = aux->get_class();
+		type_id = location->get_type();
+		class_id = location->get_class();
 		if (node.array_idx_expr != nullptr){
 			// The location represents a field from an array.
 			if (class_id != symtable_element::T_ARRAY){
@@ -619,9 +632,9 @@ void semantic_analysis::visit(node_string_literal& node) {
 #ifdef __DEBUG
 	std::cout << "Accessing string literal of value " << node.value << std::endl;
 #endif
-	//TODO: falta symtable_element::STRING
-	type_l_expr = symtable_element::FLOAT;
-	well_formed = true;
+
+	this->type_l_expr = symtable_element::STRING;
+	this->well_formed = true;
 }
 
 void semantic_analysis::visit(node_method_call_expr& node) {
@@ -653,20 +666,19 @@ void semantic_analysis::analyze_method_call(method_call& data) {
 	#endif
 
 	symtable_element::id_type type_method, type_parameter;
-	symtable_element *aux = nullptr;
+	symtable_element *method_called = dereference(data.ids);
 
 	// Determine the type of the location
-	aux = dereference(data.ids);
-	if(well_formed){
-		if(aux->get_class() == symtable_element::T_FUNCTION){
+
+	if(this->well_formed){
+		if(method_called->get_class() == symtable_element::T_FUNCTION){
 			// Rule 5: the number and type of the actual parameters,
 			// must be the same of the formal parameters
-			std::list<symtable_element>* func_params = aux->get_func_params();
-
+			std::list<symtable_element>* func_params = method_called->get_func_params();
 			if(func_params->size() != data.parameters.size()){
-				register_error(std::string("Method call with less parameters"
-										" than expected."), ERROR_5);
-				well_formed = false;
+				register_error(std::string("Method call with wrong parameters'"
+										" quantity."), ERROR_5);
+				this->well_formed = false;
 			}
 			else{
 				// {func_params->size() == data.parameters.size()}
@@ -677,17 +689,12 @@ void semantic_analysis::analyze_method_call(method_call& data) {
 						if(it->get_type() != type_l_expr){
 							register_error(std::string("Call to method with"
 									"wrong argument's type."), ERROR_5);
-							well_formed = false;
+							this->well_formed = false;
 							break;
 						}
 						else{
 							// {it->get_type == type_l_expr}
-
-							// Rule 7: string literals only with extern methods.
-							/*if(type_l_expr == symtable_element::STRING){
-								// TODO: chequear que si el método que está en
-								// en aux, es extern
-							}*/
+							;
 						}
 					}
 					else{
@@ -699,11 +706,11 @@ void semantic_analysis::analyze_method_call(method_call& data) {
 				// Rule 6: if a method call is used as an expression, the method
 				// must return some value. We just simply return the type of return
 				// of the method.
-				type_l_expr = aux->get_type();
-				if (type_l_expr == symtable_element::ID){
-					class_name_l_expr = *aux->get_class_type();
+				this->type_l_expr = method_called->get_type();
+				if (this->type_l_expr == symtable_element::ID){
+					this->class_name_l_expr = *method_called->get_class_type();
 				}
-				class_l_expr = aux->get_class();
+				this->class_l_expr = method_called->get_class();
 			}
 		}
 		else{
@@ -711,7 +718,7 @@ void semantic_analysis::analyze_method_call(method_call& data) {
 			// Rule 21: Method call operation over...methods only.
 			register_error(std::string("Method call operation over a value "
 										"different than a method."), ERROR_22);
-			well_formed = false;
+			this->well_formed = false;
 		}
 	}
 }

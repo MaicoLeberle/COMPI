@@ -103,8 +103,7 @@ void test_parser_1(){
 	assert(method->type.type == Type::VOID);  // Method type should be void
 	assert(method->id.compare("print") == 0); // Method id should be print
 	assert(method->parameters.size() == 1); // Method params count should 0
-	assert(method->parameters[0]->type.type == Type::ID); // The only param should be of user defined type ...
-	assert(method->parameters[0]->type.id.compare("string") == 0); // ... 'string' ...
+	assert(method->parameters[0]->type.type == Type::STRING); // The only param should be an string...
 	assert(method->parameters[0]->id.compare("s") == 0); // ... and id 's'
 	assert(method_body->is_extern == true); // Method should have an external body
 
@@ -266,8 +265,7 @@ void test_rule_5(){
 								"}\0\0";
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_5);
-	// TODO: la declaración de la variable local x, de method2, se confunde
-	// con la declaración del parámetro x de method1
+
 	test_program = "class Program {\n"
 						"void method1(int x){\n"
 						"}\n"
@@ -297,7 +295,7 @@ void test_rule_5(){
 						"}\n"
 					"}\0\0";
 
-	//assert(execute_test(test_program) == semantic_analysis::ERROR_5);
+	assert(execute_test(test_program) == semantic_analysis::ERROR_5);
 
 	test_program = "class Program {\n"
 						"void method1(int x, int y){\n"
@@ -313,7 +311,7 @@ void test_rule_5(){
 						"}\n"
 					"}\0\0";
 
-	//assert(execute_test(test_program) == semantic_analysis::ERROR_5);
+	assert(execute_test(test_program) == semantic_analysis::ERROR_5);
 
 	std::cout << "OK.\n" << std::endl;
 }
@@ -359,10 +357,7 @@ void test_rule_7(){
 	std::cout << "7) String literals only with extern methods:\n";
 
 	std::string test_program = "class Program {\n"
-									"boolean method1(){\n"
-									"}\n"
-									"void method2(){\n"
-										"method1(\"string\");"
+									"boolean method1(string x){\n"
 									"}\n"
 								"}\n"
 								"class main {\n"
@@ -370,7 +365,7 @@ void test_rule_7(){
 									"}\n"
 								"}\0\0";
 
-	assert(execute_test(test_program) == semantic_analysis::ERROR_9);
+	assert(execute_test(test_program) == semantic_analysis::ERROR_7);
 
 	std::cout << "OK.\n" << std::endl;
 }
@@ -407,7 +402,7 @@ void test_rule_8(){
 }
 
 void test_rule_9(){
-	std::cout << "9) The type of the value returned from the method must be the "
+	std::cout << "9) The type of the value returned from a method must be the "
 				"same than the type of the expression of the return statement:\n";
 
 	std::string test_program = "class Program {\n"
@@ -442,7 +437,6 @@ void test_rule_11(){
 								"}\0\0";
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_11);
-	// TODO: probar esto cuando tengamos hecho el method_call
 
 	test_program = "class Program {\n"
 						"int x[1];\n"
@@ -633,12 +627,10 @@ void test_rule_14(){
 
 	assert(execute_test(test_program) == semantic_analysis::ERROR_14);
 
-	// Operands of wrong type
-	// TODO: cuando se agregue a symtable_element una representación de tipo
-	// string, correr este test.
-	/*test_program = "class Program {\n"
+	// Operands of the wrong type.
+	test_program = "class Program {\n"
 						"boolean method(){\n"
-							"return \"asd\" != \"asd\";\n"
+							"return \"asd\" != true;\n"
 						"}\n"
 					"}\n"
 					"class main {\n"
@@ -646,7 +638,7 @@ void test_rule_14(){
 						"}\n"
 					"}\0\0";
 
-	assert(execute_test(test_program) == semantic_analysis::ERROR_14);*/
+	assert(execute_test(test_program) == semantic_analysis::ERROR_14);
 
 	std::cout << "OK.\n" << std::endl;
 }
@@ -1000,7 +992,7 @@ void test_semantic_analysis(){
 	test_rule_4();
 	test_rule_5();
 	test_rule_6();
-	//test_rule_7()
+	test_rule_7();
 	test_rule_8();
 	test_rule_9();
 	test_rule_11();
@@ -1137,7 +1129,6 @@ void test_semantics_of_test_cases() {
 
 	std::cout << "\tSemantics of the test cases has been proven correct." << std::endl;
 }
-
 
 int main(int argc, const char* argv[]) {
 

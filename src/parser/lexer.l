@@ -27,6 +27,7 @@ extern                      return EXTERN;
 int                         return INT;
 float                       return FLOAT;
 boolean                     return BOOLEAN;
+string                      return STRING;
 if                          return IF;
 else                        return ELSE;
 for                         return FOR;

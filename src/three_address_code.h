@@ -21,7 +21,8 @@ enum class address_type {
 enum class value_type {
 	BOOLEAN,
 	INTEGER,
-	FLOAT
+	FLOAT,
+	STRING
 };
 
 struct address {
@@ -31,6 +32,7 @@ struct address {
 		struct {
 			value_type type;
 			union {
+				std::string *sval;
 				int ival;
 				float fval;
 				bool bval;
@@ -400,6 +402,15 @@ address_pointer new_boolean_constant(bool value);
 /* PRE : {address->type == address_type::ADDRESS_CONSTANT and
  * 			get_constant_address_type(address) == BOOLEAN} */
 bool get_constant_address_boolean_value(const address_pointer&);
+
+/////////////////////////
+// @STRING CONSTANT
+/////////////////////////
+address_pointer new_string_constant(std::string value);
+
+/* PRE : {address->type == address_type::ADDRESS_CONSTANT and
+ * 			get_constant_address_type(address) == STRING} */
+std::string get_constant_address_string_value(const address_pointer&);
 
 
 /////////////////////////

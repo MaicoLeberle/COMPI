@@ -34,7 +34,8 @@ public:
     	ERROR_21, // Trying to access a field from a value that is not an object.
     	ERROR_22, // Method call operation over a value different than a method.
     	ERROR_23, // Parameter's identifier and method's name coincide.
-    	ERROR_24  // Type of attribute is the class where it belongs to.
+    	ERROR_24,  // Type of attribute is the class where it belongs to.
+    	NONE
     };
 
     semantic_analysis (void);
