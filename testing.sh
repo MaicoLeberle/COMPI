@@ -3,7 +3,7 @@
 for test_case in $(ls test); do
 	# First, clear the contents of (possible) previous executions and 
 	# create output file.
-	if [ "$(ls)" != "" ]
+	if [ "$(ls test/${test_case}/execution/*)" != "" ]
 	then
 		rm "test/${test_case}/execution/"*
 	fi
