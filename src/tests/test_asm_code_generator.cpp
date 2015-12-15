@@ -523,7 +523,8 @@ void test_return(){
 void test_objects_and_arrays(){
 	std::cout << "8) Translation of objects and arrays: ";
 
-	// return x
+	// Object creation.
+	// TODO: los offsets tendrían que ser negativos.
 	translate_ir_code(std::string("class.method:"
 									"obj[0] = 0\n"
 									"obj[4] = 0\n"

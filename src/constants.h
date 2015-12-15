@@ -18,5 +18,6 @@ const unsigned int reference_width = 4;
 
 // Quantity of integer parameters that are passed into registers.
 #define INT_PARAMS_INTO_REG 6
+#define RBP_REGISTER_SIZE 8
 
 #endif

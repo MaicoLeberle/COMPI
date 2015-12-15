@@ -81,6 +81,23 @@ void test_class_decl(){
 	assert(symtable->get(std::string("Main"))->get_class() ==
 			   symtable_element::T_CLASS);
 
+	// One empty main class declaration...
+	test_program = "class Main {\n"
+						"void main(){\n"
+						"}\n"
+					"}\0\0";
+
+	inter_code_gen_visitor v2;
+	translate(v2, test_program);
+
+	translation = v2.get_inst_list();
+
+	ir_program = "Main.main:\n"
+						"enter 0";
+
+	translate_ir_code(ir_program);
+
+	assert(are_equal_instructions_list(*translation, *ir_code));
 	std::cout << "OK. " << std::endl;
 }
 

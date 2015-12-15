@@ -18,7 +18,10 @@
  * con respecto a los archivos de header.
  *
  * TODO: agregar el chequeo en tiempo de compilación de los índices con los que
- * se accede al vector.*/
+ * se accede al vector.
+ *
+ * TODO: agregar lo de la identificación del Main!: tiene que ser sólo main!
+ * y no main.main*/
 
 asm_code_generator::asm_code_generator(instructions_list *_ir,
 										ids_info *_s_table) :
@@ -29,10 +32,11 @@ ir(_ir), s_table(_s_table) {
 		assert(_s_table != nullptr);
 	#endif
 
-	translation = new asm_instructions_list();
-	stack_params = nullptr;
-	last_reg_used = register_id::NONE;
-	params_in_registers = 0;
+	this->translation = new asm_instructions_list();
+	this->stack_params = nullptr;
+	this->last_reg_used = register_id::NONE;
+	this->params_in_registers = 0;
+	this->offset = -1;
 }
 
 register_id asm_code_generator::get_next_reg_av(register_id reg){
@@ -653,14 +657,33 @@ void asm_code_generator::allocate_integer_param(const operand_pointer& val,
 		if(stack_params == nullptr){
 			stack_params = new asm_instructions_list();
 		}
-		stack_params->insert(stack_params->begin(),
-							new_pushq_instruction(val, data_type::L));
+
+		if(pass_address){
+			// TODO: tengo que definir otro registro, ya que RDI puede estar
+			// siendo utilizado a esta altura.
+			operand_pointer reg = new_register_operand(register_id::RDI);
+			stack_params->insert(stack_params->begin(),
+								new_lea_instruction(val,
+													reg,
+													data_type::L));
+
+			stack_params->insert(stack_params->begin(),
+									new_pushq_instruction(reg, data_type::L));
+		}
+		else{
+			// {not pass_address}
+			stack_params->insert(stack_params->begin(),
+								new_pushq_instruction(val, data_type::L));
+		}
+
 	}
 }
 
 void asm_code_generator::translate_parameter(const quad_pointer& instruction){
-	// TODO: usar métodos accesores que no requieran conocimiento sobre donde
-	// estamos metiendo arg1!
+	if(this->offset < 0){
+		// Parameters have positive offsets, with respect to the rBP pointer.
+		this->offset = RBP_REGISTER_SIZE;
+	}
 	address_pointer param = get_param_inst_param(instruction);
 	operand_pointer param_address = get_address(param);
 
@@ -676,6 +699,8 @@ void asm_code_generator::translate_parameter(const quad_pointer& instruction){
 			switch(s_table->get_kind(name)){
 				case K_OBJECT:
 					// Objects are managed by reference.
+					// Update its offset.
+					s_table->set_offset(name, this->offset);
 					allocate_integer_param(param_address, true);
 
 				default:
@@ -735,7 +760,6 @@ void asm_code_generator::translate_procedure_call(const quad_pointer& instructio
 	if(stack_params != nullptr){
 		for (asm_instructions_list::iterator it = stack_params->begin();
 		it != stack_params->end(); ++it){
-
 			translation->push_back(*it);
 		}
 		delete stack_params;

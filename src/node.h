@@ -12,7 +12,7 @@
  * tuple also stores the id
  */
 struct Type {
-    enum _Type {  INTEGER, BOOLEAN, FLOAT, VOID, ID };
+    enum _Type {INTEGER, BOOLEAN, FLOAT, VOID, ID, STRING};
     _Type type;
     std::string id;
 

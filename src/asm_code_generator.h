@@ -150,6 +150,7 @@ private:
 	register_id last_reg_used; // Last register used for integer parameters.
 	bool using_registers;
 	int params_in_registers; // Quantity of integer parameters put into registers.
+	int offset;
 	std::string actual_method_name; // Name of the method being translated, and
 	std::string actual_class_name; // the class it belongs to.
 	t_attributes actual_class_attributes;

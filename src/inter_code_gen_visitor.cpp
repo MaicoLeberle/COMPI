@@ -4,10 +4,6 @@
 
  	 	 _ definir una nueva instrucción de 3-direcciones que me indique
  	 	 que tengo que generar código para declarar un string.
- 	 	 _ Agregar el tipo de las variables, al registrarlas en la tabla
- 	 	 de símbolos, para que, cuando genero el código assembly, pueda saber
- 	 	 si tengo o no un parametro integer, cosa de ponerlo en los registros,
- 	 	 antes que en la pila.
  	 	 _ Al generar las instrucciones, reemplazar los identificadores por
  	 	 quellos identificadores únicos que me genera la tabla de símbolos.
 */
@@ -536,17 +532,15 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 
 	symtable_element method(node.id,
 							determine_type(node.type.type),
-							new std::list<symtable_element>());
+							new std::list<symtable_element>(),
+							node.body->is_extern);
+
+	t_func_results pair = s_table.put_func(method,
+											node.id,
+											0,
+											actual_class->get_key());
 	#ifdef __DEBUG
-	    t_func_results pair =
-	    		s_table.put_func(method,
-						node.id,
-						0,
-						actual_class->get_key());
 	    assert(std::get<0>(pair) == FUNC_PUT);
-	#else
-		//s_table.put_func_field(method, method.get_key(), 0, actual_class->get_key());
-		s_table.put_func(method, node.id, 0, actual_class->get_key());
     #endif
 	// Generate code for the method declaration.
 	std::string *class_name = new std::string(this->actual_class->get_key());
@@ -776,7 +770,7 @@ void inter_code_gen_visitor::visit(node_location& node) {
 	// de un atributo del objeto actual. Entonces tengo que tener en cuenta el
 	// puntero this.
 	std::string name = node.ids.printable_field_id();
-	temp = new_name_address(name);
+	this->temp = new_name_address(name);
 }
 
 void inter_code_gen_visitor::visit(node_int_literal& node) {
@@ -784,7 +778,7 @@ void inter_code_gen_visitor::visit(node_int_literal& node) {
 		std::cout << "Translating int literal with value " << node.value << std::endl;
 	#endif
 
-	temp = new_integer_constant(node.value);
+	this->temp = new_integer_constant(node.value);
 }
 
 void inter_code_gen_visitor::visit(node_bool_literal& node) {
@@ -792,7 +786,7 @@ void inter_code_gen_visitor::visit(node_bool_literal& node) {
 		std::cout << "Translating bool literal with value " << node.value << std::endl;
 	#endif
 
-	temp = new_boolean_constant(node.value);
+	this->temp = new_boolean_constant(node.value);
 }
 
 void inter_code_gen_visitor::visit(node_float_literal& node) {
@@ -800,16 +794,15 @@ void inter_code_gen_visitor::visit(node_float_literal& node) {
 		std::cout << "Translating FLOAT literal with value " << node.value << std::endl;
 	#endif
 
-	temp = new_float_constant(node.value);
+	this->temp = new_float_constant(node.value);
 }
 
 void inter_code_gen_visitor::visit(node_string_literal& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating string literal of value " << node.value << std::endl;
 	#endif
-	// TODO: representación de literales string?
-	// TODO: no tengo representación de este tipo de literales en el 3-address code
-	//temp = std::string("$"+node.value);
+
+	this->temp = new_string_constant(node.value);
 }
 
 void inter_code_gen_visitor::visit(node_method_call_expr& node) {
