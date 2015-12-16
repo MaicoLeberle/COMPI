@@ -673,8 +673,6 @@ void asm_code_generator::translate_parameter(const quad_pointer& instruction){
 	}
 
 	address_pointer param = get_param_inst_param(instruction);
-    // TODO: tenemos que obtener el nombre del parámetro del método llamado, y modificar
-    // ESE offset, y no el offset del argumento que le pasamos...
     std::string name = get_address_name(param);	
     operand_pointer param_address = get_address(param);
 

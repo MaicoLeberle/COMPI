@@ -475,6 +475,7 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 			if (f->array_size > 0){
 				// Array
 				if(into_method){
+					// TODO: este tercer argumento es medio fulero...
 					translate_var_def(determine_type(node.type.type), f->id,
 					std::string(""), f->array_size);
 				}

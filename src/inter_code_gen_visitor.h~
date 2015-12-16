@@ -89,12 +89,9 @@ private:
 	unsigned int calculate_size(symtable_element::id_type, std::string);
 
 	symtable_element::id_type determine_type(Type::_Type);
-    
-    /* PRE : {id is the original id of the variable, as it appears in the code} */
-	void translate_var_def(symtable_element::id_type type,
-                            std::string id, 
-                            std::string class_name, 
-                            unsigned int array_length);
+
+	void translate_var_def(symtable_element::id_type, std::string, std::string,
+							unsigned int array_size);
 
 	/* Returns the label that identifies the beginning of the method's translation
 	 * (in the intermediate code generated).

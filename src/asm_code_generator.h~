@@ -270,7 +270,7 @@ private:
 	 * Sets the attribute act_reg_av to the register selected*/
 	register_id get_next_reg_av(register_id);
 
-	bool allocate_integer_param(const operand_pointer& val, bool pass_address);
+	boo allocate_integer_param(const operand_pointer& val, bool pass_address);
 
 	bool is_attribute(std::string var_name);
 };
