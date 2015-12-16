@@ -11,10 +11,14 @@ const float float_initial_value = 0.0;
 const bool boolean_initial_value = true;
 
 // Type's width (in bytes).
+// TODO: pasar todas estas a constantes def. con macros
 const unsigned int integer_width = 4;
 const unsigned int float_width = 4;
 const unsigned int boolean_width = 4;
 const unsigned int reference_width = 4;
+#define BOOLEAN_WIDTH 4
+#define INTEGER_WIDTH 4
+#define REFERENCE_WIDTH 4
 
 // Quantity of integer parameters that are passed into registers.
 #define INT_PARAMS_INTO_REG 6
