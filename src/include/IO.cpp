@@ -1,5 +1,5 @@
 #include <iostream>
-#include "prints.h"
+#include "IO.h"
 
 using namespace std;
 
