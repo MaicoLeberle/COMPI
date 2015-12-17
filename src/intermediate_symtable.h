@@ -7,27 +7,7 @@
 #include <map>
 #include <utility>
 
-
-/*  ---------------------------------------------------------------------    */
-/*  Data types definitions related to ids_info class.                        */
-
-enum id_type { T_STRING
-             , T_INT
-             , T_FLOAT
-             , T_BOOL
-             , T_CHAR
-             , T_UNDEFINED };
-
-enum id_kind { K_TEMP
-             , K_VAR
-             , K_OBJECT
-             , K_CLASS
-             , K_METHOD };
-
-/*  End of data types definitions related to ids_info class.    */
-/*  ---------------------------------------------------------------------    */
-
-
+  
 /*  ---------------------------------------------------------------------    */
 /*  Data types definitions related to intermediate_symtable class.           */
 
@@ -96,96 +76,103 @@ public:
                   , type of the new temporary variable.                      */
     std::string* new_temp(int, id_type);
 
-    /*  The following register_* methods register the id passed as parameter, 
+    /*  The following register_* methods register the ID passed as parameter, 
         as long with their information, into info_map.
-        They return the internal representation of the id just registered. It 
-        is assured that right after calling this method, the id passed as 
+        They return the internal representation of the ID just registered. It 
+        is assured that right after calling this method, the ID passed as 
         parameter's representation is unique inside info_map. This 
         representation is what should be used inside any intermediate 
         representaion instruction.                                           */
 
-    /*  Parameters: id with which generate the internal representation id
+    /*  Parameters: ID with which generate the internal representation id
                   , offset inside the method
-                  , type of the new variable.                                */
-    std::string register_var(std::string, int, id_type);
+                  , type of the new variable
+                  , boolean telling whether its a parameter or not.          */
+    std::string register_var(std::string, int, id_type, bool);
 
-    /*  Precondition: the id has been registered, and it is of kind K_TEMP or 
+    /*  Precondition: the ID has been registered, and it is of kind K_TEMP or 
         K_VAR.                                                               */
     id_type get_type(std::string);
 
     /*  This method is implemented only in case that it is needed in a future
         implementation of the compiler.
-        Precondition: the id has been registered, and the content is of kind 
+        Precondition: the ID has been registered, and the content is of kind 
         K_TEMP or K_VAR.                                                     */
     void set_type(std::string, id_type);
 
-    /*  Parameters: id with which generate the internal representation id
+    /*  Parameters: ID with which generate the internal representation id
                   , offset inside the method
                   , name of the parameter id's type (its class)
                   , the string that represents the beginning address of the 
-                    object.                                                  */
-    std::string register_obj(std::string, int, std::string, std::string);
+                    object
+                  , boolean telling whether its a parameter or not.          */
+    std::string register_obj(std::string, int, std::string, std::string, bool);
 
-    /*  Parameters: id with which generate the internal representation id
+    /*  Parameters: ID with which generate the internal representation id
                   , number of local variables in the method
                   , name of the class this method belongs to.                */
     std::string register_method(std::string, unsigned int, std::string);
 
-    /*  Parameters: id with which generate the internal representation id
+    /*  Parameters: ID with which generate the internal representation id
                   , list of attributes in the class (in the same order they 
                     have been declared in the source code).                  */
     std::string register_class(std::string, t_attributes);
 
     /*  Precondition: There have been more calls to register_* with the 
-        parameter id than calls to unregister with the same id.              */
+        parameter ID than calls to unregister with the same id.              */
     void unregister(std::string);
 
-    /*  Returns: true, if the parameter id has been registered previously, and
+    /*  Returns: true, if the parameter ID has been registered previously, and
         false, if it has not.                                                */
     bool id_exists(std::string);
 
-    /*  Precondition: the id has been registered.
-        Returns: the internal representation of the id inside info_map.      */
+    /*  Precondition: the ID has been registered.
+        Returns: the internal representation of the ID inside info_map.      */
     std::string get_id_rep(std::string);
 
 
 
-    /*  Precondition: the id has been registered.                            */
+    /*  Check whether the element, represented with the ID parameter, is of 
+        kind K_PARAM.               
+        Precondition: the ID has been regisered.                             */
+    bool is_parameter(std::string);
+
+    /*  Precondition: the ID has been registered.                            */
     id_kind get_kind(std::string);
 
-    /*  Precondition: the id has been registered, and it is of kind K_VAR or 
+    /*  Precondition: the ID has been registered, and it is of kind K_VAR or 
         K_OBJECT.
         Returns: the id's offset inside its method's body.                   */
     int get_offset(std::string);
 
-    /*  Precondition: the id has been registered, and it is of kind K_METHOD.
+    /*  Precondition: the ID has been registered, and it is of kind K_METHOD.
         Returns: the number of local variables inside this method's body.    */
     unsigned int get_local_vars(std::string);
 
-    /*  Precondition: the id has been registered, and it is of kind K_METHOD or
+    /*  Precondition: the ID has been registered, and it is of kind K_METHOD or
         K_OBJECT.
         Returns: the class name this object or method belongs to.             */
     std::string get_owner_class(std::string);
 
-    /*  Precondition: the id has been registered, and it is of kind K_CLASS.
+    /*  Precondition: the ID has been registered, and it is of kind K_CLASS.
         Returns: the list of all the attributes in the class, ordered as they
         were in the class's definition.                                      */
     t_attributes& get_list_attributes(std::string);
 
-    /*  Precondition: the id has been registered, and it is of kind K_METHOD.
+    /*  Precondition: the ID has been registered, and it is of kind K_METHOD.
         Returns: the list of all parameters of the function, ordered as they
         were in the method's definition.                                     */
     t_params& get_list_params(std::string);
 
     /*  Updates the number of local variables (this includes the temporary 
         ones).
-        Precondition: the id has been registered, and it is of kind K_METHOD.
+        Precondition: the ID has been registered, and it is of kind K_METHOD.
         The number of variables passed as parameter should be greater than
         the size of the list of parameters already put in the method's list. */
     void set_number_vars(std::string, unsigned int);
 
     /*  Updates the offset.
-        Precondition: the id has been registered, and it is not of kind 
+        Precondition: the ID has been registered, and it is not of kind 
         K_METHOD or kind K_CLASS.                                            */
     void set_offset(std::string, int);
 
@@ -201,6 +188,9 @@ private:
 
         /*  For variables and objects.                                       */
         int* offset = NULL;
+
+        /*  For variables and objects.                                       */
+        bool is_param;
 
         /*  For objects (declaring the object's type) and methods (declaring
             the class this method belongs to).                               */
@@ -249,9 +239,9 @@ public:
         generation.                                                          */
     ids_info* get_ids_info(void);
 
-    /*  Precondition: the parameter id has already been put in the current 
+    /*  Precondition: the parameter ID has already been put in the current 
         scope.
-        Returns: the internal representation of the parameter id; it should
+        Returns: the internal representation of the parameter ID; it should
         be used instead of the original name in the construction of any 
         intermediate representation instruction.                             */
     std::string get_id_rep(std::string);
@@ -329,7 +319,7 @@ public:
         remembered for future calls of put_*_param. Also, a new symbols
         table is pushed on top of the stack, and every subsequent call to 
         put_func_param is performed to this function and this recently created 
-        symbols table. Finally, the function's id is registered (with a unique
+        symbols table. Finally, the function's ID is registered (with a unique
         representation, of course) inside this->information.
         Parameters: the function itself
                   , the key with which it is going to be registered
@@ -390,7 +380,7 @@ public:
 
     /*  Updates the number of local variables (this includes the temporary 
         ones).
-        Precondition: the id has been previously put.                        */
+        Precondition: the ID has been previously put.                        */
     void set_number_vars(std::string
                        , unsigned int);
 
@@ -407,7 +397,7 @@ public:
         remembered for future calls of put_*_field. Also, a new symbols
         table is pushed on top of the stack, and every subsequent call to
         put_*_field is performed to this class and the recently created
-        symbols table. Finally, the class's id is registered inside 
+        symbols table. Finally, the class's ID is registered inside 
         this->information.
         Parameters: the class itself
                   , the key with which it is going to be registered.

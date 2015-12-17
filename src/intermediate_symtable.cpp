@@ -34,12 +34,17 @@ std::string* ids_info::new_temp(int o
 
 std::string ids_info::register_var(std::string key
                                  , int offset
-                                 , id_type type) {
+                                 , id_type type
+                                 , bool is_param) {
     entry_info information;
     
-    information.entry_kind = K_VAR;
     information.entry_type = type;
     information.offset =  new int(offset);
+    if (is_param)
+        information.entry_kind = K_VAR_PARAM;
+    else
+        information.entry_kind = K_VAR;
+    information.is_param = is_param;
 
     std::string internal_key = this->get_next_internal(key);
     ++((this->internal).find(key))->second;
@@ -51,7 +56,7 @@ std::string ids_info::register_var(std::string key
 }
 
 id_type ids_info::get_type(std::string key) {
-    assert((this->info_map).find(key) != (this->info_map).end());
+    assert(this->id_exists(key));
     assert((this->get_kind(key) == K_TEMP) || 
            (this->get_kind(key) == K_VAR)  ||
            (this->get_kind(key) == K_OBJECT));
@@ -66,7 +71,7 @@ id_type ids_info::get_type(std::string key) {
 
 void ids_info::set_type(std::string key
                       , id_type type) {
-    assert((this->info_map).find(key) != (this->info_map).end());
+    assert(this->id_exists(key));
     assert((this->get_kind(key) == K_TEMP) || 
            (this->get_kind(key) == K_VAR));
 
@@ -76,13 +81,18 @@ void ids_info::set_type(std::string key
 std::string ids_info::register_obj(std::string key
                                  , int offset
                                  , std::string owner
-                                 , std::string address) {
+                                 , std::string address
+                                 , bool is_param) {
     entry_info information;
     
-    information.entry_kind = K_OBJECT;
     information.offset = new int(offset);
     information.owner = new std::string(owner);
     information.begin_address = new std::string(address);
+    information.is_param = is_param;
+    if (is_param)
+        information.entry_kind = K_OBJECT_PARAM;
+    else
+        information.entry_kind = K_OBJECT;
 
     std::string internal_key = this->get_next_internal(key);
     ++((this->internal).find(key))->second;
@@ -139,7 +149,7 @@ bool ids_info::id_exists(std::string key) {
 }
 
 std::string ids_info::get_id_rep(std::string key) {
-    assert((this->info_map).find(key) != (this->info_map).end());
+    assert(this->id_exists(key));
     
     if ((((this->info_map).find(key))->second).entry_kind == K_METHOD) {
         return (key + "::" + *((((this->info_map).find(key))->second).owner));
@@ -149,8 +159,15 @@ std::string ids_info::get_id_rep(std::string key) {
     }
 }
 
+bool ids_info::is_parameter(std::string key) {
+    assert(this->id_exists(key));
+
+    return ((((this->info_map).find(key))->second).entry_kind == K_VAR_PARAM || 
+            (((this->info_map).find(key))->second).entry_kind == K_OBJECT_PARAM);
+}
+
 id_kind ids_info::get_kind(std::string key) {
-    assert((this->info_map).find(key) != (this->info_map).end());
+    assert(this->id_exists(key));
 
     return ((((this->info_map).find(key))->second).entry_kind);
 }
@@ -194,7 +211,7 @@ t_params& ids_info::get_list_params(std::string key) {
 
 void ids_info::set_number_vars(std::string key,
                                unsigned int number) {
-    assert((this->info_map).find(key) != (this->info_map).end());
+    assert(this->id_exists(key));
     assert((((this->info_map).find(key))->second).entry_kind == K_METHOD);
 
     if(!(((this->info_map).find(key))->second).local_vars)
@@ -205,13 +222,13 @@ void ids_info::set_number_vars(std::string key,
 
 void ids_info::set_offset(std::string key, 
                           int number) {
-    assert((this->info_map).find(key) != (this->info_map).end());
+    assert(this->id_exists(key));
     assert((((this->info_map).find(key))->second).entry_kind != K_METHOD);
     assert((((this->info_map).find(key))->second).entry_kind != K_CLASS);
 
     if(!(((this->info_map).find(key))->second).offset)
         (((this->info_map).find(key))->second).offset = new int(number);
-    else
+    else    
         *((((this->info_map).find(key))->second).offset) = number;
 }
 
@@ -229,7 +246,7 @@ ids_info* intermediate_symtable::get_ids_info() {
 }
 
 std::string intermediate_symtable::get_id_rep(std::string key) {
-    assert(((this->scopes).get(key))->get_class() != symtable_element::NOT_FOUND);
+    assert(((this->scopes).get(key))->get_kind() != K_NOT_FOUND);
     assert((this->information)->id_exists(key));
 
     return((this->information)->get_id_rep(key));
@@ -249,7 +266,7 @@ void intermediate_symtable::pop_symtable() {
 }
 
 symtable_element* intermediate_symtable::get(std::string key) {
-    return((this->scopes).get(key));
+    return((this->scopes).get(key));    
 }
 
 int* intermediate_symtable::get_offset(std::string key, std::string class_name) {
@@ -285,20 +302,10 @@ t_results intermediate_symtable::put_var(symtable_element e
             return(t_results(ID_EXISTS, NULL));
 
         std::string *rep;
-        if (e.get_type() == symtable_element::INTEGER)
-            rep = new std::string((this->information)->register_var(key, offset, T_INT));
-        else if (e.get_type() == symtable_element::BOOLEAN)
-            rep = new std::string((this->information)->register_var(key, offset, T_BOOL));
-        else if (e.get_type() == symtable_element::FLOAT)
-            rep = new std::string((this->information)->register_var(key, offset, T_FLOAT));
-        else if (e.get_type() == symtable_element::STRING)
-            rep = new std::string((this->information)->register_var(key, offset, T_STRING));
-        else if (e.get_type() == symtable_element::CHAR)
-            rep = new std::string((this->information)->register_var(key, offset, T_CHAR));
-        else {
-            // VOID, ID or UNDEFINED
-            rep = new std::string((this->information)->register_var(key, offset, T_UNDEFINED));
-        }
+        if (e.get_type() == T_VOID || e.get_type() == T_ID || e.get_type() == T_UNDEFINED)
+            rep = new std::string((this->information)->register_var(key, offset, T_UNDEFINED, false));
+        else
+            rep = new std::string((this->information)->register_var(key, offset, e.get_type(), false));
 
         return(t_results(ID_PUT, rep));
 }
@@ -318,7 +325,11 @@ t_results intermediate_symtable::put_obj(symtable_element& e
         if (res == symtables_stack::ID_EXISTS)
             return(t_results(ID_EXISTS, NULL));
 
-        std::string* rep = new std::string((this->information)->register_obj(key, offset, type, address));
+        std::string* rep = new std::string((this->information)->register_obj(key
+                                                                           , offset
+                                                                           , type
+                                                                           , address
+                                                                           , false));
         
         return(t_results(ID_PUT, rep));
 }
@@ -331,7 +342,7 @@ t_func_results intermediate_symtable::put_func(symtable_element& e
             effectively e's key.                                             */
         assert(key.compare(e.get_key()) == 0);
         /*  Check that e is effectively a function.                          */
-        assert(e.get_class() == symtable_element::T_FUNCTION);
+        assert(e.get_kind() == K_METHOD);
 
         symtables_stack::put_func_results res = 
                                        (this->scopes).put_func(key, e);
@@ -353,7 +364,7 @@ t_param_results intermediate_symtable::put_var_param(symtable_element& e
                                                    , std::string key
                                                    , int offset) {
         assert(key.compare(e.get_key()) == 0);
-        assert(e.get_class() == symtable_element::T_VAR);
+        assert(e.get_kind() == K_VAR);
 
         symtables_stack::put_param_results res = 
                                         (this->scopes).put_func_param(key, e);
@@ -368,20 +379,10 @@ t_param_results intermediate_symtable::put_var_param(symtable_element& e
         ((this->information)->get_list_params(*(this->func_name))).push_back(key);
 
         std::string *rep;
-        if (e.get_type() == symtable_element::INTEGER)
-            rep = new std::string((this->information)->register_var(key, offset, T_INT));
-        else if (e.get_type() == symtable_element::BOOLEAN)
-            rep = new std::string((this->information)->register_var(key, offset, T_BOOL));
-        else if (e.get_type() == symtable_element::FLOAT)
-            rep = new std::string((this->information)->register_var(key, offset, T_FLOAT));
-        else if (e.get_type() == symtable_element::STRING)
-            rep = new std::string((this->information)->register_var(key, offset, T_STRING));
-        else if (e.get_type() == symtable_element::CHAR)
-            rep = new std::string((this->information)->register_var(key, offset, T_CHAR));
-        else {
-            // VOID, ID or UNDEFINED
-            rep = new std::string((this->information)->register_var(key, offset, T_UNDEFINED));
-        }
+        if (e.get_type() == T_VOID || e.get_type() == T_ID || e.get_type() == T_UNDEFINED)
+            rep = new std::string((this->information)->register_var(key, offset, T_UNDEFINED, true));
+        else
+            rep = new std::string((this->information)->register_var(key, offset, e.get_type(), true));
 
         return(t_param_results(PARAM_PUT, rep));
 }
@@ -392,7 +393,7 @@ t_param_results intermediate_symtable::put_obj_param(symtable_element& e
                                                    , std::string owner
                                                    , std::string address) {
         assert(key.compare(e.get_key()) == 0);
-        assert(e.get_class() == symtable_element::T_OBJ);
+        assert(e.get_kind() == K_OBJECT);
 
         symtables_stack::put_param_results res = 
                                         (this->scopes).put_func_param(key, e);
@@ -414,7 +415,7 @@ t_param_results intermediate_symtable::put_obj_param(symtable_element& e
             push the new parameter into the function's parameters list.      */
         ((this->information)->get_list_params(*(this->func_name))).push_back(key);
 
-        std::string* rep = new std::string((this->information)->register_obj(key, offset, owner, address));
+        std::string* rep = new std::string((this->information)->register_obj(key, offset, owner, address, true));
 
         return(t_param_results(PARAM_PUT, rep));
 }
@@ -470,20 +471,10 @@ t_field_results intermediate_symtable::put_var_field(symtable_element& e
         ((this->information)->get_list_attributes(*(this->class_name))).push_front(t_att(key, aux));
         
         std::string *rep;
-        if (e.get_type() == symtable_element::INTEGER)
-            rep = new std::string((this->information)->register_var(key, offset, T_INT));
-        else if (e.get_type() == symtable_element::BOOLEAN)
-            rep = new std::string((this->information)->register_var(key, offset, T_BOOL));
-        else if (e.get_type() == symtable_element::FLOAT)
-            rep = new std::string((this->information)->register_var(key, offset, T_FLOAT));
-        else if (e.get_type() == symtable_element::STRING)
-            rep = new std::string((this->information)->register_var(key, offset, T_STRING));
-        else if (e.get_type() == symtable_element::CHAR)
-            rep = new std::string((this->information)->register_var(key, offset, T_CHAR));
-        else {
-            // VOID, ID or UNDEFINED
-            rep = new std::string((this->information)->register_var(key, offset, T_UNDEFINED));
-        }
+        if (e.get_type() == T_VOID || e.get_type() == T_ID || e.get_type() == T_UNDEFINED)
+            rep = new std::string((this->information)->register_var(key, offset, T_UNDEFINED, false));
+        else
+            rep = new std::string((this->information)->register_var(key, offset, e.get_type(), false));
 
         return(t_field_results(FIELD_PUT, rep));
 }
@@ -505,7 +496,11 @@ t_field_results intermediate_symtable::put_obj_field(symtable_element& e
         assert(this->class_name);
         assert((this->information)->id_exists(*(this->class_name)));
         ((this->information)->get_list_attributes(*(this->class_name))).push_front(t_att(key, new int(offset)));
-        std::string* rep = new std::string((this->information)->register_obj(key, offset, class_name, address));
+        std::string* rep = new std::string((this->information)->register_obj(key
+                                                                           , offset
+                                                                           , class_name
+                                                                           , address
+                                                                           , false));
 
         return(t_field_results(FIELD_PUT, rep));
 }

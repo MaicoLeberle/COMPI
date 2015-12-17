@@ -7,23 +7,23 @@
 
 /*  START OF CONSTRUCTORS.   */
 
-symtable_element::symtable_element(id_class not_found_class) : 
-    c_id(not_found_class), dim(0), func_params(NULL), class_fields(NULL), class_type(NULL), is_extern(false) {
-        assert(not_found_class == NOT_FOUND);
+symtable_element::symtable_element(id_kind not_found_key) : 
+    k_id(not_found_key), dim(0), func_params(NULL), class_fields(NULL), class_type(NULL), is_extern(false) {
+        assert(not_found_key == K_NOT_FOUND);
 }
 
 symtable_element::symtable_element(std::string k, id_type t) : 
-    key(k), c_id(T_VAR), t_id(t), dim(0), func_params(NULL), class_fields(NULL), class_type(NULL), is_extern(false) {
-    assert((t != symtable_element::VOID) && (t != symtable_element::ID));
+    key(k), k_id(K_VAR), t_id(t), dim(0), func_params(NULL), class_fields(NULL), class_type(NULL), is_extern(false) {
+    assert((t != T_VOID) && (t != T_ID));
 }
 
 symtable_element::symtable_element(std::string k, id_type t, unsigned int d) : 
-    key(k), c_id(T_ARRAY), t_id(t), dim(d), func_params(NULL), class_fields(NULL), class_type(NULL), is_extern(false)  { }
+    key(k), k_id(K_ARRAY), t_id(t), dim(d), func_params(NULL), class_fields(NULL), class_type(NULL), is_extern(false)  { }
 
 symtable_element::symtable_element(std::string k, std::string* s) : 
       key(k)
-    , c_id(T_OBJ)
-    , t_id(ID)
+    , k_id(K_OBJECT)
+    , t_id(T_ID)
     , class_type(s)
     , dim(0)
     , func_params(NULL)
@@ -32,8 +32,8 @@ symtable_element::symtable_element(std::string k, std::string* s) :
 
 symtable_element::symtable_element(std::string k, std::string* s, unsigned int d) :
       key(k)
-    , c_id(T_OBJ_ARRAY)
-    , t_id(ID)
+    , k_id(K_OBJECT_ARRAY)
+    , t_id(T_ID)
     , class_type(s)
     , dim(d)
     , func_params(NULL)
@@ -44,7 +44,7 @@ symtable_element::symtable_element(std::string k, std::string* s, unsigned int d
 
 symtable_element::symtable_element(std::string k, id_type t, std::list<symtable_element>* f, bool b) :
       key(k)
-    , c_id(T_FUNCTION)
+    , k_id(K_METHOD)
     , t_id(t)
     , func_params(f)
     , dim(0)
@@ -53,7 +53,7 @@ symtable_element::symtable_element(std::string k, id_type t, std::list<symtable_
     , is_extern(b)  { } 
 
 symtable_element::symtable_element(std::string* k, std::list<symtable_element>* f) :
-    key(*k), c_id(T_CLASS), t_id(ID), class_fields(f), class_type(k), dim(0), func_params(NULL) { 
+    key(*k), k_id(K_CLASS), t_id(T_ID), class_fields(f), class_type(k), dim(0), func_params(NULL) { 
     }
 
 /*  END OF CONSTRUCTORS.    */
@@ -64,11 +64,11 @@ std::string symtable_element::get_key() {
     return (this->key);
 }
 
-symtable_element::id_class symtable_element::get_class () { 
-    return (this->c_id); 
+id_kind symtable_element::get_kind () { 
+    return (this->k_id); 
 }
 
-symtable_element::id_type symtable_element::get_type () { 
+id_type symtable_element::get_type () { 
     return (this->t_id); 
 }
 
@@ -77,12 +77,12 @@ std::string* symtable_element::get_class_type () {
 }
 
 unsigned int symtable_element::get_dimension () { 
-    assert(c_id == T_ARRAY || c_id == T_OBJ_ARRAY); 
+    assert(k_id == K_ARRAY || k_id == K_OBJECT_ARRAY); 
     return (this->dim); 
 }
 
 std::list<symtable_element>* symtable_element::get_func_params () {
-    assert(this->c_id == T_FUNCTION); 
+    assert(this->k_id == K_METHOD); 
     return (this->func_params); 
 }
 
@@ -91,7 +91,7 @@ bool symtable_element::is_func_extern(void) {
 }
 
 std::list<symtable_element>* symtable_element::get_class_fields () {
-    assert(c_id == T_CLASS);
+    assert(k_id == K_CLASS);
     return (class_fields); 
 }
 
@@ -100,13 +100,13 @@ std::list<symtable_element>* symtable_element::get_class_fields () {
 /*  START OF PUTTERS.   */
 
 void symtable_element::put_func_param(symtable_element new_elem) {
-    assert(this->c_id == T_FUNCTION);
+    assert(this->k_id == K_METHOD);
     assert(this->func_params);
     (this->func_params)->push_back(new_elem);
 }
 
 void symtable_element::put_class_field(symtable_element new_elem) {
-    assert(this->c_id == T_CLASS);
+    assert(this->k_id == K_CLASS);
     assert(this->class_fields);
     (this->class_fields)->push_back(new_elem);
 }
@@ -120,17 +120,17 @@ void symtable_element::put_class_field(symtable_element new_elem) {
     ----------------------------------------------------------------------------------------------------    */
 
 /*  START OF CONSTRUCTORS.  */
-symtable::symtable() : id(NULL) {}
+symtable::symtable() : id(NULL), k_symtable(S_BLOCK) {}
 
 symtable::symtable(std::string identifier, bool b) 
-    : id(new std::string(identifier)),  class_or_function (b) { }
+    : id(new std::string(identifier)),  k_symtable(b ? S_CLASS : S_METHOD) { }
 
 /*  END OF CONSTRUCTORS.    */
 
 /*  START OF GETTERS.   */
 
 symtable_element* symtable::get_elem(std::string key) {
-    assert(id_exists(key));
+    assert(id_exists(key)); 
     return (&((hashtable.find(key))->second));
 }
 
@@ -146,7 +146,7 @@ std::string symtable::get_id() {
 bool symtable::put (std::string key, symtable_element value) {
     if (this->id_exists(key) || this->is_recursive(value))
         return false;
-    if (this->id != NULL && value.get_class() == symtable_element::T_CLASS)
+    if (this->id != NULL && value.get_kind() == K_CLASS)
         /*  A class cannot be defined inside another class or function.      */
         return false;
     hashtable.insert(std::pair<std::string, symtable_element>(key, value));
@@ -162,7 +162,7 @@ bool symtable::id_exists(std::string key) {
 }
     
 bool symtable::is_recursive(symtable_element elem) {
-    if (!this->id || elem.get_class() != symtable_element::T_OBJ || !(this->class_or_function))
+    if (!this->id || elem.get_kind() != K_OBJECT || !(this->class_or_function))
         return false;
     return((*elem.get_class_type()) == *(this->id));
 }
@@ -184,22 +184,22 @@ void symtables_stack::push_symtable() {
     (this->stack).push_front(new_table);
 }
 void symtables_stack::push_symtable(symtable_element& s) {
-    assert ((s.get_class() == symtable_element::T_CLASS)
-         || (s.get_class() == symtable_element::T_FUNCTION));
+    assert ((s.get_kind() == K_CLASS)
+         || (s.get_kind() == K_METHOD));
 
     /*  First, create the new symbols table. There is no need to insert the 
         parameter element because it should have been done BEFORE wanting to
         create a new symbols table to analize this element (be it class or 
         function).                                                           */
     symtable* new_table = new symtable(s.get_key()
-                            , ((s.get_class() == symtable_element::T_CLASS)? true : false));
+                            , ((s.get_kind() == K_CLASS)? true : false));
 
     /*  Second, each element in the function parameters list, or class 
         attributes and methods list, must be added to the new symbols table. */
     std::list<symtable_element>* l;
-    if (s.get_class() == symtable_element::T_FUNCTION) 
+    if (s.get_kind() == K_METHOD) 
         l = s.get_func_params();
-    if (s.get_class() == symtable_element::T_CLASS) 
+    if (s.get_kind() == K_CLASS) 
         l = s.get_class_fields();
 
     for(std::list<symtable_element>::iterator it = l->begin(); it != l->end(); it++) 
@@ -219,7 +219,7 @@ void symtables_stack::pop_symtable() {
 
 symtable_element* symtables_stack::get(std::string key) {
     if(this->size() == 0) {
-        symtable_element* s = new symtable_element(symtable_element::NOT_FOUND);
+        symtable_element* s = new symtable_element(K_NOT_FOUND);
         return s;
     }
     symtable* current = (this->stack).front();
@@ -231,7 +231,7 @@ symtable_element* symtables_stack::get(std::string key) {
 
     /*  If the key has not been found in any of the symbols 
         tables, then it has not been found in the current scope.     */
-    symtable_element* not_found_elem = new symtable_element(symtable_element::NOT_FOUND);
+    symtable_element* not_found_elem = new symtable_element(K_NOT_FOUND);
     return (not_found_elem);
 }
 
@@ -251,17 +251,21 @@ symtables_stack::put_results symtables_stack::put(std::string key, symtable_elem
         return symtables_stack::IS_RECURSIVE;
 }
 
+bool symtables_stack::is_attribute_of_this(std::string key) {
+    symtable_element* get_res = this->get(key);
+}
+
 /*  END OF VARIABLE TREATMENT METHODS. */
 
 /*  START FUNCTION ANALYSIS METHODS. */
 
 symtables_stack::put_func_results symtables_stack::put_func(std::string key, symtable_element& value) {
     assert(this->last_func == NULL);
-    if(value.get_class() != symtable_element::T_FUNCTION) 
+    if(value.get_kind() != K_METHOD) 
         return symtables_stack::NOT_FUNC;
 
-    if((this->get(key))->get_class() != symtable_element::NOT_FOUND 
-        && (this->get(key))->get_class() != symtable_element::T_CLASS)
+    if((this->get(key))->get_kind() != K_NOT_FOUND 
+        && (this->get(key))->get_kind() != K_CLASS)
             return symtables_stack::FUNC_EXISTS;
 
     symtable* current = (this->stack).front();
@@ -280,10 +284,10 @@ symtables_stack::put_param_results symtables_stack::put_func_param(std::string k
     assert(this->last_func);
     assert(key.compare(value.get_key()) == 0);
 
-    if((!(this->last_func)) || ((this->last_func)->get_class() == symtable_element::NOT_FOUND))
+    if((!(this->last_func)) || ((this->last_func)->get_kind() == K_NOT_FOUND))
         return symtables_stack::NO_PREV_FUNC;
     
-    if((value.get_class() == symtable_element::T_FUNCTION) || (value.get_class() == symtable_element::T_CLASS))
+    if((value.get_kind() == K_METHOD) || (value.get_kind() == K_CLASS))
         return symtables_stack::PARAM_TYPE_ERROR;
 
     ((this->last_func)->get_func_params())->push_front(value);
@@ -303,10 +307,10 @@ void symtables_stack::finish_func_analysis() {
 
 symtables_stack::put_class_results symtables_stack::put_class(std::string key, symtable_element& value) {
     assert(this->last_class == NULL);
-    if(value.get_class() != symtable_element::T_CLASS)
+    if(value.get_kind() != K_CLASS)
         return symtables_stack::NOT_CLASS;
 
-    if((this->get(key))->get_class() != symtable_element::NOT_FOUND)
+    if((this->get(key))->get_kind() != K_NOT_FOUND)
         return symtables_stack::CLASS_EXISTS;
 
     symtable* current = (this->stack).front();
@@ -325,15 +329,15 @@ symtables_stack::put_field_results symtables_stack::put_class_field(std::string 
     assert(this->last_class);
     assert(key.compare(value.get_key()) == 0);
 
-    if((this->last_class)->get_class() == symtable_element::NOT_FOUND)
+    if((this->last_class)->get_kind() == K_NOT_FOUND)
         return symtables_stack::NO_PREV_CLASS;
     
-    if(value.get_class() == symtable_element::T_CLASS)
+    if(value.get_kind() == K_CLASS)
         return symtables_stack::FIELD_TYPE_ERROR;
 
     ((this->last_class)->get_class_fields())->push_front(value);
 
-    if (value.get_class() == symtable_element::T_FUNCTION) {
+    if (value.get_kind() == K_METHOD) {
         symtables_stack::put_func_results res = this->put_func(key, value);
         if(res != symtables_stack::FUNC_PUT)
             return symtables_stack::FIELD_ERROR;

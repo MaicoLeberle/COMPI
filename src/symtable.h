@@ -6,30 +6,31 @@
 #include <string>
 #include <list>
 
+enum id_kind { K_TEMP
+             , K_VAR
+             , K_ARRAY
+             , K_OBJECT
+             , K_OBJECT_ARRAY
+             , K_METHOD 
+             , K_VAR_PARAM
+             , K_OBJECT_PARAM
+             , K_CLASS
+             , K_NOT_FOUND /* Used when a symtable_element was not found. */ };
+
+enum id_type { T_INT
+             , T_BOOL
+             , T_CHAR
+             , T_STRING
+             , T_ID /* For objects and classes (the latter reference 
+                       themselves). */
+             , T_VOID /* For methods. */
+             , T_FLOAT
+             , T_UNDEFINED };
+
 
 /*  This class represents the information stored for each identifier.        */
 class symtable_element {
 public:
-    /*  Identifier class. It will tell what kind of identifier it is.        */
-    enum id_class { T_FUNCTION
-                  , T_CLASS
-                  , T_VAR
-                  , T_OBJ
-                  , T_ARRAY
-                  , T_OBJ_ARRAY
-                  , NOT_FOUND };
-    /*  Identifier type.   It will represent the type of the identifier.
-        Objects and array of objects will have the type of the class they 
-        belong to.                                                           */
-    enum id_type { INTEGER
-                 , BOOLEAN
-                 , FLOAT
-                 , VOID
-                 , ID
-                 , STRING
-                 , CHAR
-                 , UNDEFINED };
-
     /*  For the following constructors, only necessary information is given. 
         Other attributes will be inferred from this information.
         The first parameter in each one of them, except for the first one,
@@ -37,7 +38,7 @@ public:
 
     /*  To be returned when an entry is not found in a symbols table.
         Precondition: the argument is NOT_FOUND                              */
-    symtable_element(id_class);
+    symtable_element(id_kind);
 
     /*  Basic type variable.
         Precondition: the type is neither VOID nor ID.                       */
@@ -63,8 +64,8 @@ public:
 
     std::string get_key(void);
 
-    /*  Returns the corresponding enum id_class value.                       */
-    id_class get_class (void);
+    /*  Returns the corresponding enum id_key value.                         */
+    id_kind get_kind (void);
 
     /*  Returns the corresponding enum id_type value.                        */
     id_type get_type (void);
@@ -102,7 +103,7 @@ private:
         table next to their corresponding identifiers.                       */
     std::string key;
 
-    id_class c_id;
+    id_kind k_id;
 
     id_type t_id;
 
@@ -155,7 +156,7 @@ public:
     /*  Returns TRUE if the symtable_element parameter is of the same type of
         the class whose symtable is the current one. Otherwise, returns FALSE.
         Precondition: the constructor used was symtable(std::string, 
-        symtable_element::id_class).                                         */
+        id_kind).*/
     bool is_recursive(symtable_element);
 
     /*  Returns TRUE if id_exists(...) == FALSE && 
@@ -168,7 +169,11 @@ private:
         when checking the imposibility of defining an object of some class 
         type in the definition of that class.                                */
     std::string* id;
-    bool class_or_function;
+    enum symtable_kind {
+          S_CLASS
+        , S_METHOD
+        , S_BLOCK
+    } k_symtable;
     std::map<std::string, symtable_element> hashtable;
 } ;
 
@@ -220,7 +225,7 @@ public:
     
     /*  Precondition: There have been more calls to push_symtable than
         to pop_symtable; i.e., there is still another symbols table to get 
-        an element from.                                                     */ 
+        an element from.                                                     */
     symtable_element* get (std::string);
 
     /*  Inserts a new element into the symbols tables stack. 
@@ -229,6 +234,13 @@ public:
         an element to. The element to be inserted is not a class nor a 
         function.                                                            */
     symtables_stack::put_results put(std::string, symtable_element);
+
+    /*  Check whether the element associated with the ID parameter is an 
+        attribute of the object this (current object).
+        Precondition: There have been more calls to push_symtable than
+        to pop_symtable; i.e., there is still another symbols table to get 
+        an element from.                                                     */
+    bool is_attribute_of_this(std::string);
 
     /*  Inserts a new function to the symbols tables stack. This function is 
         remembered for future calls of put_func_param. Also, a new symbols
