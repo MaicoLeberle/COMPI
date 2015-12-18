@@ -55,10 +55,16 @@ enum class register_id {
 	R15B,
 };
 
+enum class directive_type{
+    GLOBAL
+};
+
 enum class operand_addressing {
 	IMMEDIATE, // Immediate value
 	REGISTER, // Register
 	MEMORY,   // Memory value
+    DIRECTIVE, // The operand contains data about an assembler's directive,
+                // rather than data for an instruction.
 	NONE	  // For labels or other kind of data
 };
 
@@ -98,7 +104,7 @@ struct operand {
 		register_id reg;
 
 		// Immediate value representation.
-		struct{
+		struct {
 			immediate_op_type imm_op_type;
 			union {
 				// TODO: coloco sólo estos campos, ya que son los únicos tipos
@@ -111,10 +117,19 @@ struct operand {
 				int ival;
 				float fval;
 			} val;
-		}imm;
+		} imm;
 
 		// Label representation
 		std::string *label;
+
+        // Directive's represenation.
+        struct {
+            directive_type dir_t;
+            union{
+                // Label globally accesible.
+                std::string *global_label;
+            } data;
+        } dir;
 	} value;
 };
 
@@ -167,16 +182,14 @@ enum class operation {
 
 	// Misc
 	ENTER,
-	LABEL
+	LABEL,
+    // Assembler directive.
+    DIRECTIVE
 };
 
 
-// TODO: NOTA!, conviene dejarlo como struct para poder identificar más
-// rápidamente el tipo de operacion, con un simple switch sobre op
 struct asm_instruction {
 	operation op;
-	// TODO: asumo que a estas alturas, los operandos siempre tienen el
-	// mismo tipo, entonces defino esa información en un único lugar.
 	data_type ops_type;
 	operand_pointer source = nullptr;
 	operand_pointer destination = nullptr;
@@ -194,6 +207,11 @@ operand_pointer new_register_operand(register_id);
 
 operand_pointer new_immediate_integer_operand(int);
 operand_pointer new_immediate_float_operand(float);
+
+/////////////////////////////
+// @ASSEMBLER'S DIRECTIVE
+/////////////////////////////
+asm_instruction_pointer new_global_directive(std::string);
 
 /////////////////////////////
 // @OPERAND
@@ -255,18 +273,6 @@ asm_instruction_pointer new_cmp_instruction(const operand_pointer&,
 											const operand_pointer&,
 											data_type);
 
-// TODO: del documento x86-64-arqu.guide.pdf: Jump unconditionally to target,
-// which is specified as a memory location (for example, a label).
-// Aqui solo consideramos una etiqueta.
-// TODO: los operandos y las instrucciones se construyen con los constructores
-// que definimos, y estos devuelven punteros, entonces es razonable pedir que
-// tales valores se pasen por referencia, en los procedimientos que estamos
-// definiendo aca (ya que no hay riesgos de que alguien nos pase un valor
-// que esté almacenado en la pila del procedimiento, en lugar de el heap). Pero
-// en el caso de los strings, si pidieramos recibirlos por referencia, esto podria
-// entenderse como que el usuario del procedimiento debiera tener la responsabilidad
-// de almacenar en el heap el parámetro, porque nosotros no vamos a realizar una
-// copia del mismo, si no que vamos a guardar la referencia al string.
 asm_instruction_pointer new_jmp_instruction(std::string);
 
 asm_instruction_pointer new_je_instruction(std::string);

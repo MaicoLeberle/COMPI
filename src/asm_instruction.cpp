@@ -3,6 +3,7 @@
 /******************************************************************
  * Constructors of special kinds of operands.
  ******************************************************************/
+
 /////////////////////////////
 // @OPERAND
 /////////////////////////////
@@ -71,6 +72,25 @@ operand_pointer new_label_operand(std::string label){
 	op->value.label = new std::string(label); // TODO: liberar!
 
 	return op;
+}
+
+/////////////////////////////
+// @ASSEMBLER'S DIRECTIVE
+/////////////////////////////
+asm_instruction_pointer new_global_directive(std::string global_label){
+    asm_instruction_pointer inst = asm_instruction_pointer(new asm_instruction);
+	inst->op = operation::DIRECTIVE;
+
+    operand_pointer op = operand_pointer(new operand);
+	op->op_addr = operand_addressing::DIRECTIVE;
+    op->value.dir.dir_t = directive_type::GLOBAL;
+    op->value.dir.data.global_label = new std::string(global_label);
+
+	inst->source = op;
+	inst->destination = nullptr;
+	inst->is_signed = false;
+
+	return inst;
 }
 
 /******************************************************************
@@ -669,6 +689,15 @@ std::string print_operand_intel_syntax(const operand_pointer& operand){
 			break;
 		}
 
+        case operand_addressing::DIRECTIVE:{
+            switch(operand->value.dir.dir_t){
+                case directive_type::GLOBAL:
+                    ret = std::string(*operand->value.dir.data.global_label);
+                    break;
+            }
+			break;
+		}
+
 		default:
 			// {operand->op_addr == None}
 			// It's a label.
@@ -761,6 +790,28 @@ std::string print_binary_op_intel_syntax(const asm_instruction_pointer& instruct
 
 	ret =  prefix + " " + print_operand_intel_syntax(instruction->source) + " , "
 			+ print_operand_intel_syntax(instruction->destination);
+
+	#ifdef __DEBUG
+		std::cout << ret << std::endl;
+	#endif
+
+	return ret;
+}
+
+std::string print_directive_intel_syntax(const asm_instruction_pointer& instruction){
+	std::string ret, prefix;
+
+	#ifdef __DEBUG
+		std::cout << "print_directive_intel_syntax: ";
+	#endif
+
+	switch(instruction->source->value.dir.dir_t){
+		case directive_type::GLOBAL:
+			prefix = std::string(".global");
+			break;
+	}
+
+	ret = prefix + " " + print_operand_intel_syntax(instruction->source);
 
 	#ifdef __DEBUG
 		std::cout << ret << std::endl;
@@ -937,6 +988,10 @@ std::string print_intel_syntax(const asm_instruction_pointer& instruction){
 
 		case operation::LABEL:
 			ret += print_unary_op_intel_syntax(instruction) + "\n";
+			break;
+
+        case operation::DIRECTIVE:
+			ret += print_directive_intel_syntax(instruction) + "\n";
 			break;
 	}
 
