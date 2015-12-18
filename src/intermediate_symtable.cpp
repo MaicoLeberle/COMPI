@@ -376,7 +376,11 @@ t_param_results intermediate_symtable::put_var_param(symtable_element& e
 
         assert(this->func_name);
         assert((this->information)->id_exists(*(this->func_name)));
-        ((this->information)->get_list_params(*(this->func_name))).push_back(key);
+
+        /*  Now that being within a function analysis has been checked, we can
+            push the new parameter into the function's parameters list.      */
+        t_params aux = ((this->information)->get_list_params(*(this->func_name)));
+        aux.push_back(this->get_id_rep(key));
 
         std::string *rep;
         if (e.get_type() == T_VOID || e.get_type() == T_ID || e.get_type() == T_UNDEFINED)
@@ -413,7 +417,8 @@ t_param_results intermediate_symtable::put_obj_param(symtable_element& e
 
         /*  Now that being within a function analysis has been checked, we can
             push the new parameter into the function's parameters list.      */
-        ((this->information)->get_list_params(*(this->func_name))).push_back(key);
+        t_params aux = ((this->information)->get_list_params(*(this->func_name)));
+        aux.push_back(this->get_id_rep(key));
 
         std::string* rep = new std::string((this->information)->register_obj(key, offset, owner, address, true));
 
