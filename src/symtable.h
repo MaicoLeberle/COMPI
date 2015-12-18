@@ -147,7 +147,7 @@ public:
     symtable_element* get_elem(std::string);
 
     /*  Precondition: the constructor used was symtable(std::string).        */
-    std::string get_id(void);
+    std::string* get_id(void);
 
     /*  Returns TRUE if the identifier has not yet been inserted in this 
         current symtable. Otherwise, returns FALSE.                          */

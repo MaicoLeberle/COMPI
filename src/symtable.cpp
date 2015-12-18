@@ -134,9 +134,8 @@ symtable_element* symtable::get_elem(std::string key) {
     return (&((hashtable.find(key))->second));
 }
 
-std::string symtable::get_id() {
-    assert(this->id);
-    return(*(this->id));
+std::string* symtable::get_id() {
+    return (this->id);
 }
 
 /*  END OF GETTERS. */
@@ -147,7 +146,7 @@ bool symtable::put (std::string key, symtable_element value) {
     if (this->id_exists(key) || this->is_recursive(value))
         return false;
     if (this->id != NULL && value.get_kind() == K_CLASS)
-        /*  A class cannot be defined inside another class or function.      */
+        /*  A class cannot be defined inside another class or method.      */
         return false;
     hashtable.insert(std::pair<std::string, symtable_element>(key, value));
     return true;
@@ -162,7 +161,7 @@ bool symtable::id_exists(std::string key) {
 }
     
 bool symtable::is_recursive(symtable_element elem) {
-    if (!this->id || elem.get_kind() != K_OBJECT || !(this->class_or_function))
+    if (!this->id || elem.get_kind() != K_OBJECT || this->k_symtable == S_BLOCK)
         return false;
     return((*elem.get_class_type()) == *(this->id));
 }
@@ -190,11 +189,11 @@ void symtables_stack::push_symtable(symtable_element& s) {
     /*  First, create the new symbols table. There is no need to insert the 
         parameter element because it should have been done BEFORE wanting to
         create a new symbols table to analize this element (be it class or 
-        function).                                                           */
+        method).                                                             */
     symtable* new_table = new symtable(s.get_key()
                             , ((s.get_kind() == K_CLASS)? true : false));
 
-    /*  Second, each element in the function parameters list, or class 
+    /*  Second, each element in the method's parameters list, or class 
         attributes and methods list, must be added to the new symbols table. */
     std::list<symtable_element>* l;
     if (s.get_kind() == K_METHOD) 
@@ -252,12 +251,54 @@ symtables_stack::put_results symtables_stack::put(std::string key, symtable_elem
 }
 
 bool symtables_stack::is_attribute_of_this(std::string key) {
+    bool res;
     symtable_element* get_res = this->get(key);
+
+    if ((this->get(key))->get_kind() == K_NOT_FOUND) {
+        /*  The element associated with key is not even registered in the 
+            current scope.                                                   */
+        res = false; 
+    } else {
+        /*  Note that in symtables_stack::push_symtable(...) methods every
+            new symtable is pushed into the front of the symbols tables stack.
+            Hence, start analysing from the front.                           */
+        for (std::list<symtable*>::iterator it = (this->stack).begin();
+             it != (this->stack).end();
+             it++) {
+                /*  First, get the ID of the symbols table.                  */
+                std::string* aux = (*it)->get_id();
+                if (aux) {
+                    /*  Next, get the class or method it is associated with. */
+                    symtable_element* aux2 = this->get(*aux);
+                    if (aux2->get_kind() == K_CLASS) {
+                        /*  Finally, get the list of attributes belonging to 
+                            the class, and check whether key appears in the 
+                            list.                                            */
+                        std::list<symtable_element>* aux3 = aux2->get_class_fields();
+                        bool done = false;
+                        for (std::list<symtable_element>::iterator it2 = aux3->begin();
+                             it2 != aux3->end();
+                             it2++) {
+                                if (it2->get_key() == key) {
+                                    /*  We found the element we were looking 
+                                        for, within this's attributes list.  */
+                                    done = true;
+                                    break;
+                                }
+                        }
+                        if (done) 
+                            break;
+                    }
+                }
+        }
+    } 
+
+    return (res);
 }
 
 /*  END OF VARIABLE TREATMENT METHODS. */
 
-/*  START FUNCTION ANALYSIS METHODS. */
+/*  START METHOD ANALYSIS METHODS. */
 
 symtables_stack::put_func_results symtables_stack::put_func(std::string key, symtable_element& value) {
     assert(this->last_func == NULL);
@@ -270,7 +311,7 @@ symtables_stack::put_func_results symtables_stack::put_func(std::string key, sym
 
     symtable* current = (this->stack).front();
     if(current -> put(key, value)) {
-        /*  The function has been added to its class's symbols table.
+        /*  The method has been added to its class's symbols table.
             Next, it has to be analysed; hence, a new symbols table for it is
             created.                                                         */
         this->push_symtable(value);
@@ -301,7 +342,7 @@ void symtables_stack::finish_func_analysis() {
     this->last_func = NULL;
 }
 
-/*  END OF FUNCTION ANALYSIS METHODS.   */
+/*  END OF METHOD ANALYSIS METHODS.   */
 
 /* START OF CLASS ANALYSIS METHODS. */
 
