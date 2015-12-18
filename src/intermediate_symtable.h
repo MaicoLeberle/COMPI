@@ -130,8 +130,6 @@ public:
         Returns: the internal representation of the ID inside info_map.      */
     std::string get_id_rep(std::string);
 
-
-
     /*  Check whether the element, represented with the ID parameter, is of 
         kind K_PARAM.               
         Precondition: the ID has been regisered.                             */
@@ -344,8 +342,7 @@ public:
         as a parameter.
         Parameters: the variable itself
                   , the key with which it is going to be registered
-                  , the variable's offset inside the method it belongs to
-                  , the variable's type.
+                  , the variable's offset inside the method it belongs to.
         Precondition: The element is a variable, and the string given to this
         method is equal to the variable's key.
         Returns: a pair containing the result of putting the variable into the
@@ -417,8 +414,7 @@ public:
         put_class).
         Parameters: the variable itself
                   , the key with which it is going to be registered
-                  , the offset inside the method its belong to
-                  , the variable's type.
+                  , the offset inside the method its belong to.
         Precondition: the second parameter matches the variable's key, and 
         there is a class to push this field into.
         Returns: a pair containing the result of putting the variable into the

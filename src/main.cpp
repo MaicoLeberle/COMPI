@@ -103,6 +103,14 @@ int main(int argc, const char* argv[]) {
 		// para realizar la traducción?
 		asm_c_gen.translate_ir();
 		asm_c_gen.print_translation_intel_syntax();
+        if (output_file) {
+            asm_instructions_list* assembly_code = asm_c_gen.get_translation();
+            for (asm_instructions_list::iterator it = assembly_code->begin();
+                 it != assembly_code->end();
+                 it++) {
+                    fprintf(output_file, print_intel_syntax(*it).c_str());
+            }
+        } 
 
     } else exit(EXIT_SUCCESS);
 
@@ -111,7 +119,12 @@ int main(int argc, const char* argv[]) {
     return 0;
 }
 
-void parseArguments(char** beginIt, char** endIt, FILE*& input_file, FILE*& output_file, enum target& stage, bool& debugging) {
+void parseArguments(char** beginIt
+                  , char** endIt
+                  , FILE*& input_file
+                  , FILE*& output_file
+                  , enum target& stage
+                  , bool& debugging) {
     char** itr = beginIt;
     itr++; // First argument is program name
 
