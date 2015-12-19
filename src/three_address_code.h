@@ -235,6 +235,15 @@ quad_pointer new_binary_assign(const address_pointer& dest,
 							   const address_pointer& arg2,
 							   quad_oper op);
 
+/* PRE : {quad->type == quad_type::BINARY_ASSIGN} */
+address_pointer get_binary_assign_result(const quad_pointer&);
+
+/* PRE : {quad->type == quad_type::BINARY_ASSIGN} */
+address_pointer get_binary_assign_arg1(const quad_pointer&);
+
+/* PRE : {quad->type == quad_type::BINARY_ASSIGN} */
+address_pointer get_binary_assign_arg2(const quad_pointer&);
+
 bool is_binary_assignment(const quad_pointer& instruction,
 						 const address_pointer& dest,
 						 const address_pointer& arg1,
@@ -395,7 +404,7 @@ float get_constant_address_float_value(const address_pointer&);
 
 
 /////////////////////////
-// BOOLEAN ADDRESS
+// @BOOLEAN ADDRESS
 /////////////////////////
 address_pointer new_boolean_constant(bool value);
 

@@ -151,13 +151,22 @@ private:
 	bool using_registers;
 	int params_in_registers; // Quantity of integer parameters put into registers.
 	int offset;
+    int nmbr_parameter; // Number of the method's parameter being analyzed.s 
 	std::string actual_method_name; // Name of the method being translated, and
 	std::string actual_class_name; // the class it belongs to.
 	t_attributes actual_class_attributes;
 	std::string last_label;
+    bool contains_main_method; // Does the file compiled has a "main" method defined?
+                                // Used to know when to add the corresponding 
+                                // assembler's directives, to make the method 
+                                // globally accesible.
 
 
-	operand_pointer get_address(address_pointer address);
+    /* Translates a thress-address code's operand into an assembly's operand's.
+     * PRE : {the offset of address, as indicated in this->s_table->get_offset
+     *          is updated.}
+     */ 
+	operand_pointer convert_to_asm_operand(address_pointer address);
 	void translate_binary_op(const quad_pointer&);
 	void translate_unary_op(const quad_pointer&);
 	void translate_copy(const quad_pointer&);
@@ -273,6 +282,9 @@ private:
 	bool allocate_integer_param(const operand_pointer& val, bool pass_address);
 
 	bool is_attribute(std::string var_name);
+
+    // Returns the width in bytes for an indicated three-address value's type. 
+    int get_value_width(value_type);
 };
 
 #endif

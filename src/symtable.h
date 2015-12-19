@@ -59,9 +59,7 @@ public:
     /*  Class.                                                               */
     symtable_element(std::string*, std::list<symtable_element>*);
 
-
     /*  Getters.                                                             */
-
     std::string get_key(void);
 
     /*  Returns the corresponding enum id_key value.                         */

@@ -26,8 +26,8 @@ ids_info *s_table = nullptr; // Global symbols' table.
 
 void set_symbol_table(){
 	s_table = new ids_info();
-	s_table->register_var(std::string("x"), -4, T_UNDEFINED);
-	s_table->register_var(std::string("y"), 4, T_UNDEFINED);
+	s_table->register_var(std::string("x"), -4, T_UNDEFINED, false);
+	s_table->register_var(std::string("y"), 4, T_UNDEFINED, true);
 
 	// Register information about "method" and "class".
 	std::string method("method");
@@ -37,15 +37,16 @@ void set_symbol_table(){
 
 	// "method" has an integer parameter.
 	s_table->get_list_params(method).push_back(param);
-	s_table->register_var(param, -4, T_INT);
+	s_table->register_var(param, -4, T_INT, true);
 
 	// Register information about an instance "obj".
 	s_table->register_obj(std::string("obj"),
 							8,
 							std::string("class"),
-							std::string("obj.att1"));
+							std::string("obj.att1"),
+                            false);
 
-	s_table->register_var(std::string("obj.att1"), 0, id_type::T_INT);
+	s_table->register_var(std::string("obj.att1"), 0, id_type::T_INT, false);
 }
 
 void test_binary_assign(){
@@ -555,10 +556,10 @@ void test_objects_and_arrays(){
 void test_asm_code_generator(){
 	std::cout << "\nTesting assembly code generation:" << std::endl;
 	set_symbol_table();
-	test_binary_assign();
+	/*test_binary_assign();
 	test_unary_assign();
 	test_copy();
-	test_jmp();
+	test_jmp();*/
 	test_parameter_and_call();
 	test_enter();
 	test_return();

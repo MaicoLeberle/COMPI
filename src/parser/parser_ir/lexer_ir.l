@@ -65,7 +65,7 @@ not                         return NOT;
 \)                          return ')';
 \.                          return '.';
 \:                          return ':';
-{alpha}({alpha_num})*    {irlval.id = new std::string(irtext, irleng); 
+{alpha}({alpha_num}|@)*    {irlval.id = new std::string(irtext, irleng); 
                              return ID;}
 \"(.|\\n)*\"                {irlval.l_str = new std::string(irtext, irleng); 
                              return L_STR;}

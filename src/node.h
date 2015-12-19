@@ -774,6 +774,7 @@ public:
      */
     reference_list ids;
     expr_pointer array_idx_expr;
+    bool is_attribute_from_actual_object;
 
     node_location(reference_list ids_) : ids(ids_), array_idx_expr(nullptr) {}
     node_location(reference_list ids_, expr_pointer array_idx_expr_) :
@@ -783,8 +784,24 @@ public:
     	return location;
     }
 
+    expr_pointer get_array_idx_expr(void){
+        return this->array_idx_expr;
+    }
+
     bool is_object_field(void){
     	return this->ids.size() > 1;
+    }
+
+    bool is_array_pos(void){
+    	return this->array_idx_expr != nullptr;
+    }
+
+    void set_is_attribute_from_actual_object(bool flag){
+        this->is_attribute_from_actual_object = flag;        
+    }
+
+    bool get_is_attribute_from_actual_object(void){
+        return this->is_attribute_from_actual_object;        
     }
 
     reference_list get_ids(void){

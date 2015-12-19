@@ -1,17 +1,6 @@
 #include "asm_code_generator.h"
 
-/* TODO: temas a resolver:
- * 		_ resolver cómo determinar el signo correcto de los offsets de las
- * 		variables (positivo para parámetros de una función, negativos para las
- * 		variables locales). Creo que esto lo debería resolver al nivel de
- * 		generador de código assembly y no a nivel de generación de código
- * 		intermedio.
- *
- * 		_ cuando una función recibe parámetros a través de registros (por ej.
- * 		los primeros 6 param enteros), el preludio de la misma debería pasar
- * 		a memoria estos parámetros?
- *
- * TODO: fijarse cómo resolver la llamada a servicios de la librería estándar
+/* TODO: fijarse cómo resolver la llamada a servicios de la librería estándar
  * de C: qué label utilizamos?
  *
  * TODO: agregar al Makefile la dependendencia de las unidades de compilación
@@ -37,6 +26,29 @@ ir(_ir), s_table(_s_table) {
 	this->last_reg_used = register_id::NONE;
 	this->params_in_registers = 0;
 	this->offset = -1;
+    this->nmbr_parameter = -1;
+    this->contains_main_method = false;
+}
+
+// TODO: se usa???
+int asm_code_generator::get_value_width(value_type type){
+    int width = 0;
+    
+    switch(type){
+        case value_type::INTEGER:
+            width = INTEGER_WIDTH;
+            break;
+
+        case value_type::BOOLEAN:
+            width = BOOLEAN_WIDTH;
+            break;
+
+        case value_type::FLOAT:
+            width = FLOAT_WIDTH;
+            break;
+    }
+
+    return width;
 }
 
 register_id asm_code_generator::get_next_reg_av(register_id reg){
@@ -77,7 +89,7 @@ register_id asm_code_generator::get_next_reg_av(register_id reg){
 	return ret;
 }
 
-// TODO: esto debería estar en ids_info?
+// TODO: esto debería estar en ids_info? se usa?
 bool asm_code_generator::is_attribute(std::string var_name){
 	bool ret = false;
 
@@ -105,18 +117,18 @@ asm_instructions_list* asm_code_generator::get_translation(){
 	return translation;
 }
 
-operand_pointer asm_code_generator::get_address(address_pointer address){
+operand_pointer asm_code_generator::convert_to_asm_operand(address_pointer address){
 	// TODO: cómo discriminamos los demás casos de operand?
 	operand_pointer ret = nullptr;
 
 	switch(address->type){
 		case address_type::ADDRESS_NAME:{
 			std::string var_name = get_address_name(address);
-			ret = new_memory_operand(
-								s_table->get_offset(get_address_name(address)),
-								register_id::RBP,
-								register_id::NONE,
-								1);
+            ret = new_memory_operand(
+								    s_table->get_offset(get_address_name(address)),
+								    register_id::RBP,
+								    register_id::NONE,
+								    1);
 			break;
 		}
 
@@ -170,24 +182,28 @@ void asm_code_generator::translate_binary_op(const quad_pointer& instruction){
 			// 		imulw y,z (z = z ∗ y, z debe ser un registro)
 			// 		mov[b|w|l|q] z,x (x = z)
 			operand_pointer new_register = new_register_operand(register_id::R8D);
-			operand_pointer x = get_address(instruction->result);
-			operand_pointer y = get_address(instruction->arg1);
-			operand_pointer z = get_address(instruction->arg2);
+
+            // The value is saved into x. Check if its offset is updated:
+            address_pointer result = get_binary_assign_result(instruction);
+            std::string result_id = get_address_name(result);
+            if(not this->s_table->is_parameter(result_id) and this->s_table->get_offset(result_id) >= 0){
+                // Then, its offset is not updated. We assume that
+                // this->offset contains the correct offset.
+                s_table->set_offset(get_address_name(result), 
+                                    this->offset);
+
+                this->offset -= this->get_value_width(get_constant_address_type(result));
+            }
+
+			operand_pointer x = this->convert_to_asm_operand(result);
+			operand_pointer y = this->convert_to_asm_operand(get_binary_assign_arg1(instruction));
+			operand_pointer z = this->convert_to_asm_operand(get_binary_assign_arg2(instruction));
 			// We use a new register to ensure that the second operand can be
 			// the destination of the product.
-			// TODO: en la generación de código intermedio, no nos aseguramos de
-			// esto?
 			data_type ops_type = data_type::L;
-			// TODO: cada vez que llamo a get_address, tengo que averiguar si
-			// el address se refiere a un atributo. Si así fuera, tengo que
-			// determinar la ubicación del atributo, en base al uso de la
-			// referencia this, y utilizar, quizás lea en vez de mov. El offset
-			// de los atributos deberia entonces referirse a su pos dentro del
-			// objeto.
 			translation->push_back(new_mov_instruction(y,
 														new_register,
 														data_type::L));
-			// TODO: signed?
 			translation->push_back(new_mul_instruction(z,
 														new_register,
 														data_type::L,
@@ -207,11 +223,22 @@ void asm_code_generator::translate_binary_op(const quad_pointer& instruction){
 
 			// Operands are always of 32-bit long.
 			data_type ops_type = data_type::L;
+            // The value is saved into x. Check if its offset is updated:
+            address_pointer result = get_binary_assign_result(instruction);
+            std::string result_id = get_address_name(result);
+            if(not this->s_table->is_parameter(result_id) and this->s_table->get_offset(result_id) >= 0){
+                // Then, its offset is not updated. We assume that
+                // this->offset contains the correct offset.
+                s_table->set_offset(get_address_name(result), 
+                                    this->offset);
+
+                this->offset -= this->get_value_width(get_constant_address_type(result));
+            }
 
 			// Operands.
-			operand_pointer x = get_address(instruction->result);
-			operand_pointer y = get_address(instruction->arg1);
-			operand_pointer z = get_address(instruction->arg2);
+			operand_pointer x = this->convert_to_asm_operand(result);
+			operand_pointer y = this->convert_to_asm_operand(get_binary_assign_arg1(instruction));
+			operand_pointer z = this->convert_to_asm_operand(get_binary_assign_arg2(instruction));
 			// TODO: quizás deberíamos guardar "y" en algún registro, hacer corrimiento
 			// de 32 posiciones hacia la derecha (para quedarnos con los 32 bits
 			// de mayor peso), y guardar el resultado en EDX
@@ -255,11 +282,22 @@ void asm_code_generator::translate_binary_op(const quad_pointer& instruction){
 
 			// Operands are always of 32-bit long.
 			data_type ops_type = data_type::L;
+            // The value is saved into x. Check if its offset is updated:
+            address_pointer result = get_binary_assign_result(instruction);
+            std::string result_id = get_address_name(result);
+            if(not this->s_table->is_parameter(result_id) and this->s_table->get_offset(result_id) >= 0){
+                // Then, its offset is not updated. We assume that
+                // this->offset contains the correct offset.
+                s_table->set_offset(get_address_name(result), 
+                                    this->offset);
+
+                this->offset -= this->get_value_width(get_constant_address_type(result));
+            }
 
 			// Operands.
-			operand_pointer x = get_address(instruction->result);
-			operand_pointer y = get_address(instruction->arg1);
-			operand_pointer z = get_address(instruction->arg2);
+			operand_pointer x = this->convert_to_asm_operand(result);
+			operand_pointer y = this->convert_to_asm_operand(get_binary_assign_arg1(instruction));
+			operand_pointer z = this->convert_to_asm_operand(get_binary_assign_arg2(instruction));
 			// TODO: quizás deberíamos guardar "y" en algún registro, hacer corrimiento
 			// de 32 posiciones hacia la derecha (para quedarnos con los 32 bits
 			// de mayor peso), y guardar el resultado en EDX
@@ -303,9 +341,21 @@ void asm_code_generator::translate_binary_op(const quad_pointer& instruction){
 			//		para determinar el tipo de instrucción?)
 			// TODO: cómo lo defino?
 			operand_pointer new_register = new_register_operand(register_id::R8D);
-			operand_pointer x = get_address(instruction->result);
-			operand_pointer y = get_address(instruction->arg1);
-			operand_pointer z = get_address(instruction->arg2);
+
+            // The value is saved into x. Check if its offset is updated:
+            address_pointer result = get_binary_assign_result(instruction);
+            std::string result_id = get_address_name(result);
+            if(not this->s_table->is_parameter(result_id) and this->s_table->get_offset(result_id) >= 0){
+                // Then, its offset is not updated. We assume that
+                // this->offset contains the correct offset.
+                s_table->set_offset(get_address_name(result), 
+                                    this->offset);
+
+                this->offset -= this->get_value_width(get_constant_address_type(result));
+            }
+			operand_pointer x = this->convert_to_asm_operand(result);
+			operand_pointer y = this->convert_to_asm_operand(get_binary_assign_arg1(instruction));
+			operand_pointer z = this->convert_to_asm_operand(get_binary_assign_arg2(instruction));
 			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 			translation->push_back(new_mov_instruction(y, new_register, ops_type));
 			translation->push_back(new_add_instruction(z, new_register, ops_type));
@@ -319,9 +369,20 @@ void asm_code_generator::translate_binary_op(const quad_pointer& instruction){
 			//		mov[b|w|l|q] z,x
 			// TODO: cómo lo defino?
 			operand_pointer new_register = new_register_operand(register_id::R8D);
-			operand_pointer x = get_address(instruction->result);
-			operand_pointer y = get_address(instruction->arg1);
-			operand_pointer z = get_address(instruction->arg2);
+            // The value is saved into x. Check if its offset is updated:
+            address_pointer result = get_binary_assign_result(instruction);
+            std::string result_id = get_address_name(result);
+            if(not this->s_table->is_parameter(result_id) and this->s_table->get_offset(result_id) >= 0){
+                // Then, its offset is not updated. We assume that
+                // this->offset contains the correct offset.
+                s_table->set_offset(get_address_name(result), 
+                                    this->offset);
+
+                this->offset -= this->get_value_width(get_constant_address_type(result));
+            }
+			operand_pointer x = this->convert_to_asm_operand(result);
+			operand_pointer y = this->convert_to_asm_operand(get_binary_assign_arg1(instruction));
+			operand_pointer z = this->convert_to_asm_operand(get_binary_assign_arg2(instruction));
 			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 			translation->push_back(new_mov_instruction(y, new_register, ops_type));
 			translation->push_back(new_sub_instruction(z, new_register, ops_type));
@@ -340,8 +401,20 @@ void asm_code_generator::translate_unary_op(const quad_pointer& instruction){
 			// 		mov[b|w|l|q] y,x
 			// TODO: cómo lo defino?
 			operand_pointer new_register = new_register_operand(register_id::R8D);
-			operand_pointer x = get_address(instruction->result);
-			operand_pointer y = get_address(instruction->arg1);
+
+            // The value is saved into x. Check if its offset is updated:
+            address_pointer result = get_unary_assign_dest(instruction);
+            std::string result_id = get_address_name(result);
+            if(not this->s_table->is_parameter(result_id) and this->s_table->get_offset(result_id) >= 0){
+                // Then, its offset is not updated. We assume that
+                // this->offset contains the correct offset.
+                s_table->set_offset(get_address_name(result), 
+                                    this->offset);
+
+                this->offset -= this->get_value_width(get_constant_address_type(result));
+            }
+			operand_pointer x = this->convert_to_asm_operand(result);
+			operand_pointer y = this->convert_to_asm_operand(get_unary_assign_src(instruction));
 			data_type ops_type = data_type::L; // TODO: cómo determino el tipo de los operandos?
 			// We use a new register to ensure that the second operand can be
 			// the destination of the product.
@@ -361,8 +434,20 @@ void asm_code_generator::translate_unary_op(const quad_pointer& instruction){
 			// TODO: estamos asumiendo que los booleanos los representamos con
 			// 32-bits.
 			operand_pointer new_register = new_register_operand(register_id::R8D);
-			operand_pointer x = get_address(instruction->result);
-			operand_pointer y = get_address(instruction->arg1);
+
+            // The value is saved into x. Check if its offset is updated:
+            address_pointer result = get_unary_assign_dest(instruction);
+            std::string result_id = get_address_name(result);
+            if(not this->s_table->is_parameter(result_id) and this->s_table->get_offset(result_id) >= 0){
+                // Then, its offset is not updated. We assume that
+                // this->offset contains the correct offset.
+                s_table->set_offset(get_address_name(result), 
+                                    this->offset);
+
+                this->offset -= this->get_value_width(get_constant_address_type(result));
+            }
+			operand_pointer x = this->convert_to_asm_operand(result);
+			operand_pointer y = this->convert_to_asm_operand(get_unary_assign_src(instruction));
 			data_type ops_type = data_type::L;
 
 			translation->push_back(new_mov_instruction(y, new_register, ops_type));
@@ -374,8 +459,19 @@ void asm_code_generator::translate_unary_op(const quad_pointer& instruction){
 		default:{
 			// UNARY_ASSIGN x = & y
 			// lea[b|w|l|q] y,x
-			operand_pointer x = get_address(get_unary_assign_dest(instruction));
-			operand_pointer y = get_address(get_unary_assign_src(instruction));
+            // The value is saved into x. Check if its offset is updated:
+            address_pointer result = get_unary_assign_dest(instruction);
+            std::string result_id = get_address_name(result);
+            if(not this->s_table->is_parameter(result_id) and this->s_table->get_offset(result_id) >= 0){
+                // Then, its offset is not updated. We assume that
+                // this->offset contains the correct offset.
+                s_table->set_offset(get_address_name(result), 
+                                    this->offset);
+
+                this->offset -= this->get_value_width(get_constant_address_type(result));
+            }
+			operand_pointer x = this->convert_to_asm_operand(result);
+			operand_pointer y = this->convert_to_asm_operand(get_unary_assign_src(instruction));
 			data_type ops_type = data_type::L;
 
 			translation->push_back(new_lea_instruction(y, x, ops_type));
@@ -387,8 +483,19 @@ void asm_code_generator::translate_unary_op(const quad_pointer& instruction){
 void asm_code_generator::translate_copy(const quad_pointer& instruction){
 	// COPY x = y:
 	// 		mov[b|w|l|q] y,x
-	operand_pointer x = get_address(get_copy_inst_dest(instruction));
-	operand_pointer y = get_address(get_copy_inst_orig(instruction));
+    // The value is saved into x. Check if its offset is updated:
+    address_pointer result = get_copy_inst_dest(instruction);
+    std::string result_id = get_address_name(result);
+    if(not this->s_table->is_parameter(result_id) and this->s_table->get_offset(result_id) >= 0){
+        // Then, its offset is not updated. We assume that
+        // this->offset contains the correct offset.
+        s_table->set_offset(get_address_name(result), 
+                            this->offset);
+
+        this->offset -= this->get_value_width(get_constant_address_type(result));
+    }
+	operand_pointer x = this->convert_to_asm_operand(result);
+	operand_pointer y = this->convert_to_asm_operand(get_copy_inst_orig(instruction));
 
 	#ifdef __DEBUG
 		address_type type = get_address_type(get_copy_inst_dest(instruction));
@@ -408,15 +515,22 @@ void asm_code_generator::translate_indexed_copy_to(const quad_pointer&
 	//		componente)
 
 	// TODO: que hay de la directiva PTR?
-	address_pointer dest_add = get_indexed_copy_to_dest(instruction);
-	operand_pointer dest = get_address(dest_add);
+    address_pointer dest_add = get_indexed_copy_to_dest(instruction);
+    std::string dest_id = get_address_name(dest_add);
+    if(not this->s_table->is_parameter(dest_id) and this->s_table->get_offset(dest_id) >= 0){
+        // Then, its offset is not updated. We assume that
+        // this->offset contains the correct offset.
+        s_table->set_offset(dest_id, this->offset);
+        this->offset -= this->get_value_width(get_constant_address_type(dest_add));
+    }
+	operand_pointer dest = this->convert_to_asm_operand(dest_add);
 
 	address_pointer index_add = get_indexed_copy_to_index(instruction);
-	//operand_pointer index = get_address(index);
+	//operand_pointer index = this->convert_to_asm_operand(index);
 
 	int offset = get_constant_address_integer_value(index_add);
 
-	operand_pointer orig = get_address(get_indexed_copy_to_src(instruction));
+	operand_pointer orig = this->convert_to_asm_operand(get_indexed_copy_to_src(instruction));
 
 	#ifdef __DEBUG
 		assert(get_address_type(dest_add) == address_type::ADDRESS_NAME);
@@ -446,8 +560,6 @@ void asm_code_generator::translate_indexed_copy_to(const quad_pointer&
 		// {s_table->get_kind(name) != id_kind::K_OBJECT}
 		// It is an array. Then, "dest" always refer to a position into the
 		// actual stack frame.
-		// TODO: pedir que id_kind también tengo un valor para representar
-		// arrays.
 		pos = new_memory_operand(offset + get_memory_operand_offset(dest),
 								register_id::RBP,
 								register_id::NONE,
@@ -462,14 +574,22 @@ void asm_code_generator::translate_indexed_copy_from(const quad_pointer& instruc
 	// INDEXED_COPY_FROM,	// x = y[i]
 	// 		mov[b|w|l|q] y[i], x (idem caso anterior)
 	// TODO: que hay de la directiva PTR?
-	operand_pointer dest = get_address(get_indexed_copy_from_dest(instruction));
+    address_pointer dest_add = get_indexed_copy_from_dest(instruction);
+    std::string dest_id = get_address_name(dest_add);
+    if(not this->s_table->is_parameter(dest_id) and this->s_table->get_offset(dest_id) >= 0){
+        // Then, its offset is not updated. We assume that
+        // this->offset contains the correct offset.
+        s_table->set_offset(dest_id, this->offset);
+        this->offset -= this->get_value_width(get_constant_address_type(dest_add));
+    }
+	operand_pointer dest = this->convert_to_asm_operand(dest_add);
 
 	address_pointer index_add = get_indexed_copy_from_index(instruction);
 
 	int offset = get_constant_address_integer_value(index_add);
 
 	address_pointer orig_add = get_indexed_copy_from_src(instruction);
-	operand_pointer orig = get_address(orig_add);
+	operand_pointer orig = this->convert_to_asm_operand(orig_add);
 
 	#ifdef __DEBUG
 		assert(get_address_type(orig_add) == address_type::ADDRESS_NAME);
@@ -499,8 +619,6 @@ void asm_code_generator::translate_indexed_copy_from(const quad_pointer& instruc
 		// {s_table->get_kind(name) != id_kind::K_OBJECT}
 		// It is an array. Then, "orig" always refer to a position into the
 		// actual stack frame.
-		// TODO: pedir que id_kind también tengo un valor para representar
-		// arrays.
 		pos = new_memory_operand(offset + get_memory_operand_offset(orig),
 								register_id::RBP,
 								register_id::NONE,
@@ -529,7 +647,7 @@ void asm_code_generator::translate_conditional_jump(const quad_pointer& instruct
 	//		Luego usar:
 	//			jcc L  donde cc es la condición adecuada, para que salte si x es verdadero
 	operand_pointer aux_reg = new_register_operand(register_id::R8D);
-	operand_pointer x = get_address(get_conditional_jmp_guard(instruction));
+	operand_pointer x = this->convert_to_asm_operand(get_conditional_jmp_guard(instruction));
 	// TODO: en la generación de código intermedio, no nos aseguramos de
 	// esto?
 	operand_pointer aux = new_immediate_integer_operand(1);
@@ -555,8 +673,8 @@ void asm_code_generator::translate_conditional_jump(const quad_pointer& instruct
 }
 
 void asm_code_generator::translate_relational_jump(const quad_pointer& instruction){
-	operand_pointer x = get_address(instruction->arg1);
-	operand_pointer y = get_address(instruction->arg2);
+	operand_pointer x = this->convert_to_asm_operand(instruction->arg1);
+	operand_pointer y = this->convert_to_asm_operand(instruction->arg2);
 	data_type ops_type = data_type::L;
 	translation->push_back(new_cmp_instruction(x, y, ops_type));
 
@@ -667,16 +785,9 @@ bool asm_code_generator::allocate_integer_param(const operand_pointer& val,
 }
 
 void asm_code_generator::translate_parameter(const quad_pointer& instruction){
-	if(this->offset < 0){
-		// Parameters have positive offsets, with respect to the rBP pointer.
-		this->offset = RBP_REGISTER_SIZE;
-	}
-
 	address_pointer param = get_param_inst_param(instruction);
-    // TODO: tenemos que obtener el nombre del parámetro del método llamado, y modificar
-    // ESE offset, y no el offset del argumento que le pasamos...
     std::string name = get_address_name(param);	
-    operand_pointer param_address = get_address(param);
+    operand_pointer param_address = this->convert_to_asm_operand(param);
 
 	address_type addr_type = get_address_type(param);
 
@@ -685,12 +796,7 @@ void asm_code_generator::translate_parameter(const quad_pointer& instruction){
 			switch(s_table->get_kind(name)){
 				case K_OBJECT:{
 					    // Objects are managed by reference.
-                        bool using_registers = allocate_integer_param(param_address, true);					
-                        if(not using_registers){
-                            // Update the offset of the parameter.
-					        s_table->set_offset(name, this->offset);
-                            this->offset += REFERENCE_WIDTH;
-                        }
+                        allocate_integer_param(param_address, true);
                     }
                     break;
 
@@ -699,12 +805,7 @@ void asm_code_generator::translate_parameter(const quad_pointer& instruction){
 
 					switch(type){
 						case T_INT:{
-                                bool using_registers = allocate_integer_param(param_address, false);					
-                                if(not using_registers){
-                                    // Update the offset of the parameter.
-					                s_table->set_offset(name, this->offset);
-                                    this->offset += INTEGER_WIDTH;
-                                }
+                                allocate_integer_param(param_address, false);
                             }       
                             break;
 
@@ -713,12 +814,7 @@ void asm_code_generator::translate_parameter(const quad_pointer& instruction){
 							    // abi.pdf, se indica que los booleanos deben tener un byte
 							    // de longitud, y sólo el bit 0 debe contener el valor booleano
 							    // mientras que los demás bits deben ser 0.
-                                bool using_registers = allocate_integer_param(param_address, false);					
-                                if(not using_registers){
-                                    // Update the offset of the parameter.
-					                s_table->set_offset(name, this->offset);
-                                    this->offset += BOOLEAN_WIDTH;
-                                }
+                                allocate_integer_param(param_address, false);
                             }
                             break;
 
@@ -742,12 +838,7 @@ void asm_code_generator::translate_parameter(const quad_pointer& instruction){
 		// {addr_type == address_type::ADDRESS_CONSTANT}
 		switch(get_constant_address_type(param)){
 			case value_type::INTEGER:{
-                bool using_registers = allocate_integer_param(param_address, false);					
-                if(not using_registers){
-                    // Update the offset of the parameter.
-		            s_table->set_offset(name, this->offset);
-                    this->offset += INTEGER_WIDTH;
-                }
+                allocate_integer_param(param_address, false);					
                 break;
 			}
 
@@ -797,7 +888,7 @@ void asm_code_generator::translate_procedure_call(const quad_pointer& instructio
 }
 
 void asm_code_generator::translate_function_call(const quad_pointer& instruction){
-	operand_pointer dest = get_address(instruction->result);
+	operand_pointer dest = this->convert_to_asm_operand(instruction->result);
 	operand_pointer reg_rax = new_register_operand(register_id::RAX);
 
 	translate_procedure_call(instruction);
@@ -809,7 +900,7 @@ void asm_code_generator::translate_return(const quad_pointer& instruction){
 	data_type ops_type = data_type::L;
 	// TODO: por ahora sólo resolvemos el caso para los enteros.
 	operand_pointer rax = new_register_operand(register_id::RAX);
-	operand_pointer x = get_address(instruction->arg1);
+	operand_pointer x = this->convert_to_asm_operand(instruction->arg1);
 	translation->push_back(new_mov_instruction(x, rax, ops_type));
 	translation->push_back(new_leave_instruction());
 	translation->push_back(new_ret_instruction());
@@ -822,9 +913,66 @@ void asm_code_generator::translate_label(const quad_pointer& instruction){
 	this->actual_class_name = get_label_inst_class_name(instruction);
 	this->actual_class_attributes = this->s_table->get_list_attributes(
 													this->actual_class_name);
+
 	this->last_label = get_label_inst_label(instruction);
+    // TODO: hack to make it compatible with g++'s assembly.
+    // TODO: debería ser main.main.
+    if(this->last_label == std::string("Main.main")){
+        this->last_label = std::string("main");
+        this->contains_main_method = true;
+    }
 
 	translation->push_back(new_label_instruction(this->last_label));
+
+    // System V ABI: update the offsets of the parameters' position into the
+    // stack frame, taking into account that integer parameters are passed
+    // into registers.
+    t_params params = s_table->get_list_params(this->actual_method_name);
+	std::string param_name;
+    
+    // Update the offset of each parameter, to make them compatible with
+    // the System V's ABI: parameters have positive offsets, with respect to 
+    // the rBP pointer, and are passed in reversed order (first parameter 
+    // closest to the rBP rgister). Integer parameters are passed by
+    // registers, and then put into the stack frame, with negative
+    // offsets.
+    int pos_offset = RBP_REGISTER_SIZE;
+    int neg_offset = -RBP_REGISTER_SIZE;
+
+	for(t_params::iterator it = params.begin(); it != params.end(); it++){
+		param_name = *it;
+        id_type type = s_table->get_type(param_name);
+
+        // TODO: param_name es el id único que representa al parámetro?
+		if(type != T_INT){
+			s_table->set_offset(param_name, pos_offset);
+            
+            // Update the offset.
+            // TODO: esto no haría falta abstraerlo en un método?
+            switch(type){
+                case id_type::T_BOOL:
+                    pos_offset += BOOLEAN_WIDTH;
+                    break;
+                
+                case id_type::T_FLOAT:
+                    pos_offset += FLOAT_WIDTH;
+                    break;
+        
+                case id_type::T_ID:
+                    pos_offset += REFERENCE_WIDTH;
+                    break;
+        
+                case id_type::T_STRING:
+                    // TODO: qué hacemos en este caso?.
+                    break;
+            }
+		}
+        else{
+            // {type == T_INT}
+            s_table->set_offset(param_name, neg_offset);
+            neg_offset += INTEGER_WIDTH;
+        }
+	}
 }
 
 void asm_code_generator::translate_enter_procedure(const quad_pointer&
@@ -848,11 +996,9 @@ void asm_code_generator::translate_enter_procedure(const quad_pointer&
 		assert(int_params.size() <= 6);
 	#endif
 
-	// TODO: vamos a tener que actualizar la cantidad de bytes que pedimos en
-	// el stack, para que ahora incluya los parámetros que pasamos de los
-	// registros, al stack.
-	// TODO: no acceder directamente a los atributos de las quad. Utilizar
-	// los getters!
+	// Enter instruction, that allocates space into the stack frame,
+    // for local, temporal variables AND for the integer parameters
+    // passed by registers, that are moved to the stack frame.
 	operand_pointer stack_space = new_immediate_integer_operand(
 								get_enter_inst_bytes(instruction)
 								+ integer_width*int_params.size());
@@ -860,30 +1006,28 @@ void asm_code_generator::translate_enter_procedure(const quad_pointer&
 	operand_pointer nesting = new_immediate_integer_operand(0);
 	translation->push_back(new_enter_instruction(stack_space, nesting));
 
-	// Put the parameters into the stack, right into the beginning of the stack
-	// frame.
-	int offset = 0;
-	register_id reg = register_id::NONE;
-	for(t_params::iterator it = int_params.begin(); it != int_params.end(); it++){
-		reg = get_next_reg_av(reg);
+    // Local and temporal variables have negatives offsets, with respect
+    // to the rBP pointer.
+    this->offset = -RBP_REGISTER_SIZE;
 
-		// The new positions of this parameters are below the rBP pointer.
-		offset -= integer_width;
-		translation->push_back(
+	// Put the parameters into the stack, right at the beginning of the stack
+	// frame.
+    register_id reg = register_id::NONE;
+	for(t_params::iterator it = int_params.begin(); it != int_params.end(); it++){
+		reg = this->get_next_reg_av(reg);
+		this->translation->push_back(
 					new_mov_instruction(new_register_operand(reg),
-										new_memory_operand(offset,
+										new_memory_operand(this->offset,
 															register_id::RBP,
 															register_id::NONE,
 															1),
 										data_type::L));
-
-		// Update the offset of the parameter.
-		s_table->set_offset(*it, offset);
+        this->offset -= INTEGER_WIDTH;
 	}
 }
 
 void asm_code_generator::translate_ir(void){
-	// Translator with window size of 1
+    // Translator with window size of 1
 	for(instructions_list::iterator it = ir->begin();
 	it != ir->end(); ++it){
 
@@ -943,6 +1087,11 @@ void asm_code_generator::translate_ir(void){
 			case quad_type::ENTER_PROCEDURE:
 				translate_enter_procedure(*it);
 		}
-
 	}
+
+    if(this->contains_main_method){
+        // Make the "main" method globally availabe.
+        this->translation->insert(this->translation->begin(),
+                                new_global_directive(std::string("main")));
+    }
 }

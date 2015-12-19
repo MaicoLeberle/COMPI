@@ -4,8 +4,6 @@
 
  	 	 _ definir una nueva instrucción de 3-direcciones que me indique
  	 	 que tengo que generar código para declarar un string.
- 	 	 _ Al generar las instrucciones, reemplazar los identificadores por
- 	 	 quellos identificadores únicos que me genera la tabla de símbolos.
 */
 std::string printable_field_id(reference_list ids);
 
@@ -27,34 +25,94 @@ ids_info* inter_code_gen_visitor::get_ids_info(){
 	return s_table.get_ids_info();
 }
 
+symtable_element* inter_code_gen_visitor::get_next_symtable_element(symtable_element
+*actual_element, std::string id){
+	#ifdef __DEBUG
+		// PRE
+		assert(actual_element->get_kind() == id_kind::K_CLASS);
+	#endif
+
+	symtable_element *ret = nullptr;
+
+	std::list<symtable_element> *fields = actual_element->get_class_fields();
+	for(std::list<symtable_element>::iterator it = fields->begin();
+		it != fields->end(); ++it){
+
+		if(it->get_key() == id){
+			ret = &(*it);
+			break;
+		}
+	}
+
+	return ret;
+}
+
+// TODO: cuando pedimos los atributos de un método devuelve los ids originales!
+// lo mismo con los atributos de una clase.
+symtable_element* inter_code_gen_visitor::dereference(reference_list ids){
+	#ifdef __DEBUG
+		// PRE
+		assert(s_table.size() > 0);
+		std::cout << "Accessing reference " << ids[0] << std::endl;
+	#endif
+
+	symtable_element *ret = nullptr;
+	symtable_element *aux = this->s_table.get(ids[0]);
+	id_kind aux_kind;
+
+	std::vector<int>::size_type i = (std::vector<int>::size_type) 1;
+	std::vector<int>::size_type limit = ids.size();
+	// INV : {aux is the symtable_element for the id number i-1 in ids}
+	while(i < limit){
+		#ifdef __DEBUG
+			std::cout << "Accessing reference " << ids[i] << std::endl;
+		#endif
+
+		// Index the previous symtable_element, with the next id.
+		aux_kind = aux->get_kind();
+		// {aux_kind == id_kind::K_OBJECT}
+		// Get the class of the object.
+		std::string *object_class_name = aux->get_class_type();
+		symtable_element *object_class = this->s_table.get(*object_class_name);
+		#ifdef __DEBUG
+			assert(object_class->get_kind() != id_kind::K_NOT_FOUND);
+		#endif
+		// Obtain the next element.
+		aux = this->get_next_symtable_element(object_class, ids[i]);
+		i++;
+	}
+
+	return ret;
+}
+
 // TODO: este método está repetido en semantic_analysis
-symtable_element::id_type inter_code_gen_visitor::determine_type(Type::_Type type_ast){
-	symtable_element::id_type ret;
+id_type inter_code_gen_visitor::determine_type(Type::_Type type_ast){
+	id_type ret;
 
 	switch(type_ast){
 		case Type::INTEGER:
-			ret = symtable_element::INTEGER;
+			ret = id_type::T_INT;
 			break;
 
 		case Type::FLOAT:
-			ret = symtable_element::FLOAT;
+			ret = id_type::T_FLOAT;
 			break;
 
 		case Type::BOOLEAN:
-			ret = symtable_element::BOOLEAN;
+			ret = id_type::T_BOOL;
 			break;
 
 		case Type::VOID:
-			ret = symtable_element::VOID;
+			ret = id_type::T_VOID;
 			break;
 
 		case Type::ID:
-			ret = symtable_element::ID;
+			ret = id_type::T_ID;
 			break;
 
-		/*case Type::STRING:
-			ret = symtable_element::STRING;
-			break;*/
+		case Type::STRING:
+			ret = id_type::T_STRING;
+			break;
 
 		#ifdef __DEBUG
 			default:
@@ -88,24 +146,24 @@ std::string inter_code_gen_visitor::obtain_methods_label(reference_list ids){
 /*	Determines the width of variable of a given type, being it a basic type
  *  or an instance.
  * */
-unsigned int inter_code_gen_visitor::calculate_size(
-symtable_element::id_type type, std::string class_name){
+unsigned int inter_code_gen_visitor::calculate_size(id_type type, 
+                                                    std::string class_name){
 	unsigned int size = 0;
 
 	switch(type){
-		case symtable_element::INTEGER:
-			size = integer_width;
+		case id_type::T_INT:
+			size = INTEGER_WIDTH;
 			break;
 
-		case symtable_element::FLOAT:
-			size = float_width;
+		case id_type::T_FLOAT:
+			size = FLOAT_WIDTH;
 			break;
 
-		case symtable_element::BOOLEAN:
-			size = boolean_width;
+		case id_type::T_BOOL:
+			size = BOOLEAN_WIDTH;
 			break;
 
-		case symtable_element::ID:
+		case id_type::T_ID:
 			// TODO: esta información se tendría que almacenar directamente
 			// en la tabla de símbolos.
 			symtable_element *class_elem = s_table.get(class_name);
@@ -114,7 +172,7 @@ symtable_element::id_type type, std::string class_name){
 			for(std::list<symtable_element>::iterator it = fields->begin();
 			it != fields->end(); it++){
 
-				if((*it).get_class() != symtable_element::id_class::T_FUNCTION){
+				if((*it).get_kind() != id_kind::K_METHOD){
 					if((*it).get_class_type() != nullptr){
 						size += this->calculate_size((*it).get_type(),
 													*(*it).get_class_type());
@@ -134,7 +192,7 @@ symtable_element::id_type type, std::string class_name){
 }
 
 void inter_code_gen_visitor::array_initialization(
-symtable_element::id_type type, std::string id, unsigned int array_length){
+id_type type, std::string id, unsigned int array_length){
 
 	address_pointer dest, constant = nullptr;
 	// Register the array's identifier into the symbol's table.
@@ -144,6 +202,7 @@ symtable_element::id_type type, std::string id, unsigned int array_length){
 	#ifdef __DEBUG
 		assert(std::get<0>(pair) == ID_PUT);
 	#endif
+    std::string id_array = *std::get<1>(pair);
 
 	// Initialize each position of the array with the corresponding
 	// initial value.
@@ -151,15 +210,15 @@ symtable_element::id_type type, std::string id, unsigned int array_length){
 	unsigned int arr_size =  arr_pos_width*array_length;
 
 	switch(type){
-		case symtable_element::INTEGER:
+		case id_type::T_INT:
 			constant = new_integer_constant(integer_initial_value);
 			break;
 
-		case symtable_element::FLOAT:
+		case id_type::T_FLOAT:
 			constant = new_float_constant(float_initial_value);
 			break;
 
-		case symtable_element::BOOLEAN:
+		case id_type::T_BOOL:
 			constant = new_boolean_constant(boolean_initial_value);
 
 		#ifdef __DEBUG
@@ -168,7 +227,7 @@ symtable_element::id_type type, std::string id, unsigned int array_length){
 		#endif
 	}
 
-	dest = new_name_address(id);
+	dest = new_name_address(id_array);
 	for(int arr_offset = 0;
 		arr_offset < arr_size;
 		arr_offset += arr_pos_width){
@@ -181,27 +240,23 @@ symtable_element::id_type type, std::string id, unsigned int array_length){
 	this->offset += arr_size;
 }
 
-// TODO: no es variable declaration: es variable definition!
-/*	Translates a variable declaration, registers its information into the
+/*	Translates a variable definition, registers its information into the
  * 	table of symbols and updates the offset.
  * 	PRE : {the actual value of offset indicates where, the new variable,
  * 			must be stored}
  * */
 
-void inter_code_gen_visitor::translate_var_def(symtable_element::id_type type,
+void inter_code_gen_visitor::translate_var_def(id_type type,
 std::string id, std::string class_name, unsigned int array_length){
-
-	// TODO: guardar el offset después de haberlo alterado: si x ocupa 4 bytes,
-	// y es la primer variable, entonces comienza en -4 y llega hasta 0. Deberiamos
-	// entonces restarle al offset,  en vez de sumarle?
-
 	address_pointer dest, constant = nullptr;
 
-	if(type == symtable_element::ID){
+	if(type == id_type::T_ID){
 		this->instance_initialization(class_name, id);
 		// After instance_initialization, offset had been updated correctly.
 	}
 	else{
+        // {type != id_type::T_ID}
+
 		if (array_length > 0){
 			this->array_initialization(type, id, array_length);
 		}
@@ -209,22 +264,23 @@ std::string id, std::string class_name, unsigned int array_length){
 			// {array_length <= 0}
 			// Basic type
 			switch(type){
-				case symtable_element::INTEGER:
+				case id_type::T_INT:
 					constant = new_integer_constant(integer_initial_value);
 					break;
 
-				case symtable_element::FLOAT:
+				case id_type::T_FLOAT:
 					constant = new_float_constant(float_initial_value);
 					break;
 
-				case symtable_element::BOOLEAN:
+				case id_type::T_BOOL:
 					constant = new_boolean_constant(boolean_initial_value);
 			}
-			dest = new_name_address(id);
 			symtable_element variable(id, type);
 
 			if(class_name != std::string("")){
 				// Then it is an instance's attribute.
+                // By pre-condition, id is the unique identifier of the instance.
+			    dest = new_name_address(id);
 				inst_list->push_back(new_indexed_copy_to(dest,
 									  new_integer_constant(this->offset),
 									  constant));
@@ -232,14 +288,15 @@ std::string id, std::string class_name, unsigned int array_length){
 			else{
 				// {class_name == std::string("")}
 				// The variable defined is not an attribute of an instance.
-
+                // By pre-condition, id is the original identifier of the variable.
 				t_results pair = s_table.put_var(variable, id, this->offset);
 				#ifdef __DEBUG
 					assert(std::get<0>(pair) == ID_PUT);
 				#endif
-
+                dest = new_name_address(*std::get<1>(pair));
 				inst_list->push_back(new_copy(dest, constant));
 			}
+
 			this->offset += calculate_size(type, std::string(""));
 		}
 	}
@@ -255,7 +312,7 @@ int inter_code_gen_visitor::get_attribute_offset(reference_list ids){
 	reference_list::iterator it = ids.begin();
 	reference_list::iterator it_end = ids.end();
 	// {it is the object}
-	symtable_element *object = s_table.get(*it);
+	symtable_element *object = this->s_table.get(*it);
 	symtable_element *element = nullptr;
 	std::string *class_name = object->get_class_type();
 	it++;
@@ -263,12 +320,11 @@ int inter_code_gen_visitor::get_attribute_offset(reference_list ids){
 	// INV : {class_name is the name of the class to which "it" is and
 	//			attribute of}
 	while(it != it_end){
-		// TODO: por que es un puntero?
-		at_offset += *s_table.get_offset(*it, *class_name);
+		at_offset += *this->s_table.get_offset(*it, *class_name);
 
 		element = s_table.get(*it);
 
-		if(element->get_class() == symtable_element::id_class::T_OBJ){
+		if(element->get_kind() == id_kind::K_OBJECT){
 			class_name = element->get_class_type();
 		}
 		it++;
@@ -285,69 +341,72 @@ std::string id_instance){
 	std::list<symtable_element> *fields = class_object->get_class_fields();
 	std::string first_field("");
 
-	// Reset the offset, to compute new offsets, with respect to the beginning
-	// of the instance.
+	// Update the symbol's table, with information about the instance.
+	// The identifier of the instance will "point" to the first attribute.
+	// It is placed before the attributes. Update the offset properly.
+	symtable_element id(id_instance, new std::string(id_class));
+	t_results pair_id_instance = s_table.put_obj(id,
+									id_instance,
+									this->offset,
+									id_class,
+									std::string(""));
+
+	#ifdef __DEBUG
+		assert(std::get<0>(pair_id_instance) == ID_PUT);
+	#endif
+    std::string unique_id_instance =  *std::get<1>(pair_id_instance);
+
+    // Reset this->offset, to compute offsets of the attributes, with respect to the 
+    // beginning of the instance.
 	unsigned int prev_offset = this->offset;
-	this->offset = 0;
+	this->offset = 0;    
+    
+    // Add the size of the first field saved: the reference to the first attribute.
+	this->offset += reference_width;
 
 	// Extract the beginning
 	std::list<symtable_element>::iterator it = fields->begin();
 
 	if(it != fields->end() and
-	(*it).get_class() != symtable_element::T_FUNCTION){
-		// Register the first attribute.
-		first_field = id_instance + "." + (*it).get_key();
+	(*it).get_kind() != id_kind::K_METHOD){
+		// Register the first attribute, just to remember the position of the first attribute,
+        // and to take its effective address later.
 		symtable_element variable(first_field, (*it).get_class_type());
-		t_results pair = this->s_table.put_var(variable, first_field, prev_offset);
+		t_results pair_first_field = this->s_table.put_var(variable, 
+                                                            unique_id_instance + "." + (*it).get_key(), 
+                                                            prev_offset + reference_width);
 		#ifdef __DEBUG
-			assert(std::get<0>(pair) == ID_PUT);
+			assert(std::get<0>(pair_first_field) == ID_PUT);
 		#endif
+
+        first_field = *std::get<1>(pair_first_field);
 	}
 	else{
 		// {it == fields->end() or
-		// 	(*it).get_class() == symtable_element::T_FUNCTION}
+		// 	(*it).get_kind() == id_kind::K_METHOD}
 
 		// The class hasn't attributes.
-		// TODO: cómo hacemos con esto?
-		first_field = id_instance;
+		// TODO: cómo hacemos en este caso de clase sin atributos?
+		first_field = unique_id_instance;
 	}
 
 	for(; it != fields->end(); ++it){
-		if((*it).get_class() != symtable_element::T_FUNCTION){
-			translate_var_def((*it).get_type(), id_instance, id_class, 0);
+		if((*it).get_kind() != id_kind::K_METHOD){
+			translate_var_def((*it).get_type(), unique_id_instance, id_class, 0);
 		}
 	}
 
 	// Save the address of the first attribute, into a pointer.
-	inst_list->push_back(new_unary_assign(new_name_address(id_instance),
-											new_name_address(first_field),
-											quad_oper::ADDRESS_OF));
+    inst_list->push_back(new_unary_assign(new_name_address(unique_id_instance),
+										new_name_address(first_field),
+										quad_oper::ADDRESS_OF));
 
-	// Update the symbol's table, with information about the instance.
-	// The identifier of the instance will "point" to the first attribute.
-	// It is placed after all the attributes. Update the offset properly.
-	this->offset = prev_offset + this->offset;
-	symtable_element id(id_instance, new std::string(id_class));
-	t_results pair = s_table.put_obj(id,
-									id_instance,
-									this->offset,
-									id_class,
-									first_field);
-	// TODO: al intentar recuperar el id del primer atributo,
-	// recordar que parecieran estar guardándose estos en el orden
-	// inverso a como uno los guarda en la tabla de símbolos.
-	#ifdef __DEBUG
-		assert(std::get<0>(pair) == ID_PUT);
-	#endif
-
-	this->offset += reference_width;
+    // Restore and update the offset.
+    this->offset += prev_offset;
 
 	return first_field;
 }
 
-/* _ TODO: Recordar que la semántica de los operadores booleanos es short-circuit
- * (ver página 400 del dragon book)
- * */
 void inter_code_gen_visitor::visit(node_program& node){
 	#ifdef __DEBUG
 		std::cout << "Beginning translation." << std::endl;
@@ -411,9 +470,6 @@ void inter_code_gen_visitor::visit(node_class_decl& node) {
 			aux.accept(*this);
 	}
 	// End of class declaration -> in offset we have the size of an instance.
-	// TODO: tengo que guardar ese valor en algún lugar en la tabla, para poder
-	// después recuperarlo, al momento de necesitar saber el tamaño que
-	// ocupa una instancia, para atualizar el offset
 
 	// Translation of methods.
 	for(std::list<class_block_pointer>::iterator it = methods.begin();
@@ -458,9 +514,6 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 											this->offset,
 											node.type.id,
 											std::string(""));
-				// TODO: al intentar recuperar el id del primer atributo, recordar
-				// que parecieran estar guardándose estos en el orden inverso
-				// a como uno los guarda en la tabla de símbolos.
 				#ifdef __DEBUG
 					assert(std::get<0>(pair) == FIELD_PUT);
 				#endif
@@ -499,16 +552,15 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 				// {f->array_size <= 0}
 				// Basic type
 				if(into_method){
-					// TODO: este tercer argumento es medio fulero...
 					translate_var_def(determine_type(node.type.type), f->id,
 										std::string(""), 0);
 				}
 				else{
 					// {not into_method}
 					symtable_element id(f->id, determine_type(node.type.type));
-					t_field_results pair = s_table.put_var_field(id,
-																f->id,
-																this->offset);
+					t_field_results pair = this->s_table.put_var_field(id,
+																        f->id,
+																        this->offset);
 
 					#ifdef __DEBUG
 						assert(std::get<0>(pair) == FIELD_PUT);
@@ -557,14 +609,18 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 	// Add the "this" reference as first parameter.
 	std::string this_param("this");
 	symtable_element obj_param(this_param, class_name);
-	t_param_results pair1 = s_table.put_obj_param(obj_param,
-												 this_param,
-												 this->offset,
-												 *class_name,
-												 std::string(""));
+    std::cout << "Llamando a put_obj_param" << std::endl;
+	t_param_results pair1 = this->s_table.put_obj_param(obj_param,
+												    this_param,
+												    this->offset,
+												    *class_name,
+												    std::string(""));
+    std::cout << "Listo..." << std::endl;
 	#ifdef __DEBUG
 		assert(std::get<0>(pair1) == PARAM_PUT);
 	#endif
+
+    this->this_unique_id = *std::get<1>(pair1);
 
 	this->offset += reference_width;
 
@@ -573,9 +629,6 @@ void inter_code_gen_visitor::visit(node_method_decl& node){
 		p->accept(*this);
 	}
 
-	// TODO: quizás estamos mezclando cuestiones de código asm aquí, pero
-	// para simplificar, reiniciamos el cálculo del offset, cuando
-	// vamos a analizar el cuerpo del método.
 	this->offset = 0;
 	into_method = true;
 	// Save inst_list
@@ -685,80 +738,157 @@ void inter_code_gen_visitor::visit(node_assignment_statement& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating assignment statement." << std::endl;
 	#endif
-	expr_call_appropriate_accept(node.get_expression());
-	address_pointer r_value = temp;
+	this->expr_call_appropriate_accept(node.get_expression());
+	address_pointer r_value = this->temp;
+    address_pointer l_value = nullptr;
+    address_pointer index = nullptr;
 	location_pointer location = node.get_location();
+    reference_list ids = location->get_ids();
+    bool is_att_from_act_obj = location->get_is_attribute_from_actual_object();
 
-	// TODO: acá estaría faltando el determinar cuando estamos asignando
-	// atributos del objeto actual. En tal caso, tenemos que traducir
-	// la asignación a algo de la forma this[offset] = valor.
-	if(node.oper == AssignOper::ASSIGN){
-		if(location->is_object_field()){
-			reference_list ids = location->get_ids();
-			std::string object = ids[0];
-			unsigned int at_offset = this->get_attribute_offset(ids);
-			inst_list->push_back(
-					new_indexed_copy_to(new_name_address(object),
-										new_integer_constant(at_offset),
-										r_value));
-		}
-		else{
-			// {not location.is_object_field()}
-			location->accept(*this);
-			address_pointer l_value = temp;
-			inst_list->push_back(new_copy(l_value, r_value));
-		}
-	}
-	else{
-		// {node.oper != AssignOper::ASSIGN}
-		quad_oper oper;
-		if(node.oper == AssignOper::PLUS_ASSIGN){
-			oper = quad_oper::PLUS;
-		}
-		else{
-			// {node.oper != AssignOper::PLUS_ASSIGN}
-			oper = quad_oper::MINUS;
-		}
+    if(location->is_array_pos()){
+        std::string array_name("");
+        if(is_att_from_act_obj){
+            // This is an attribute from the actual object. Complete the 
+            // identifier with "this".
+            ids = reference_list(ids);
+            ids.insert(ids.begin(), this->this_unique_id);
+        }
 
-		if(location->is_object_field()){
-			// The l-value denotes an instance's attribute.
-			reference_list ids = location->get_ids();
-			std::string object_name = ids[0];
-			address_pointer object_address = new_name_address(object_name);
-			unsigned int at_offset = this->get_attribute_offset(ids);
-			address_pointer at_offset_address = new_integer_constant(at_offset);
+        // Evaluate the index.
+        this->expr_call_appropriate_accept(location->get_array_idx_expr());
+        // We have the value of the index in this->temp.
+        index = this->temp;
 
-			// Extract the value of the attribute, and save it into a
-			// temporal variable.
-			t_results pair =  s_table.new_temp(this->offset);
+        // Increment the index, by the size of the array.
+        symtable_element *array = this->dereference(ids);
+        unsigned int size = this->calculate_size(array->get_type(),
+                                        std::string(""));
+        
+        inst_list->push_back(new_binary_assign(index,
+                                            index, 
+                                            new_integer_constant(size), 
+                                            quad_oper::TIMES));
+        
+        if(location->is_object_field() or is_att_from_act_obj){
+            // Get the offset of the array, into the instance.
+            unsigned int at_offset = this->get_attribute_offset(ids);
 
-			address_pointer temp_field = new_name_address(*std::get<1>(pair));
+            // Add this offset to the previous.
+            inst_list->push_back(new_binary_assign(index,
+	                                            index, 
+                                                new_integer_constant(at_offset), 
+                                                quad_oper::PLUS));
 
-			inst_list->push_back(new_indexed_copy_from(temp_field,
-														object_address,
-														at_offset_address));
+            l_value = new_name_address(this->this_unique_id);
+        }
+        else{
+            // {not location->is_object_field() and not is_att_from_act_obj}
+            l_value = new_name_address(this->s_table.get_id_rep(ids[0]));
+        }
+    }
+    else{
+        // {not location->is_array_pos()}
 
-			// Update the value saved into the temporal.
-			inst_list->push_back(new_binary_assign(temp_field,
-													temp_field,
-													r_value,
-													oper));
+        if(location->is_object_field() or is_att_from_act_obj){
+            std::string object_name("");
 
-			// Assign the result to the attribute.
-			inst_list->push_back(new_indexed_copy_to(object_address,
-													at_offset_address,
-													temp_field));
-		}
-		else{
-			// {not location.is_object_field()}
-			location->accept(*this);
-			address_pointer l_value = temp;
-			inst_list->push_back(new_binary_assign(l_value,
-													l_value,
-													r_value,
-													oper));
-		}
-	}
+            if(is_att_from_act_obj){
+                // This is an attribute from the actual object. Complete the 
+                // identifier with "this".
+                ids = reference_list(ids);
+                ids.insert(ids.begin(), this->this_unique_id);
+                object_name = this->this_unique_id;
+            }
+            else{
+                object_name = ids[0];            
+            }
+
+            // Get the offset of the attribute, into the instance.
+            unsigned int at_offset = this->get_attribute_offset(ids);
+            l_value = new_name_address(this->s_table.get_id_rep(object_name));
+            index = new_integer_constant(at_offset);
+        }
+        else{
+            // {not location->is_object_field() and not is_att_from_act_obj}
+            std::string name = location->get_ids().printable_field_id();
+            l_value = new_name_address(this->s_table.get_id_rep(name));
+        }        
+    }
+
+    switch(node.oper){
+        case AssignOper::ASSIGN:
+            if(location->is_array_pos() or location->is_object_field() 
+            or is_att_from_act_obj){
+                
+                inst_list->push_back(
+                            new_indexed_copy_to(l_value,
+                                                index, 
+                                                r_value));
+            }
+            else{
+                // {not location->is_array_pos() and 
+                // not location->is_object_field() and 
+                // not is_att_from_act_obj}
+                inst_list->push_back(new_copy(l_value, r_value));
+            }
+            break;
+
+        default:
+            // Extract the value represented by location.
+            this->expr_call_appropriate_accept(location);
+            // We have the value of location in this->temp.
+            address_pointer location_value = this->temp;
+
+            quad_oper op;
+            
+            switch(node.oper){
+                case AssignOper::PLUS_ASSIGN:
+                    op = quad_oper::PLUS;
+                    break;
+
+                default:
+                    // {AssignOper::MINUS_ASSIGN}
+                    op = quad_oper::MINUS;
+            }
+            
+            if(location->is_array_pos() or location->is_object_field() 
+            or is_att_from_act_obj){
+                
+                // Save the increment into a temporal variable.
+                t_results pair =  this->s_table.new_temp(this->offset);
+
+	            #ifdef __DEBUG
+		            assert(std::get<0>(pair) == put_results::ID_PUT);
+	            #endif
+                address_pointer new_temp = new_name_address(*std::get<1>(pair));
+
+                inst_list->push_back(
+                            new_binary_assign(new_temp,
+                                                location_value, 
+                                                r_value,
+                                                op));
+                // TODO:Update the offset.
+                //this->offset += 
+                
+                // Finally, put the result into location.
+                inst_list->push_back(
+                            new_indexed_copy_to(l_value,
+                                                index, 
+                                                new_temp));
+                
+            }
+            else{
+                // {not location->is_array_pos() and 
+                // not location->is_object_field() and 
+                // not is_att_from_act_obj}
+                inst_list->push_back(
+                            new_binary_assign(l_value,
+                                                location_value, 
+                                                r_value,
+                                                op));
+            }
+    }
 }
 
 void inter_code_gen_visitor::visit(node_location& node) {
@@ -766,14 +896,109 @@ void inter_code_gen_visitor::visit(node_location& node) {
 		std::cout << "Translating location expression" << std::endl;
 	#endif
 
-	// TODO: por ahora, convertimos la location en un address. Es correcto
-	// usar este nombre para la address?
-	// TODO: preguntar si estamos dentro de un método. En tal caso, averiguar
-	// si location se trata de un parámetro del metodo. Si no fuera así, se trata
-	// de un atributo del objeto actual. Entonces tengo que tener en cuenta el
-	// puntero this.
-	std::string name = node.ids.printable_field_id();
-	this->temp = new_name_address(name);
+    // TODO: agregar tests para esto que estamos haciendo!!!!
+    bool is_att_from_act_obj = node.get_is_attribute_from_actual_object();
+    address_pointer reference = nullptr;
+    address_pointer index = nullptr;
+
+    if(node.is_array_pos()){
+        // Evaluate the index.
+        this->expr_call_appropriate_accept(node.get_array_idx_expr());
+        // We have the value of the index in this->temp.
+        index = this->temp;
+
+        // Compute the offset, by taking into the account the size
+        // of each field of the array.
+        // TODO: no tengo que sumarle el espacio de la referencia inicial?
+        symtable_element *array = this->dereference(node.get_ids());
+        int field_size = this->calculate_size(array->get_type(),
+                                                std::string(""));
+        address_pointer address_field_size = new_integer_constant(field_size);            
+        inst_list->push_back(new_binary_assign(index,
+		                                        index, 
+                                                address_field_size, 
+                                                quad_oper::TIMES));
+        reference_list ids = node.get_ids();
+
+        // Determine if it is an instance's attribute.
+        if(node.is_object_field() or is_att_from_act_obj){
+            if(is_att_from_act_obj){
+                // This is an attribute from the actual object. Complete the 
+                // identifier with "this".
+                ids = reference_list(ids);
+                ids.insert(ids.begin(), this->this_unique_id);
+            }
+
+	        std::string object_name = ids[0];
+            // Get the offset of the array, into the instance.
+	        unsigned int at_offset = this->get_attribute_offset(ids);
+            
+            // Add this offset to the previous.
+            inst_list->push_back(new_binary_assign(index,
+		                                        index, 
+                                                new_integer_constant(at_offset), 
+                                                quad_oper::PLUS));
+
+            std::string object_unique_id = this->s_table.get_id_rep(object_name);
+            reference = new_name_address(object_unique_id);
+        }
+        else{
+            // {not node.is_object_field() and not is_att_from_act_obj}
+            reference = new_name_address(this->s_table.get_id_rep(ids[0]));
+        }
+        // Save into this->temp the result of the array indexing.
+        t_results pair =  this->s_table.new_temp(this->offset);
+
+        #ifdef __DEBUG
+	        assert(std::get<0>(pair) == put_results::ID_PUT);
+        #endif
+        this->temp = new_name_address(*std::get<1>(pair));
+        // We use space to save a new temporal. Update this->offset.
+        this->offset += field_size;
+        
+        inst_list->push_back(
+			            new_indexed_copy_from(this->temp,
+                                                reference,
+								                index));
+    }
+    else{
+        // {not node.is_array_pos()}
+        if(node.is_object_field() or is_att_from_act_obj){
+		    reference_list ids = node.get_ids();
+
+            if(is_att_from_act_obj){
+                // This is an attribute from the actual object. Complete the 
+                // identifier with "this".
+                ids = reference_list(ids);
+                ids.insert(ids.begin(), this->this_unique_id);
+            }
+		    std::string object_name = ids[0];
+		    unsigned int at_offset = this->get_attribute_offset(ids);
+            t_results pair =  this->s_table.new_temp(this->offset);
+	        #ifdef __DEBUG
+		        assert(std::get<0>(pair) == put_results::ID_PUT);
+	        #endif
+
+            this->temp = new_name_address(*std::get<1>(pair));
+            reference = new_name_address(this->s_table.get_id_rep(
+                                                object_name));
+            index = new_integer_constant(at_offset);
+		    inst_list->push_back(
+				    new_indexed_copy_from(this->temp,
+                                            reference,
+									    index));
+            // We use space to save a new temporal. Update this->offset.
+            symtable_element *element = this->dereference(node.get_ids());        
+            this->offset += this->calculate_size(element->get_type(),
+                                                std::string(""));
+            
+        }
+        else{
+            // {not node.is_object_field() and not is_att_from_act_obj}
+            std::string name = node.ids.printable_field_id();
+            this->temp = new_name_address(this->s_table.get_id_rep(name));        
+        }
+	}
 }
 
 void inter_code_gen_visitor::visit(node_int_literal& node) {
@@ -814,18 +1039,21 @@ void inter_code_gen_visitor::visit(node_method_call_expr& node) {
 	#endif
 	// First parameter: "this" reference
 	address_pointer this_param = nullptr;
+    symtable_element *method = this->dereference(node.method_call_data->ids);
+
 	if(node.method_call_data->ids.size() >= 2){
 		// It is a call of the form obj1. ... .objn.method()
-		// Then, this = objn.
-		std::string object_name = node.method_call_data->ids[node.method_call_data->ids.size()-2];
-		this_param = new_name_address(object_name);
+		// Then, this = objn. Obtain the symtable_element that represents objn.
+        reference_list ids_objn = reference_list(node.method_call_data->ids);
+        ids_objn.pop_back();
+        symtable_element *objn = this->dereference(ids_objn);
+		this_param = new_name_address(this->s_table.get_id_rep(objn->get_key()));
 	}
 	else{
 		// {node.method_call_data->ids.size() < 2}
 		// It is a call of the form method()
 		// Then, this = actual object.
-		// TODO: debería ser simplemente this?
-		this_param = new_name_address(std::string("this"));
+		this_param = new_name_address(this->this_unique_id);
 	}
 
 	// Add the "this" reference as parameter.
@@ -833,15 +1061,28 @@ void inter_code_gen_visitor::visit(node_method_call_expr& node) {
 
 	// Add the remaining parameters.
 	for(auto r : node.method_call_data->parameters){
-		expr_call_appropriate_accept(r);
-		inst_list->push_back(new_parameter_inst(temp));
+		this->expr_call_appropriate_accept(r);
+		inst_list->push_back(new_parameter_inst(this->temp));
 	}
-	// TODO: generar una nueva dirección para almacenar el valor de retorno
-	// actualmente es la variable dest
-	address_pointer dest = nullptr;
-	std::string method_label = obtain_methods_label(node.method_call_data->ids);
-	inst_list->push_back(new_function_call_inst(dest, new_label_address(method_label),
-						new_integer_constant(node.method_call_data->parameters.size())));
+
+    // Create a temporal variable to store the result.
+    t_results temp_pair =  this->s_table.new_temp(this->offset);
+    #ifdef __DEBUG
+        assert(std::get<0>(temp_pair) == put_results::ID_PUT);
+    #endif
+	this->temp = new_name_address(*std::get<1>(temp_pair));
+
+	std::string method_label = this->obtain_methods_label(
+                                    node.method_call_data->ids);
+	inst_list->push_back(
+                new_function_call_inst(
+                    this->temp, 
+                    new_label_address(method_label),
+                    new_integer_constant(
+                        node.method_call_data->parameters.size())));
+
+    // Update the offset.
+    this->offset += this->calculate_size(method->get_type(), std::string(""));
 }
 
 void inter_code_gen_visitor::visit(node_method_call_statement& node) {
@@ -853,25 +1094,25 @@ void inter_code_gen_visitor::visit(node_method_call_statement& node) {
 	address_pointer this_param = nullptr;
 	if(node.method_call_data->ids.size() >= 2){
 		// It is a call of the form obj1. ... .objn.method()
-		// Then, this = objn.
-		std::string object_name = node.method_call_data->ids[node.method_call_data->ids.size()-2];
-		this_param = new_name_address(object_name);
-
+		// Then, this = objn. Obtain the symtable_element that represents objn.
+        reference_list ids_objn = reference_list(node.method_call_data->ids);
+        ids_objn.pop_back();
+        symtable_element *objn = this->dereference(ids_objn);
+		this_param = new_name_address(this->s_table.get_id_rep(objn->get_key()));
 	}
 	else{
 		// {node.method_call_data->ids.size() < 2}
 		// It is a call of the form method()
 		// Then, this = actual object.
-		// TODO: debería ser simplemente this?
-		this_param = new_name_address(std::string("this"));
+		this_param = new_name_address(this->this_unique_id);
 	}
 	inst_list->push_back(new_parameter_inst(this_param));
 	// Remaining parameters.
 	for(auto r : node.method_call_data->parameters){
-		expr_call_appropriate_accept(r);
-		inst_list->push_back(new_parameter_inst(temp));
+		this->expr_call_appropriate_accept(r);
+		this->inst_list->push_back(new_parameter_inst(this->temp));
 	}
-	std::string method_label = obtain_methods_label(node.method_call_data->ids);
+	std::string method_label = this->obtain_methods_label(node.method_call_data->ids);
 	inst_list->push_back(new_procedure_call_inst(new_label_address(method_label),
 						new_integer_constant(node.method_call_data->parameters.size()+1)));
 }
@@ -880,22 +1121,18 @@ void inter_code_gen_visitor::visit(node_if_statement& node){
 	#ifdef __DEBUG
 			std::cout << "Translating if statement" << std::endl;
 	#endif
-	expr_call_appropriate_accept(node.expression);
-	// TODO: la visita a node.expression, guarda en un atributo de la instancia
-	// el valor de la referencia (temp) en donde se almacena el
-	// resultado de evaluar node.expression
-	// TODO: L1 y L2 son 2 etiquetas de valores fijos, a definir
-	// TODO: la intermediate_symtable va a generarme etiquetas únicas.
-	// TODO: leer página 410 del libro Dragón: backpatching, para ver el temita
-	// de cómo definir correctamente las etiquetas
-	std::string label_else("L1");
-	inst_list->push_back(new_conditional_jump_inst(temp,
+	this->expr_call_appropriate_accept(node.expression);
+
+    t_results label_else_pair =  s_table.new_temp(this->offset);
+	std::string label_else(*std::get<1>(label_else_pair));
+	inst_list->push_back(new_conditional_jump_inst(this->temp,
 													new_label_address(label_else),
 													quad_oper::IFFALSE));
 	// Code for the "if" branch.
 	stm_call_appropriate_accept(node.then_statement);
 	// Unconditional jump to the final part of the translation.
-	std::string label_end("L2");
+    t_results label_end_pair =  s_table.new_temp(this->offset);
+	std::string label_end(*std::get<1>(label_end_pair));	
 	inst_list->push_back(new_unconditional_jump_inst(
 												new_label_address(label_end)));
 
@@ -913,33 +1150,26 @@ void inter_code_gen_visitor::visit(node_for_statement& node){
 			std::cout << "Translating for statement" << std::endl;
 	#endif
 
-	expr_call_appropriate_accept(node.from);
-	// TODO: var es la variable sobre la que itera el ciclo, temp es la dirección
-	// en donde se almacenó la evaluación de node.from
-
-	// The variable node.id is local to the loop.
+	this->expr_call_appropriate_accept(node.from);
+    // The variable node.id is local to the loop.
 	address_pointer var = new_name_address(node.id);
 	inst_list->push_back(new_copy(var, temp));
 
-	// TODO: L1 es una etiqueta a definir, de valor fijo.
-	std::string label_beginning("L1");
+    t_results label_beg_pair =  s_table.new_temp(this->offset);
+	std::string label_beginning(*std::get<1>(label_beg_pair));
 	inst_list->push_back(new_label_inst(new_label_address(label_beginning)));
 
-	// TODO: lo siguiente no hace falta, ya que en nuestro three-address code,
-	// tenemos directamente una instrucción que realiza una comparación de orden
-	// y salta a una posición etiquetada
-
-	/*// TODO: temp es el lugar en donde se almacenó la evaluación de node.to, y
-	// z es al lugar en donde se almacenará el resultado de la comparación
-	inst_list->push_back("LTE x to z");
-	// TODO: L2 es una etiqueta a definir, de valor fijo.
+	/*inst_list->push_back("LTE x to z");
 	inst_list->push_back("IFFALSE z L2");*/
 
-	std::string label_ending("L2");
-	expr_call_appropriate_accept(node.to);
+    t_results label_ending_pair =  s_table.new_temp(this->offset);
+	std::string label_ending(*std::get<1>(label_ending_pair));
+	this->expr_call_appropriate_accept(node.to);
 	// if temp < var goto label_ending
-	inst_list->push_back(new_relational_jump_inst(temp, var, quad_oper::LESS,
-						new_label_address(label_ending)));
+	inst_list->push_back(new_relational_jump_inst(this->temp, 
+                                                    var, 
+                                                    quad_oper::LESS,
+						                            new_label_address(label_ending)));
 
 	// Body code.
 	stm_call_appropriate_accept(node.body);
@@ -964,15 +1194,16 @@ void inter_code_gen_visitor::visit(node_while_statement& node) {
 	 *  LABEL L1, (EXPRESSION CODE, it returns t1), IFFALSE t1 L2, (BODY CODE),
 	 *  GOTO L1, LABEL L2
 	 * */
-	// TODO: el valor de esta etiqueta podría cambiar
-	std::string label_beginning("L1");
+    t_results label_beg_pair =  s_table.new_temp(this->offset);
+	std::string label_beginning(*std::get<1>(label_beg_pair));
 	inst_list->push_back(new_label_inst(new_label_address(label_beginning)));
 
 	// Evaluate the guard. Its value is in temp.
-	expr_call_appropriate_accept(node.expression);
+	this->expr_call_appropriate_accept(node.expression);
 
 	// If the guard is false, jump to the end of the code.
-	std::string label_ending("L2");
+    t_results label_end_pair =  s_table.new_temp(this->offset);
+	std::string label_ending(*std::get<1>(label_end_pair));
 	inst_list->push_back(new_conditional_jump_inst(temp,
 										new_label_address(label_ending),
 										quad_oper::IFFALSE));
@@ -994,7 +1225,7 @@ void inter_code_gen_visitor::visit(node_return_statement& node) {
 	#endif
 
 	// Evaluate the returned value. Its value is in temp.
-	expr_call_appropriate_accept(node.expression);
+	this->expr_call_appropriate_accept(node.expression);
 
 	inst_list->push_back(new_return_inst(temp));
 }
@@ -1035,25 +1266,8 @@ void inter_code_gen_visitor::visit(node_binary_operation_expr& node) {
 	#endif
 
 	// Evaluate the operands.
-	expr_call_appropriate_accept(node.left);
-	left_operand = temp;
-
-	expr_call_appropriate_accept(node.right);
-	right_operand = temp;
-
-	// New temporal for the result.
-	t_results pair =  s_table.new_temp(this->offset);
-
-	#ifdef __DEBUG
-		assert(std::get<0>(pair) == put_results::ID_PUT);
-	#endif
-
-	dest = new_name_address(*std::get<1>(pair));
-
-	// Update offset.
-	this->offset += this->calculate_size(
-			this->determine_type(node.get_type().type),
-			std::string(""));
+	this->expr_call_appropriate_accept(node.left);
+	left_operand = this->temp;
 
 	switch(node.oper){
 		case Oper::TIMES:
@@ -1100,17 +1314,64 @@ void inter_code_gen_visitor::visit(node_binary_operation_expr& node) {
 			oper = quad_oper::DISTINCT;
 			break;
 
-		case Oper::AND:
-			// TODO: nuestro and es short-circuit
-			break;
+        default:{
+            // {node.oper == Oper::AND or node.oper = Oper::OR}
+            // This operators have a "short-circuit" semantics.
+            t_results label_pair =  s_table.new_temp(this->offset);
+	        #ifdef __DEBUG
+		        assert(std::get<0>(label_pair) == put_results::ID_PUT);
+	        #endif
+			
+            bool short_circuit_value;
 
-		case Oper::OR:
-			// TODO: nuestro or es short-circuit
-			break;
+            switch(node.oper){
+                case Oper::AND:
+                    short_circuit_value = false;
+                    break;
+
+                default:
+                    // {node.oper == Oper::OR}
+                    short_circuit_value = true;
+            }
+
+            // Determine if left_operand is short_circuit_value.
+            inst_list->push_back(
+                new_relational_jump_inst(left_operand,
+                                        new_boolean_constant(short_circuit_value),
+									    quad_oper::EQUAL,
+									    new_label_address(*std::get<1>(label_pair))));
+            // If that is not the case, evaluate the right operand.
+            this->expr_call_appropriate_accept(node.right);
+            inst_list->push_back(new_copy(left_operand, this->temp));
+
+            inst_list->push_back(
+                        new_label_inst(
+                            new_label_address(*std::get<1>(label_pair))));
+            
+            this->temp = left_operand;
+        }
 	}
 
-	inst_list->push_back(new_binary_assign(dest,
-			   left_operand, right_operand, oper));
+    if(node.oper != Oper::AND and node.oper != Oper::OR){
+        this->expr_call_appropriate_accept(node.right);
+	    right_operand = this->temp;
+        // New temporal for the result.
+	    t_results pair =  this->s_table.new_temp(this->offset);
+
+	    #ifdef __DEBUG
+		    assert(std::get<0>(pair) == put_results::ID_PUT);
+	    #endif
+
+	    dest = new_name_address(*std::get<1>(pair));
+ 
+	    inst_list->push_back(new_binary_assign(dest,
+			       left_operand, right_operand, oper));
+
+        // Update offset.
+	    this->offset += this->calculate_size(
+			    this->determine_type(node.get_type().type),
+			    std::string(""));
+    }
 
 	temp = dest;
 }
@@ -1123,7 +1384,7 @@ void inter_code_gen_visitor::visit(node_negate_expr& node) {
 	#endif
 
 	// Evaluate the operand.
-	expr_call_appropriate_accept(node.expression);
+	this->expr_call_appropriate_accept(node.expression);
 
 	// New temporal for the result.
 	t_results pair =  s_table.new_temp(this->offset);
@@ -1148,7 +1409,7 @@ void inter_code_gen_visitor::visit(node_negative_expr& node) {
 		std::cout << "Translating negative expression" << std::endl;
 	#endif
 	// Evaluate the operand.
-	expr_call_appropriate_accept(node.expression);
+	this->expr_call_appropriate_accept(node.expression);
 
 	// New temporal for the result.
 	t_results pair =  s_table.new_temp(this->offset);
@@ -1174,6 +1435,6 @@ void inter_code_gen_visitor::visit(node_parentheses_expr& node) {
 	#ifdef __DEBUG
 		std::cout << "Translating parentheses expression" << std::endl;
 	#endif
-	expr_call_appropriate_accept(node.expression);
+	this->expr_call_appropriate_accept(node.expression);
 }
 

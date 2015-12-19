@@ -18,6 +18,7 @@ const unsigned int boolean_width = 4;
 const unsigned int reference_width = 4;
 #define BOOLEAN_WIDTH 4
 #define INTEGER_WIDTH 4
+#define FLOAT_WIDTH 4
 #define REFERENCE_WIDTH 4
 
 // Quantity of integer parameters that are passed into registers.
