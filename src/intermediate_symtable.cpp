@@ -382,15 +382,15 @@ t_param_results intermediate_symtable::put_var_param(symtable_element& e
         assert((this->information)->id_exists(*(this->func_name)));
 
         /*  Now that being within a function analysis has been checked, we can
-            push the new parameter into the function's parameters list.      */
-        t_params aux = ((this->information)->get_list_params(*(this->func_name)));
-        aux.push_back(this->get_id_rep(key));
-
+            push the new parameter into the function's parameters list, and 
+            register the variable in the current scope.                      */
         std::string *rep;
         if (e.get_type() == T_VOID || e.get_type() == T_ID || e.get_type() == T_UNDEFINED)
             rep = new std::string((this->information)->register_var(key, offset, T_UNDEFINED, true));
         else
             rep = new std::string((this->information)->register_var(key, offset, e.get_type(), true));
+        t_params aux = (this->information)->get_list_params(*(this->func_name));
+        aux.push_back(this->get_id_rep(key));
 
         return(t_param_results(PARAM_PUT, rep));
 }
@@ -419,12 +419,18 @@ t_param_results intermediate_symtable::put_obj_param(symtable_element& e
         assert((this->information)->id_exists(*(this->func_name)));
         assert((this->information)->get_kind(*(this->func_name)) == K_METHOD);
 
-        /*  Now that being within a function analysis has been checked, we can
-            push the new parameter into the function's parameters list.      */
-        t_params aux = ((this->information)->get_list_params(*(this->func_name)));
-        aux.push_back(this->get_id_rep(key));
 
-        std::string* rep = new std::string((this->information)->register_obj(key, offset, owner, address, true));
+        /*  Now that being within a function analysis has been checked, we can
+            push the new parameter into the function's parameters list, and 
+            register the object in the current scope.                        */
+        std::string* rep;
+        rep = new std::string((this->information)->register_obj(key
+                                                              , offset
+                                                              , owner
+                                                              , address
+                                                              , true));
+        t_params aux = (this->information)->get_list_params(*(this->func_name));
+        aux.push_back(this->get_id_rep(key));
 
         return(t_param_results(PARAM_PUT, rep));
 }
@@ -434,7 +440,7 @@ void intermediate_symtable::set_number_vars(std::string key
     assert((this->information)->id_exists(key));
     assert((this->information)->get_local_vars(key) <= number);
     (this->information)->set_number_vars(key, number);
-} 
+}
 
 void intermediate_symtable::finish_func_analysis() {
     (this->scopes).finish_func_analysis();
