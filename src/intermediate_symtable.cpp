@@ -50,7 +50,7 @@ std::string ids_info::register_var(std::string key
     ++((this->internal).find(key))->second;
     information.rep = internal_key;
 
-    (this->info_map).insert(std::pair<std::string, entry_info>(key, information));
+    (this->info_map).insert(std::pair<std::string, entry_info>(internal_key, information));
 
     return internal_key;
 }
@@ -101,7 +101,7 @@ std::string ids_info::register_obj(std::string key
     /*  Insert element into this->info_map; then check if insertion was 
         successful.                                                          */
     std::pair<std::map<std::string, entry_info>::iterator, bool> res;
-    res = (this->info_map).insert(std::pair<std::string, entry_info>(key, information));
+    res = (this->info_map).insert(std::pair<std::string, entry_info>(internal_key, information));
     assert(res.second);
 
     return internal_key;
@@ -120,7 +120,7 @@ std::string ids_info::register_method(std::string key
     std::string internal_key = key + "::" + owner;
     information.rep = internal_key;
 
-    (this->info_map).insert(std::pair<std::string, entry_info>(key, information));
+    (this->info_map).insert(std::pair<std::string, entry_info>(internal_key, information));
 
     return internal_key;
 }
@@ -136,7 +136,7 @@ std::string ids_info::register_class(std::string key
     ++((this->internal).find(key))->second;
     information.rep = internal_key;
 
-    (this->info_map).insert(std::pair<std::string, entry_info>(key, information));
+    (this->info_map).insert(std::pair<std::string, entry_info>(internal_key, information));
 
     return internal_key;
 }
