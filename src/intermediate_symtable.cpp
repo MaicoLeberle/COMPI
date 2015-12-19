@@ -98,7 +98,11 @@ std::string ids_info::register_obj(std::string key
     ++((this->internal).find(key))->second;
     information.rep = internal_key;
 
-    (this->info_map).insert(std::pair<std::string, entry_info>(key, information));
+    /*  Insert element into this->info_map; then check if insertion was 
+        successful.                                                          */
+    std::pair<std::map<std::string, entry_info>::iterator, bool> res;
+    res = (this->info_map).insert(std::pair<std::string, entry_info>(key, information));
+    assert(res.second);
 
     return internal_key;
 }
@@ -430,7 +434,7 @@ void intermediate_symtable::set_number_vars(std::string key
     assert((this->information)->id_exists(key));
     assert((this->information)->get_local_vars(key) <= number);
     (this->information)->set_number_vars(key, number);
-}
+} 
 
 void intermediate_symtable::finish_func_analysis() {
     (this->scopes).finish_func_analysis();
