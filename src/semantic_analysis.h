@@ -85,9 +85,9 @@ public:
 
 private:
 	symtables_stack s_table;
-	symtable_element::id_type type_l_expr; // Type of the last expression analyzed.
+	id_type type_l_expr; // Type of the last expression analyzed.
 	std::string class_name_l_expr; // Class of the last expression analyzed.
-	symtable_element::id_class class_l_expr; // Symtable element's class of the
+	//symtable_element::id_class class_l_expr; // Symtable element's class of the
 											 // last expression analyzed.
 	int errors; // Number of errors encountered.
 	error_id last_error; // For unit-testing purposes.
@@ -102,12 +102,12 @@ private:
     /* Converts a type expression described in terms of the Type enum of
 	 * node.h, to a type expression suitable for storage into
 	 * a symtable_element object. */
-	symtable_element::id_type determine_symtable_type(Type::_Type);
+	id_type determine_symtable_type(Type::_Type);
 
 	/* Converts a type expression described in terms of the id_type enum of
 	 * symtable.h, to a type expression in terms of the Typ enum of node.h.
 	 * */
-	Type::_Type determine_node_type(symtable_element::id_type type_symtable);
+	Type::_Type determine_node_type(id_type type_symtable);
 
 	/* Determines an returns the symtable_element referred by a given reference_list,
 	 * , and set well_formed to true, if the given reference_list is well_formed.
@@ -132,8 +132,7 @@ private:
 	 * by considering the hierarchy of numeric types of the language.
 	 * PRE : {the types received are numeric}
 	 * */
-	symtable_element::id_type get_wider_type(symtable_element::id_type,
-			symtable_element::id_type);
+	id_type get_wider_type(id_type, id_type);
 
 	void analyze_method_call(method_call&);
 };

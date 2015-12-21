@@ -75,11 +75,11 @@ void test_class_decl(){
 	// In the intermediate_symtable, just data about the classes.
 	intermediate_symtable *symtable = v1.get_symtable();
 
-	assert(symtable->get(std::string("Program"))->get_class() ==
-		   symtable_element::T_CLASS);
+	assert(symtable->get(std::string("Program"))->get_kind() ==
+		   id_kind::K_CLASS);
 
-	assert(symtable->get(std::string("Main"))->get_class() ==
-			   symtable_element::T_CLASS);
+	assert(symtable->get(std::string("Main"))->get_kind() ==
+			   id_kind::K_CLASS);
 
 	// One empty main class declaration...
 	test_program = "class Main {\n"
@@ -141,33 +141,33 @@ void test_field_decl(){
 	// Field b
 	std::list<symtable_element>::iterator it = fields->begin();
 	assert((*it).get_key() == std::string("b"));
-	assert((*it).get_class() == symtable_element::T_VAR);
-	assert((*it).get_type() == symtable_element::BOOLEAN);
+	assert((*it).get_kind() == id_kind::K_VAR);
+	assert((*it).get_type() == id_type::T_BOOL);
 
 	// Field x
 	it++;
 	assert(it->get_key() == std::string("x"));
-	assert(it->get_class() == symtable_element::T_VAR);
-	assert(it->get_type() == symtable_element::FLOAT);
+	assert(it->get_kind() == id_kind::K_VAR);
+	assert(it->get_type() == id_type::T_FLOAT);
 
 	// Field o
 	it++;
 	assert(it->get_key() == std::string("o"));
-	assert(it->get_class() == symtable_element::T_ARRAY);
-	assert(it->get_type() == symtable_element::INTEGER);
+	assert(it->get_kind() == id_kind::K_ARRAY);
+	assert(it->get_type() == id_type::T_INT);
 	assert(it->get_dimension() == 1);
 
 	// Field m
 	it++;
 	assert(it->get_key() == std::string("m"));
-	assert(it->get_class() == symtable_element::T_VAR);
-	assert(it->get_type() == symtable_element::INTEGER);
+	assert(it->get_kind() == id_kind::K_VAR);
+	assert(it->get_type() == id_type::T_INT);
 
 	// Field n
 	it++;
 	assert(it->get_key() == std::string("n"));
-	assert(it->get_class() == symtable_element::T_VAR);
-	assert(it->get_type() == symtable_element::INTEGER);
+	assert(it->get_kind() == id_kind::K_VAR);
+	assert(it->get_type() == id_type::T_INT);
 
 	// In class2...
 	class_program = symtable->get(std::string("class2"));
@@ -178,8 +178,8 @@ void test_field_decl(){
 	// Field obj
 	it = fields->begin();
 	assert((*it).get_key() == std::string("obj"));
-	assert((*it).get_class() == symtable_element::T_OBJ);
-	assert((*it).get_type() == symtable_element::ID);
+	assert((*it).get_kind() == id_kind::K_OBJECT);
+	assert((*it).get_type() == id_type::T_ID);
 	assert(*(*it).get_class_type() == std::string("class1"));
 
 	// Local variables
@@ -212,16 +212,16 @@ void test_field_decl(){
 						 	 	 	 	 	 integer_width*2 +
 						 	 	 	 	 	 float_width*2 +
 						 	 	 	 	 	 boolean_width*2) + "\n"
-				 "n = "+std::to_string(integer_initial_value)+"\n"
-				 "x = "+std::to_string(float_initial_value)+"\n"
-				 "b = "+BOOL_STR(boolean_initial_value)+"\n"
-				 "obj[0] = "+BOOL_STR(boolean_initial_value)+"\n"
-				 "obj[" + std::to_string(boolean_width) + "] = " +
+				 "n@0 = "+std::to_string(integer_initial_value)+"\n"
+				 "x@0 = "+std::to_string(float_initial_value)+"\n"
+				 "b@0 = "+BOOL_STR(boolean_initial_value)+"\n"
+				 "obj@0[" + std::to_string(reference_width) + "] = "+BOOL_STR(boolean_initial_value)+"\n"
+				 "obj@0[" + std::to_string(reference_width + boolean_width) + "] = " +
 				 	 	 	 	 	 	std::to_string(float_initial_value)+"\n"
-				 "obj[" + std::to_string(float_width +
+				 "obj@0[" + std::to_string(reference_width + float_width +
 	 	 	 	 	 	 boolean_width) + "] = " +
 	 	 	 	 	 	 	 	 	 std::to_string(integer_initial_value)+"\n"
-				 "obj = &obj.b2\n"
+				 "obj@0 = &obj@0.b2@0\n"
 				 "Main.main:\n"
 				 "enter 0";
 
@@ -285,8 +285,8 @@ void test_method_decl(){
 	std::string ir_program = "class2.method:\n"
 				"enter " + std::to_string(integer_width +
 										float_width) + "\n" +
-				"n = " + std::to_string(integer_initial_value) +
-				"x = " + std::to_string(float_initial_value) +
+				"n@0 = " + std::to_string(integer_initial_value) +
+				"x@0 = " + std::to_string(float_initial_value) +
 				"Main.main:\n" +
 				"enter 0";
 
@@ -305,7 +305,7 @@ void test_method_decl(){
 	// Method "method"
 	std::list<symtable_element>::iterator method = fields->begin();
 
-	assert((*method).get_class() == symtable_element::T_FUNCTION);
+	assert((*method).get_kind() == id_kind::K_METHOD);
 
 	std::list<symtable_element> *params = (*method).get_func_params();
 	std::list<symtable_element>::iterator param =  params->begin();
@@ -313,22 +313,22 @@ void test_method_decl(){
 	// TODO: los parámetros también me los está guardando, en la tabla, en el
 	// orden inverso en el que son guardados.
 	// Parameter obj
-	assert((*param).get_class() == symtable_element::T_OBJ);
+	assert((*param).get_kind() == id_kind::K_OBJECT);
 	assert((*param).get_key() == std::string("obj"));
-	assert((*param).get_type() == symtable_element::ID);
+	assert((*param).get_type() == id_type::T_ID);
 	assert(*(*param).get_class_type() == std::string("class1"));
 
 	// Parameter m
 	param++;
-	assert((*param).get_class() == symtable_element::T_VAR);
+	assert((*param).get_kind() == id_kind::K_VAR);
 	assert((*param).get_key() == std::string("m"));
-	assert((*param).get_type() == symtable_element::INTEGER);
+	assert((*param).get_type() == id_type::T_INT);
 
 	// Parameter "this"
 	param++;
-	assert((*param).get_class() == symtable_element::T_OBJ);
+	assert((*param).get_kind() == id_kind::K_OBJECT);
 	assert((*param).get_key() == std::string("this"));
-	assert((*param).get_type() == symtable_element::ID);
+	assert((*param).get_type() == id_type::T_ID);
 	assert(*(*param).get_class_type() == std::string("class2"));
 
 	std::cout << "OK. " << std::endl;
@@ -356,10 +356,43 @@ void test_assignment_stm(){
 
 	std::string ir_program = "class1.method:\n"
 							"enter "+std::to_string(integer_width) + "\n"
-							"n = " + std::to_string(integer_initial_value) + "\n"
-							"n = 1\n"
-							"n = n + 1\n"
-							"n = n - 1"
+							"n@0 = " + std::to_string(integer_initial_value) + "\n"
+							"n@0 = 1\n"
+							"n@0 = n@0 + 1\n"
+							"n@0 = n@0 - 1"
+							"Main.main:"
+							"enter 0";
+
+
+	translate_ir_code(ir_program);
+
+	assert(are_equal_instructions_list(*translation, *ir_code));
+
+    // Accessing instances' attributes.
+    test_program = "class class1 { int n;"                                
+					"}"
+                    "class class2 { void method(class1 obj) {"
+										"int n;"
+										"n = obj.n + 1;"
+									"}\n"
+                                
+					"}"
+					"class Main {\n"
+						"void main(){\n"
+						"}\n"
+					"}\0\0";
+	inter_code_gen_visitor v2;
+
+	translate(v2, test_program);
+
+	translation = v1.get_inst_list();
+
+	ir_program = "class1.method:\n"
+							"enter "+std::to_string(integer_width) + "\n"
+							"n@0 = " + std::to_string(integer_initial_value) + "\n"
+							"n@0 = 1\n"
+							"n@0 = n@0 + 1\n"
+							"n@0 = n@0 - 1"
 							"Main.main:"
 							"enter 0";
 
@@ -966,14 +999,55 @@ void test_array_decl(){
 	std::cout << "OK. " << std::endl;
 }
 
+void test_scopes(){
+	std::cout << "18) Modelling scopes:";
+
+    // Variables declared in the iner-most scope, should shadow variables   
+    // declared in outer scopes. This holds also for attributes and parameters.
+	std::string test_program = "class class1 { int n;"
+                                                "void method(int m) {"
+													"int n;"
+                                                    "int m;"
+												"}\n"
+								"}"
+                                "class class2 { int n;"
+                                                "void method(int m) {"
+													"int n;"
+                                                    "int m;"
+												"}\n"
+								"}"
+								"class Main {\n"
+									"void main(){\n"
+									"}\n"
+								"}\0\0";
+	inter_code_gen_visitor v1;
+
+	translate(v1, test_program);
+
+	instructions_list *translation = v1.get_inst_list();
+
+	std::string ir_program = "class1.method1:\n"
+								"enter 8\n"
+								"a[0] = 0\n"
+								"a[4] = 0\n"
+								"Main.main:\n"
+								"enter 0";
+
+	translate_ir_code(ir_program);
+
+	assert(are_equal_instructions_list(*translation, *ir_code));
+
+	std::cout << "OK. " << std::endl;
+}
+
 void test_inter_code_gen_visitor(){
 	std::cout << "\nTesting intermediate code generation:" << std::endl;
-	test_three_address_code();
+	/*test_three_address_code();
 	test_class_decl();
 	test_field_decl();
-	test_method_decl();
+	test_method_decl();*/
 	test_assignment_stm();
-	test_method_call_statement();
+	/*test_method_call_statement();
 	test_if_statement();
 	test_for_statement();
 	test_while_statement();
@@ -984,6 +1058,8 @@ void test_inter_code_gen_visitor(){
 	test_binary_operation();
 	test_unary_operation();
 	test_parentheses_expr();
-	test_array_decl();
+	test_array_decl();*/
+    // TODO: correr este test
+    //test_scopes();
 }
 

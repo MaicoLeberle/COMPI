@@ -69,6 +69,8 @@ private:
 				// (page 376 of Dragon book), and share this information
 				// between nodes.
 	bool into_method;
+    std::string this_unique_id; // Unique id determined for the actual 
+                                // object's reference, "this".
 	address_pointer temp; // Temporal where the value of the last analyzed
 						   // expression is saved.
 
@@ -82,16 +84,24 @@ private:
 	std::string instance_initialization(std::string id_class,
 										std::string id_instance);
 
-	void array_initialization(symtable_element::id_type type,
+	void array_initialization(id_type type,
 							std::string id,
 							unsigned int array_length);
 
-	unsigned int calculate_size(symtable_element::id_type, std::string);
+	unsigned int calculate_size(id_type, std::string);
 
-	symtable_element::id_type determine_type(Type::_Type);
+	id_type determine_type(Type::_Type);
     
-    /* PRE : {id is the original id of the variable, as it appears in the code} */
-	void translate_var_def(symtable_element::id_type type,
+    /* Initializes a variable.
+     * PRE : {if the variable isn't an instance's attribute => 
+     *         id is the original identifier of the variable, as it appears 
+     *          in the code and this->offset must be the corresponding value 
+     *                              &&
+     *        if the variable is an instance's attribute => id is the unique 
+     *          identifier of the instance (as it appears into the symbol's 
+     *          table) and this->offset is the offset of the attribute, with
+     *          respect to the beginning of the instance} */
+	void translate_var_def(id_type type,
                             std::string id, 
                             std::string class_name, 
                             unsigned int array_length);
@@ -102,6 +112,12 @@ private:
 	 * RETURNS: a std::string representing the label's content.
 	 * */
 	std::string obtain_methods_label(reference_list ids);
+
+    /* Simplified version of semantic_analysis' dereference method. */
+    symtable_element* dereference(reference_list);
+
+    symtable_element* get_next_symtable_element(symtable_element *actual_element, 
+                                                std::string id);
 
 	int get_attribute_offset(reference_list ids);
 

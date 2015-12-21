@@ -920,6 +920,36 @@ quad_pointer new_binary_assign(const address_pointer& dest,
 	return instruction;
 }
 
+/* PRE : {quad->type == quad_type::BINARY_ASSIGN} */
+address_pointer get_binary_assign_result(const quad_pointer& instruction){
+    // PRE
+	#ifdef __DEBUG
+		assert(instruction->type == quad_type::BINARY_ASSIGN);
+	#endif
+
+    return instruction->result;
+}
+
+/* PRE : {quad->type == quad_type::BINARY_ASSIGN} */
+address_pointer get_binary_assign_arg1(const quad_pointer& instruction){
+    // PRE
+	#ifdef __DEBUG
+		assert(instruction->type == quad_type::BINARY_ASSIGN);
+	#endif
+
+    return instruction->arg1;
+}
+
+/* PRE : {quad->type == quad_type::BINARY_ASSIGN} */
+address_pointer get_binary_assign_arg2(const quad_pointer& instruction){
+    // PRE
+	#ifdef __DEBUG
+		assert(instruction->type == quad_type::BINARY_ASSIGN);
+	#endif
+
+    return instruction->arg2;
+}
+
 bool is_binary_assignment(const quad_pointer& instruction,
 						 const address_pointer& dest,
 						 const address_pointer& arg1,
