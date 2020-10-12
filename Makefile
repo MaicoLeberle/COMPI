@@ -4,7 +4,7 @@ OS=$(shell uname -s)
 
 ifeq ($(OS),Darwin)
 	LEX=/usr/bin/flex
-	YACC=/usr/bin/bison
+	YACC=/usr/local/bin/bison-3.7.2
 	LDFLAGS=-L/usr/local/opt/bison/lib -L/usr/local/opt/flex/lib
 	CPPFLAGS=-I/usr/local/opt/flex/include -ll -g -std=c++11 -Wno-deprecated-register -fpermissive
 	FLAGS=-g -std=c++11 -Wno-deprecated-register -fpermissive
