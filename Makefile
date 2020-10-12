@@ -11,7 +11,7 @@ ifeq ($(OS),Darwin)
 else ifeq ($(OS),Linux)
 	LEX=/usr/bin/flex
 	YACC=/usr/bin/bison
-	CPPFLAGS=-lfl -g -std=c++11 -Wno-deprecated-register -fpermissive
+	CPPFLAGS=-ll -g -std=c++11 -Wno-deprecated-register -fpermissive
 	FLAGS=-g -std=c++11 -Wno-deprecated-register -fpermissive
 endif
 

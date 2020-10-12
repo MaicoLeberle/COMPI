@@ -57,10 +57,10 @@ void test_parser_1(){
 	std::cout << "3) First statement should be inc declaration: ";
 	method_pointer method = std::dynamic_pointer_cast<node_method_decl>(main_class->class_block[0]);
 
-	assert(method->type.type == Type::INTEGER);  // Method type should be int
+	assert(method->type.type == Type::TINTEGER);  // Method type should be int
 	assert(method->id.compare("inc") == 0); // Method id should be inc
 	assert(method->parameters.size() == 1); // Method params count should 1
-	assert(method->parameters[0]->type.type == Type::INTEGER); // The only param should be of type 'int' ...
+	assert(method->parameters[0]->type.type == Type::TINTEGER); // The only param should be of type 'int' ...
 	assert(method->parameters[0]->id.compare("x") == 0); // ... and id 'x'
 
 	body_pointer method_body = method->body;
@@ -74,7 +74,7 @@ void test_parser_1(){
 	std::string returned_x = std::dynamic_pointer_cast<node_location>(returned_expr->left)->ids[0];
 	long long returned_1 = std::dynamic_pointer_cast<node_int_literal>(returned_expr->right)->value;
 
-	assert(returned_expr->oper == Oper::PLUS); // The operation should be a plus
+	assert(returned_expr->oper == Oper::OPLUS); // The operation should be a plus
 	assert(returned_x.compare("x") == 0); // The left expr should be a location of name 'x'
 	assert(returned_1 == 1); // The right expr should be a integer of value 1
 	std::cout << "OK" << std::endl;
@@ -86,7 +86,7 @@ void test_parser_1(){
 	method = std::dynamic_pointer_cast<node_method_decl>(main_class->class_block[1]);
 	method_body = method->body;
 
-	assert(method->type.type == Type::INTEGER);  // Method type should be int
+	assert(method->type.type == Type::TINTEGER);  // Method type should be int
 	assert(method->id.compare("read_int") == 0); // Method id should be read_int
 	assert(method->parameters.size() == 0); // Method params count should 0
 	assert(method_body->is_extern == true); // Method should have an external body
@@ -100,10 +100,10 @@ void test_parser_1(){
 	method = std::dynamic_pointer_cast<node_method_decl>(main_class->class_block[2]);
 	method_body = method->body;
 
-	assert(method->type.type == Type::VOID);  // Method type should be void
+	assert(method->type.type == Type::TVOID);  // Method type should be void
 	assert(method->id.compare("print") == 0); // Method id should be print
 	assert(method->parameters.size() == 1); // Method params count should 0
-	assert(method->parameters[0]->type.type == Type::STRING); // The only param should be an string...
+	assert(method->parameters[0]->type.type == Type::TSTRING); // The only param should be an string...
 	assert(method->parameters[0]->id.compare("s") == 0); // ... and id 's'
 	assert(method_body->is_extern == true); // Method should have an external body
 
@@ -117,7 +117,7 @@ void test_parser_1(){
 	method_body = method->body;
 	method_statements = method_body->block->content;
 
-	assert(method->type.type == Type::VOID);  // Method type should be void
+	assert(method->type.type == Type::TVOID);  // Method type should be void
 	assert(method->id.compare("main") == 0); // Method id should be main
 	assert(method->parameters.size() == 0); // Method params count should 0
 	assert(method_body->is_extern == false); // Method should not have an external body
@@ -125,7 +125,7 @@ void test_parser_1(){
 
 	field_pointer y_decl = std::dynamic_pointer_cast<node_field_decl>(method_statements[0]);
 
-	assert(y_decl->type.type == Type::INTEGER); // The declared y should be of type int
+	assert(y_decl->type.type == Type::TINTEGER); // The declared y should be of type int
 	assert(y_decl->ids.size() == 1); // Should have only 1 var declared
 	assert(y_decl->ids[0]->id.compare("y") == 0); // The name of the var is 'y'
 
