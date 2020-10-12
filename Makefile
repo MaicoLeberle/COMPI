@@ -3,19 +3,17 @@ CC=g++
 OS=$(shell uname -s)
 
 ifeq ($(OS),Darwin)
-	LEX=/usr/local/Cellar/flex/2.5.39/bin/flex
-	YACC=/usr/local/Cellar/bison/3.0.4/bin/bison
-	LDFLAGS=-L/usr/local/opt/bison/lib -L/usr/local/opt/flex/lib
-	CPPFLAGS=-I/usr/local/opt/flex/include
-endif
-
-ifeq ($(OS),Linux)
 	LEX=/usr/bin/flex
 	YACC=/usr/bin/bison
+	LDFLAGS=-L/usr/local/opt/bison/lib -L/usr/local/opt/flex/lib
+	CPPFLAGS=-I/usr/local/opt/flex/include -ll -g -std=c++11 -Wno-deprecated-register -fpermissive
+	FLAGS=-g -std=c++11 -Wno-deprecated-register -fpermissive
+else ifeq ($(OS),Linux)
+	LEX=/usr/bin/flex
+	YACC=/usr/bin/bison
+	CPPFLAGS=-lfl -g -std=c++11 -Wno-deprecated-register -fpermissive
+	FLAGS=-g -std=c++11 -Wno-deprecated-register -fpermissive
 endif
-
-CPPFLAGS+=-lfl -g -std=c++11 -Wno-deprecated-register -fpermissive
-FLAGS=-g -std=c++11 -Wno-deprecated-register -fpermissive
 
 SRC=src
 BUILD=build
