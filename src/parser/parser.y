@@ -129,15 +129,15 @@ method_decl
     ;
 
 void
-    : VOID                             {$$ = new Type(Type::VOID);}
+    : VOID                             {$$ = new Type(Type::TVOID);}
     ;
 
 type
-    : INT                              {$$ = new Type(Type::INTEGER);}
-    | FLOAT                            {$$ = new Type(Type::FLOAT);}
-    | BOOLEAN                          {$$ = new Type(Type::BOOLEAN);}
-    | STRING                           {$$ = new Type(Type::STRING);}
-    | ID                               {$$ = new Type(Type::ID, *$1); delete $1;}
+    : INT                              {$$ = new Type(Type::TINTEGER);}
+    | FLOAT                            {$$ = new Type(Type::TFLOAT);}
+    | BOOLEAN                          {$$ = new Type(Type::TBOOLEAN);}
+    | STRING                           {$$ = new Type(Type::TSTRING);}
+    | ID                               {$$ = new Type(Type::TID, *$1); delete $1;}
     ;
 
 params
@@ -182,9 +182,9 @@ statement
     ;
 
 assign_op
-    : '='                                   {$$ = new AssignOper(AssignOper::ASSIGN);}
-    | PLUS_ASSIGN                           {$$ = new AssignOper(AssignOper::PLUS_ASSIGN);}
-    | MINUS_ASSIGN                          {$$ = new AssignOper(AssignOper::MINUS_ASSIGN);}
+    : '='                                   {$$ = new AssignOper(AssignOper::AASSIGN);}
+    | PLUS_ASSIGN                           {$$ = new AssignOper(AssignOper::APLUS_ASSIGN);}
+    | MINUS_ASSIGN                          {$$ = new AssignOper(AssignOper::AMINUS_ASSIGN);}
     ;
 
 method_call
@@ -222,31 +222,31 @@ expr_params
     ;
 
 bin_op
-    : expr '+' expr             {$$ = new node_binary_operation_expr(Oper::PLUS,
+    : expr '+' expr             {$$ = new node_binary_operation_expr(Oper::OPLUS,
                                   expr_pointer($1), expr_pointer($3));}
-    | expr '-' expr             {$$ = new node_binary_operation_expr(Oper::MINUS,
+    | expr '-' expr             {$$ = new node_binary_operation_expr(Oper::OMINUS,
                                   expr_pointer($1), expr_pointer($3));}
-    | expr '*' expr             {$$ = new node_binary_operation_expr(Oper::TIMES, 
+    | expr '*' expr             {$$ = new node_binary_operation_expr(Oper::OTIMES, 
                                   expr_pointer($1), expr_pointer($3));}
-    | expr '/' expr             {$$ = new node_binary_operation_expr(Oper::DIVIDE, 
+    | expr '/' expr             {$$ = new node_binary_operation_expr(Oper::ODIVIDE, 
                                   expr_pointer($1), expr_pointer($3));}
-    | expr '%' expr             {$$ = new node_binary_operation_expr(Oper::MOD,
+    | expr '%' expr             {$$ = new node_binary_operation_expr(Oper::OMOD,
                                   expr_pointer($1), expr_pointer($3));}
-    | expr '<' expr             {$$ = new node_binary_operation_expr(Oper::LESS,
+    | expr '<' expr             {$$ = new node_binary_operation_expr(Oper::OLESS,
                                   expr_pointer($1), expr_pointer($3));}
-    | expr '>' expr             {$$ = new node_binary_operation_expr(Oper::GREATER,
+    | expr '>' expr             {$$ = new node_binary_operation_expr(Oper::OGREATER,
                                   expr_pointer($1), expr_pointer($3));}
-    | expr LESS_EQUAL expr      {$$ = new node_binary_operation_expr(Oper::LESS_EQUAL,
+    | expr LESS_EQUAL expr      {$$ = new node_binary_operation_expr(Oper::OLESS_EQUAL,
                                   expr_pointer($1), expr_pointer($3));}
-    | expr GREATER_EQUAL expr   {$$ = new node_binary_operation_expr(Oper::GREATER_EQUAL, 
+    | expr GREATER_EQUAL expr   {$$ = new node_binary_operation_expr(Oper::OGREATER_EQUAL, 
                                   expr_pointer($1), expr_pointer($3));}
-    | expr EQUAL expr           {$$ = new node_binary_operation_expr(Oper::EQUAL,
+    | expr EQUAL expr           {$$ = new node_binary_operation_expr(Oper::OEQUAL,
                                   expr_pointer($1), expr_pointer($3));}
-    | expr DISTINCT expr        {$$ = new node_binary_operation_expr(Oper::DISTINCT,
+    | expr DISTINCT expr        {$$ = new node_binary_operation_expr(Oper::ODISTINCT,
                                   expr_pointer($1), expr_pointer($3));}
-    | expr AND expr             {$$ = new node_binary_operation_expr(Oper::AND,
+    | expr AND expr             {$$ = new node_binary_operation_expr(Oper::OAND,
                                   expr_pointer($1), expr_pointer($3));}
-    | expr OR expr              {$$ = new node_binary_operation_expr(Oper::OR,
+    | expr OR expr              {$$ = new node_binary_operation_expr(Oper::OOR,
                                   expr_pointer($1), expr_pointer($3));}
     ;
 

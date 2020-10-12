@@ -63,27 +63,27 @@ id_type semantic_analysis::determine_symtable_type(Type::_Type type_ast){
 	id_type ret;
 
 	switch(type_ast){
-		case Type::INTEGER:
+		case Type::TINTEGER:
 			ret = id_type::T_INT;
 			break;
 
-		case Type::FLOAT:
+		case Type::TFLOAT:
 			ret = id_type::T_FLOAT;
 			break;
 
-		case Type::BOOLEAN:
+		case Type::TBOOLEAN:
 			ret = id_type::T_BOOL;
 			break;
 
-		case Type::VOID:
+		case Type::TVOID:
 			ret = id_type::T_VOID;
 			break;
 
-		case Type::ID:
+		case Type::TID:
 			ret = id_type::T_ID;
 			break;
 
-		case Type::STRING:
+		case Type::TSTRING:
 			ret = id_type::T_STRING;
 			break;
 
@@ -101,27 +101,27 @@ Type::_Type semantic_analysis::determine_node_type(id_type type_symtable){
 
 	switch(type_symtable){
 		case id_type::T_INT:
-			ret = Type::INTEGER;
+			ret = Type::TINTEGER;
 			break;
 
 		case id_type::T_FLOAT:
-			ret = Type::FLOAT;
+			ret = Type::TFLOAT;
 			break;
 
 		case id_type::T_BOOL:
-			ret = Type::BOOLEAN;
+			ret = Type::TBOOLEAN;
 			break;
 
 		case id_type::T_VOID:
-			ret = Type::VOID;
+			ret = Type::TVOID;
 			break;
 
 		case id_type::T_ID:
-			ret = Type::ID;
+			ret = Type::TID;
 			break;
 
 		case id_type::T_STRING:
-			ret = Type::STRING;
+			ret = Type::TSTRING;
 			break;
 
 		#ifdef __DEBUG
@@ -338,7 +338,7 @@ void semantic_analysis::visit(node_field_decl& node) {
 			continue;
 		}
 		// Everything ok. Add the identifier to the symbol table.
-		if (node.type.type == Type::ID){
+		if (node.type.type == Type::TID){
 			// Declaration of instances.
 			// Create a new symtable_element object, that represents
 			// an object, with the id and the name of the corresponding class.
@@ -437,7 +437,7 @@ void semantic_analysis::visit(node_parameter_identifier& node) {
 		std::cout << "Accessing parameter " << node.id << std::endl;
 	#endif
 	// We add the identifier to the actual symbol table
-	if(node.type.type == Type::ID &&
+	if(node.type.type == Type::TID &&
 	   s_table.get(node.type.id)->get_kind() != id_kind::K_CLASS){
 		register_error(std::string("Identifier "+node.id+" has unknown type "
 						+ node.type.id + "."),
@@ -453,11 +453,11 @@ void semantic_analysis::visit(node_parameter_identifier& node) {
 					"coincide:" + node.id), ERROR_23);
 		}
 		else{
-			if(node.type.type != Type::ID){
+			if(node.type.type != Type::TID){
 				// The parameter has a basic type.
 
 				// Rule 7: string literals only with extern methods.
-				if(node.type.type == Type::STRING
+				if(node.type.type == Type::TSTRING
 				and not this->actual_method->is_func_extern()){
 					register_error(std::string("String literals can only be "
 					"used as parameters of extern methods."), ERROR_7);
@@ -539,8 +539,8 @@ void semantic_analysis::visit(node_assignment_statement& node) {
 			}
 			// Rule 17: in a -= or += assignment, the location and the
 			// expression assigned must evaluated to integer or float.
-			if (node.oper == AssignOper::PLUS_ASSIGN ||
-			node.oper == AssignOper::MINUS_ASSIGN){
+			if (node.oper == AssignOper::APLUS_ASSIGN ||
+			node.oper == AssignOper::AMINUS_ASSIGN){
 
 				if((type_id != id_type::T_FLOAT &&
 					type_id != id_type::T_INT) ||
@@ -885,8 +885,8 @@ void semantic_analysis::visit(node_binary_operation_expr& node) {
 			
 			// Rule 13: operands of arithmetic and relational operations,
 			// must have type int or float.
-			if (node.oper != Oper::EQUAL && node.oper != Oper::DISTINCT &&
-				node.oper != Oper::AND && node.oper != Oper::OR){
+			if (node.oper != Oper::OEQUAL && node.oper != Oper::ODISTINCT &&
+				node.oper != Oper::OAND && node.oper != Oper::OOR){
 
 				if ((l_op_type == id_type::T_INT ||
 				l_op_type == id_type::T_FLOAT) &&
@@ -894,8 +894,8 @@ void semantic_analysis::visit(node_binary_operation_expr& node) {
 				r_op_type == id_type::T_FLOAT)){
 
 					this->well_formed = true;
-					if (node.oper == Oper::LESS || node.oper == Oper::GREATER ||
-					node.oper == Oper::LESS_EQUAL || node.oper == Oper::GREATER_EQUAL){
+					if (node.oper == Oper::OLESS || node.oper == Oper::OGREATER ||
+					node.oper == Oper::OLESS_EQUAL || node.oper == Oper::OGREATER_EQUAL){
 						this->type_l_expr = id_type::T_BOOL;
 					}
 					else{
@@ -914,7 +914,7 @@ void semantic_analysis::visit(node_binary_operation_expr& node) {
 				//  node.oper == Oper::AND || node.oper == Oper::OR}
 
 				// Rule 14: eq_op operands must have the same type (int, float or boolean)
-				if (node.oper == Oper::EQUAL || node.oper == Oper::DISTINCT){
+				if (node.oper == Oper::OEQUAL || node.oper == Oper::ODISTINCT){
 					if (l_op_type != r_op_type ||
 						(l_op_type != id_type::T_INT &&
 						 l_op_type != id_type::T_FLOAT &&

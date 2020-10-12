@@ -12,7 +12,7 @@
  * tuple also stores the id
  */
 struct Type {
-    enum _Type {INTEGER, BOOLEAN, FLOAT, VOID, ID, STRING};
+    enum _Type {TINTEGER, TBOOLEAN, TFLOAT, TVOID, TID, TSTRING};
     _Type type;
     std::string id;
 
@@ -31,21 +31,21 @@ struct Type {
  * precedence.
  */
 enum class Oper {
-	TIMES, DIVIDE, MOD,
-	PLUS, MINUS,
-	LESS, LESS_EQUAL, GREATER, GREATER_EQUAL,
-	EQUAL, DISTINCT,
-	AND,
-	OR
+	OTIMES, ODIVIDE, OMOD,
+	OPLUS, OMINUS,
+	OLESS, OLESS_EQUAL, OGREATER, OGREATER_EQUAL,
+	OEQUAL, ODISTINCT,
+	OAND,
+	OOR
 };
 
 /**
  * Enumerator class for assignment operators.
  */
 enum class AssignOper {
-	ASSIGN,
-	PLUS_ASSIGN,
-	MINUS_ASSIGN
+	AASSIGN,
+	APLUS_ASSIGN,
+	AMINUS_ASSIGN
 };
 
 // Abstract classes ///////////////////////////////////////////////////////////
@@ -115,7 +115,7 @@ public:
 	}
 
 	void set_type(std::string id){
-		type_expr.type = Type::_Type::ID;
+		type_expr.type = Type::_Type::TID;
 		type_expr.id = id;
 	}
 
@@ -289,7 +289,7 @@ public:
     id_list ids;
 
     node_field_decl(Type type_, id_list ids_) : type(type_), ids(ids_) {
-        assert(type_.type != Type::VOID);
+        assert(type_.type != Type::TVOID);
     }
 
     bool is_node_field_decl(){
@@ -350,7 +350,7 @@ public:
 
     node_parameter_identifier(Type type_, std::string id_) :
         type(type_), id(id_) {
-        assert(type_.type != Type::VOID);
+        assert(type_.type != Type::TVOID);
     }
 
     template<typename visitor>

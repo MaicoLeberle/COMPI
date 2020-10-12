@@ -90,27 +90,27 @@ id_type inter_code_gen_visitor::determine_type(Type::_Type type_ast){
 	id_type ret;
 
 	switch(type_ast){
-		case Type::INTEGER:
+		case Type::TINTEGER:
 			ret = id_type::T_INT;
 			break;
 
-		case Type::FLOAT:
+		case Type::TFLOAT:
 			ret = id_type::T_FLOAT;
 			break;
 
-		case Type::BOOLEAN:
+		case Type::TBOOLEAN:
 			ret = id_type::T_BOOL;
 			break;
 
-		case Type::VOID:
+		case Type::TVOID:
 			ret = id_type::T_VOID;
 			break;
 
-		case Type::ID:
+		case Type::TID:
 			ret = id_type::T_ID;
 			break;
 
-		case Type::STRING:
+		case Type::TSTRING:
 			ret = id_type::T_STRING;
 			break;
 
@@ -494,7 +494,7 @@ void inter_code_gen_visitor::visit(node_field_decl& node) {
 		#endif
 
 		// Translate each identifier. Add the identifier to the symbol table.
-		if (node.type.type == Type::ID){
+		if (node.type.type == Type::TID){
 			// Declaration of instances.
 			std::string *class_name = new std::string(node.type.id);
 			symtable_element id(f->id, class_name);
@@ -664,7 +664,7 @@ void inter_code_gen_visitor::visit(node_parameter_identifier& node) {
 	#endif
 
 	switch(node.type.type){
-		case Type::ID:{
+		case Type::TID:{
 				std::string *class_name = new std::string(node.type.id);
 				// TODO: el último parámetro debería ser un string de la forma
 				// node.id "." nombre del primer atributo de la clase
@@ -817,7 +817,7 @@ void inter_code_gen_visitor::visit(node_assignment_statement& node) {
     }
 
     switch(node.oper){
-        case AssignOper::ASSIGN:
+        case AssignOper::AASSIGN:
             if(location->is_array_pos() or location->is_object_field() 
             or is_att_from_act_obj){
                 
@@ -843,7 +843,7 @@ void inter_code_gen_visitor::visit(node_assignment_statement& node) {
             quad_oper op;
             
             switch(node.oper){
-                case AssignOper::PLUS_ASSIGN:
+                case AssignOper::APLUS_ASSIGN:
                     op = quad_oper::PLUS;
                     break;
 
@@ -1270,47 +1270,47 @@ void inter_code_gen_visitor::visit(node_binary_operation_expr& node) {
 	left_operand = this->temp;
 
 	switch(node.oper){
-		case Oper::TIMES:
+		case Oper::OTIMES:
 			oper = quad_oper::TIMES;
 			break;
 
-		case Oper::PLUS:
+		case Oper::OPLUS:
 			oper = quad_oper::PLUS;
 			break;
 
-		case Oper::MINUS:
+		case Oper::OMINUS:
 			oper = quad_oper::MINUS;
 			break;
 
-		case Oper::DIVIDE:
+		case Oper::ODIVIDE:
 			oper = quad_oper::DIVIDE;
 			break;
 
-		case Oper::MOD:
+		case Oper::OMOD:
 			oper = quad_oper::MOD;
 			break;
 
-		case Oper::LESS:
+		case Oper::OLESS:
 			oper = quad_oper::LESS;
 			break;
 
-		case Oper::LESS_EQUAL:
+		case Oper::OLESS_EQUAL:
 			oper = quad_oper::LESS_EQUAL;
 			break;
 
-		case Oper::GREATER:
+		case Oper::OGREATER:
 			oper = quad_oper::GREATER;
 			break;
 
-		case Oper::GREATER_EQUAL:
+		case Oper::OGREATER_EQUAL:
 			oper = quad_oper::GREATER_EQUAL;
 			break;
 
-		case Oper::EQUAL:
+		case Oper::OEQUAL:
 			oper = quad_oper::EQUAL;
 			break;
 
-		case Oper::DISTINCT:
+		case Oper::ODISTINCT:
 			oper = quad_oper::DISTINCT;
 			break;
 
@@ -1325,7 +1325,7 @@ void inter_code_gen_visitor::visit(node_binary_operation_expr& node) {
             bool short_circuit_value;
 
             switch(node.oper){
-                case Oper::AND:
+                case Oper::OAND:
                     short_circuit_value = false;
                     break;
 
@@ -1352,7 +1352,7 @@ void inter_code_gen_visitor::visit(node_binary_operation_expr& node) {
         }
 	}
 
-    if(node.oper != Oper::AND and node.oper != Oper::OR){
+    if(node.oper != Oper::OAND and node.oper != Oper::OOR){
         this->expr_call_appropriate_accept(node.right);
 	    right_operand = this->temp;
         // New temporal for the result.
