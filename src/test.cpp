@@ -1136,7 +1136,7 @@ int main(int argc, const char* argv[]) {
 
 	test_parser();
 	//test_semantic_analysis();
-	test_inter_code_gen_visitor();
+	//test_inter_code_gen_visitor();
 	test_asm_code_generator();
 	test_asm_instruction();
 	test_ir_parser();

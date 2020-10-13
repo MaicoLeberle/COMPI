@@ -222,10 +222,11 @@ private:
 };
 
 
-/*  intermediate_symtable has every method (and semantic action, for that 
-    matter) symtables_stack has, but also creates an ids_info object and 
-    updates it accordingly to the actions performed to the symtables_stack
-    object.                                                                  */
+/*  intermediate_symtable has attributes symtables_stack and ids_info, 
+    where ids_info contains information about the actions performed 
+    to symtables_stack. In all the rest, it acts quite similarly to 
+    symtables_stack.                                                                 
+*/
 
 class intermediate_symtable {
 public:
