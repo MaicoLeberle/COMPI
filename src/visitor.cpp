@@ -52,19 +52,19 @@ void visitor::expr_call_appropriate_accept(expr_pointer e) {
 void visitor::stm_call_appropriate_accept(statement_pointer s){
 	switch(s->type_of_statement()) {
 		case node_statement::field_decl :
-				node_field_decl& aux = static_cast<node_field_decl&> (*s);
-				aux.accept(*this);
-				break;
+			node_field_decl& aux = static_cast<node_field_decl&> (*s);
+			aux.accept(*this);
+			break;
 
 		case node_statement::block :
-				node_block& aux = static_cast<node_block&> (*s);
-				aux.accept(*this);
-				break;
+			node_block& aux = static_cast<node_block&> (*s);
+			aux.accept(*this);
+			break;
 
 		case node_statement::assignment_statement :
-				node_assignment_statement& aux = static_cast<node_assignment_statement&> (*s);
-				aux.accept(*this);
-				break;
+			node_assignment_statement& aux = static_cast<node_assignment_statement&> (*s);
+			aux.accept(*this);
+			break;
 
 		case node_statement::method_call_statement :
 			node_method_call_statement& aux = static_cast<node_method_call_statement&> (*s);

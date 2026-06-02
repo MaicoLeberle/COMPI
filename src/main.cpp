@@ -22,6 +22,7 @@ Options:
 #include <cassert>
 #include "node.h"
 #include "semantic_analysis.h"
+#include "llvm_ir_generator.h"
 #include "inter_code_gen_visitor.h"
 #include "asm_code_generator.h"
 
@@ -33,22 +34,21 @@ enum target{
       PARSE = 1
     , SEMANTICS = 2
     , INTERCODE = 3
-    , ASSEMBLY = 4
+    , LLVM = 4
+    , ASSEMBLY = 5
 };
 
-void parseArguments(char**, char**, FILE*&, FILE*&, enum target&, bool&);
+void printUsage(const char*);
+void parseArguments(char**, char**, FILE*&, FILE*&, enum target&, bool&, bool&);
 bool endsWith(std::string const&, std::string const&);
 
 
 int main(int argc, const char* argv[]) {
-    /*  If only program name has been given to command line interface, then
-        print this help message.                                             */
+    /* If only the program name has been given to command line interface, then
+     * print this help message.
+     */
     if (argc < 2) {
-        std::cout << "Usage: " << argv[0] << " [OPTIONS] FILE" << std::endl;
-        std::cout << std::endl << "OPTIONS:" << std::endl;
-        std::cout << "  -o OUTPUT      Renames the executable file to OUTPUT." << std::endl;
-        std::cout << "  -target STAGE  STAGE is either \"parse\", \"semantics\", \"intercode\", or \"assembly\"." << std::endl;
-        std::cout << "  -debug         Prints debugging information." << std::endl;
+        printUsage(argv[0]);
         exit(EXIT_SUCCESS);
     }
     semantic_analysis sem_analysis_v;
@@ -57,45 +57,67 @@ int main(int argc, const char* argv[]) {
     FILE* input_file = NULL;
     FILE* output_file = NULL;
     enum target stage;
-    bool debugging;
-    parseArguments((char**)argv, (char**)argv + argc, input_file, output_file, stage, debugging);
+    bool llvm, debugging;
+    parseArguments((char**)argv, (char**)argv + argc, input_file, output_file, stage, llvm, debugging);
 
+
+    /*************************************************************************/
     if (debugging) {
         #define __DEBUG
     }
 
-    /*  Set flex to read from it instead of defaulting to STDIN.             */
+    /*  Set flex to read from input_file instead of defaulting to STDIN.     */
     yyin = input_file;
+    /*************************************************************************/
 
+
+    /*************************************************************************/
     if(stage >= PARSE) {
-        /*  Parse through all the input.                                         */
+        /*  Parse through all the input.                                     */
         do {
             yyparse();
         } while (!feof(yyin));
     }
-
     fclose(input_file);
+    /*************************************************************************/
 
+
+    /*************************************************************************/
     if(stage >= SEMANTICS) {
         /*  Perform semantic analysis.                                       */
         ast->accept(sem_analysis_v);
     } else exit(EXIT_SUCCESS);
+    /*************************************************************************/
 
+
+    /*************************************************************************/
     if(stage >= INTERCODE) {
-    	if(sem_analysis_v.is_analysis_successful()){
-			// Proceed with the next step: generation of IR code.
-			inter_code_gen_visitor ir_c_gen_v;
-			ast->accept(ir_c_gen_v);
+        if (llvm) {
+            /* TO DO: implement the translation to the LLVM intermediate
+             * representation.
+             * THIS FEATURE IS NOT FULLY IMPLEMENTED YET!
+             */
+            llvm_ir_generator llvm_ir_gen_v;
+            ast->accept(llvm_ir_gen_v);
+        } else {
+            if(sem_analysis_v.is_analysis_successful()){
+                // Proceed with the next step: generation of IR code.
+                inter_code_gen_visitor ir_c_gen_v;
+                ast->accept(ir_c_gen_v);
 
-			ir_inst_list =  ir_c_gen_v.get_inst_list();
-			sym_table = ir_c_gen_v.get_ids_info();
-		}
-    	else{
-			// {not sem_analysis_v.is_analysis_successful()}
-    		exit(EXIT_FAILURE);
-    	}
+                ir_inst_list =  ir_c_gen_v.get_inst_list();
+                sym_table = ir_c_gen_v.get_ids_info();
+            }
+            else{
+                // {not sem_analysis_v.is_analysis_successful()}
+                exit(EXIT_FAILURE);
+            }
+        }
     } else exit(EXIT_SUCCESS);
+    /*************************************************************************/
 
+
+    /*************************************************************************/
     if(stage == ASSEMBLY) {
     	// Generation of ASM code.
 		asm_code_generator asm_c_gen(ir_inst_list, sym_table);
@@ -110,20 +132,34 @@ int main(int argc, const char* argv[]) {
                  it++) {
                     fprintf(output_file, print_intel_syntax(*it).c_str());
             }
-        } 
+        }
 
     } else exit(EXIT_SUCCESS);
+    /*************************************************************************/
+
 
     std::cout << std::endl << "COMPILATION FINISHED SUCCESFULLY." << std::endl;
 
     return 0;
 }
 
+
+void printUsage(const char* programName) {
+    std::cout << "Usage: " << programName << " [OPTIONS] FILE" << std::endl;
+    std::cout << std::endl << "OPTIONS:" << std::endl;
+    std::cout << "  -o OUTPUT      Renames the executable file to OUTPUT." << std::endl;
+    std::cout << "  -target STAGE  where STAGE is either \"parse\", \"semantics\", \"intercode\" or \"assembly\"." << std::endl;
+    std::cout << "  -llvm          compiles to the LLVM intermediate representation (instead of COMPI's native one)" << std::endl;
+    std::cout << "  -debug         Prints debugging information." << std::endl;
+}
+
+
 void parseArguments(char** beginIt
                   , char** endIt
                   , FILE*& input_file
                   , FILE*& output_file
                   , enum target& stage
+                  , bool& llvm
                   , bool& debugging) {
     char** itr = beginIt;
     itr++; // First argument is program name
@@ -163,6 +199,8 @@ void parseArguments(char** beginIt
                     stage = SEMANTICS;
                 } else if (std::string("intercode").compare(*itr) == 0) {
                     stage = INTERCODE;
+                } else if (std::string("llvm").compare(*itr) == 0) {
+                    stage = LLVM;
                 } else if (std::string("assembly").compare(*itr) == 0) {
                     stage = ASSEMBLY;
                 } else {
@@ -172,6 +210,8 @@ void parseArguments(char** beginIt
                 }
             }
             stage_done = true;
+        } else if (std::string("-llvm").compare(*itr) == 0) {
+            llvm = true;
         } else if (std::string("-debug").compare(*itr) == 0) {
             debugging = true;
             #define __DEBUG
@@ -203,10 +243,10 @@ void parseArguments(char** beginIt
         exit(EXIT_SUCCESS);
     }
 
-    if(!output_file_done) 
+    if(!output_file_done)
         output_file = fopen("a.out", "w");
 
-    if (!stage_done) 
+    if (!stage_done)
         stage = ASSEMBLY;
 }
 

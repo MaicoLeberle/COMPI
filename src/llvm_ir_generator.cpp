@@ -1,0 +1,29 @@
+#include "llvm_ir_generator.h"
+
+void llvm_ir_generator::visit(node_program&) {}
+void llvm_ir_generator::visit(node_class_decl&) {}
+void llvm_ir_generator::visit(node_field_decl&) {}
+void llvm_ir_generator::visit(node_id&) {}
+void llvm_ir_generator::visit(node_method_decl&) {}
+void llvm_ir_generator::visit(node_parameter_identifier&) {}
+void llvm_ir_generator::visit(node_body&) {}
+void llvm_ir_generator::visit(node_block&) {}
+void llvm_ir_generator::visit(node_assignment_statement&) {}
+void llvm_ir_generator::visit(node_method_call_statement&) {}
+void llvm_ir_generator::visit(node_if_statement&) {}
+void llvm_ir_generator::visit(node_for_statement&) {}
+void llvm_ir_generator::visit(node_while_statement&) {}
+void llvm_ir_generator::visit(node_return_statement&) {}
+void llvm_ir_generator::visit(node_break_statement&) {}
+void llvm_ir_generator::visit(node_continue_statement&) {}
+void llvm_ir_generator::visit(node_skip_statement&) {}
+void llvm_ir_generator::visit(node_int_literal&) {}
+void llvm_ir_generator::visit(node_float_literal&) {}
+void llvm_ir_generator::visit(node_bool_literal&) {}
+void llvm_ir_generator::visit(node_string_literal&) {}
+void llvm_ir_generator::visit(node_binary_operation_expr&) {}
+void llvm_ir_generator::visit(node_location&) {}
+void llvm_ir_generator::visit(node_negate_expr&) {}
+void llvm_ir_generator::visit(node_negative_expr&) {}
+void llvm_ir_generator::visit(node_parentheses_expr&) {}
+void llvm_ir_generator::visit(node_method_call_expr&) {}
